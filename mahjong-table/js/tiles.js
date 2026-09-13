@@ -65,6 +65,18 @@
     return String.fromCodePoint(SUIT_GLYPH_BASE[suit] + (rankOf(i) - 1));
   }
 
+  // Filenames for the real tile artwork in shared/assets/tiles/ (CC BY-SA 4.0,
+  // see that folder's CREDITS.md). Honor order matches HONOR_NAMES: the last
+  // three are Haku/white, Hatsu/green, Chun/red - deliberately NOT numeric
+  // order, since that's how the source artwork is labeled upstream.
+  const HONOR_ASSET = ["wind-east", "wind-south", "wind-west", "wind-north", "dragon-white", "dragon-green", "dragon-red"];
+  const SUIT_ASSET_PREFIX = { m: "man", s: "sou", p: "pin" };
+
+  function assetOf(i) {
+    if (isHonor(i)) return HONOR_ASSET[i - HONOR_BASE] + ".svg";
+    return SUIT_ASSET_PREFIX[suitOf(i)] + rankOf(i) + ".svg";
+  }
+
   function nameOf(i) {
     if (isHonor(i)) return HONOR_NAMES[i - HONOR_BASE];
     return rankOf(i) + " " + ({ m: "Characters", s: "Bamboo", p: "Circles" })[suitOf(i)];
@@ -135,6 +147,7 @@
     isDragon,
     isWind,
     glyphOf,
+    assetOf,
     nameOf,
     buildWall,
     shuffle,

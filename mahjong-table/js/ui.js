@@ -17,6 +17,7 @@
   const HONOR_GLYPHS_FALLBACK = ["\u{1F000}", "\u{1F001}", "\u{1F002}", "\u{1F003}", "\u{1F006}", "\u{1F005}", "\u{1F004}"];
   const HONOR_NAMES_FALLBACK = ["East", "South", "West", "North", "Haku", "Hatsu", "Chun"];
   const TILE_BACK = "\u{1F02B}";
+  const TILE_ASSET_BASE = "../shared/assets/tiles/";
 
   function tileGlyph(kind) {
     if (kind == null) return "";
@@ -25,6 +26,25 @@
     if (kind >= 18) return String.fromCodePoint(0x1f019 + (kind - 18));
     if (kind >= 9) return String.fromCodePoint(0x1f010 + (kind - 9));
     return String.fromCodePoint(0x1f007 + kind);
+  }
+
+  // Real tile artwork (see shared/assets/tiles/CREDITS.md) is used for every
+  // actual tile-face rendering (hand/melds/discards/dora); tileGlyph() above
+  // stays in use only for compact contexts like the seat wind-badge, where a
+  // single character fits better than a full tile image, and as the fallback
+  // here if MJ.tiles.assetOf isn't available for some reason.
+  function renderTileFace(container, kind) {
+    container.textContent = "";
+    if (window.MJ && MJ.tiles && typeof MJ.tiles.assetOf === "function") {
+      const img = document.createElement("img");
+      img.className = "tile-face-img";
+      img.src = TILE_ASSET_BASE + MJ.tiles.assetOf(kind);
+      img.alt = tileName(kind);
+      img.draggable = false;
+      container.appendChild(img);
+    } else {
+      container.textContent = tileGlyph(kind);
+    }
   }
 
   // compact notation for log lines ("5p"), matching how the design doc phrases them
@@ -155,7 +175,7 @@
       (meld.tiles || []).forEach((k) => {
         const t = document.createElement("div");
         t.className = "tile-mini" + (meld.concealed ? " face-down" : "");
-        t.textContent = meld.concealed ? "" : tileGlyph(k);
+        if (!meld.concealed) renderTileFace(t, k);
         group.appendChild(t);
       });
       container.appendChild(group);
@@ -168,7 +188,7 @@
     (discards || []).forEach((k) => {
       const t = document.createElement("div");
       t.className = "discard-tile";
-      t.textContent = tileGlyph(k);
+      renderTileFace(t, k);
       container.appendChild(t);
     });
   }
@@ -195,7 +215,7 @@
   function makeHandTile(kind, seatIdx, activeDiscarder, isDrawn) {
     const d = document.createElement("div");
     d.className = "hand-tile" + (isDrawn ? " drawn" : "");
-    d.textContent = tileGlyph(kind);
+    renderTileFace(d, kind);
     d.dataset.kind = String(kind);
     if (activeDiscarder) {
       const restricted = currentTurnOptions && Array.isArray(currentTurnOptions.discardOptions);
@@ -219,7 +239,7 @@
   function makeMiniTile(kind) {
     const d = document.createElement("div");
     d.className = "tile-mini";
-    d.textContent = tileGlyph(kind);
+    renderTileFace(d, kind);
     return d;
   }
 

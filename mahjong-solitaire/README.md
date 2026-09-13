@@ -12,3 +12,7 @@ them. Includes hint, shuffle-remaining, and a timer.
 Simple enough to stay in one file — there's no separate `css/`/`js/` split
 and no automated test suite here, unlike the other two games in this
 collection, which are large enough to warrant one.
+
+Tile faces are rendered from real tile artwork in `../shared/assets/tiles/`
+(CC BY-SA 4.0 — see that folder's `CREDITS.md`), not this repo's own MIT
+code license.

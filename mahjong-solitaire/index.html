@@ -155,6 +155,13 @@
     transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.15s ease, opacity 0.25s ease;
   }
 
+  .tile-face-img {
+    width: 82%;
+    height: 82%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+
   .tile::after {
     content: "";
     position: absolute;
@@ -315,21 +322,32 @@
     return LAYER_COUNTS.map((n) => cells.slice(0, n).map((c) => ({ x: c.x, y: c.y })));
   }
 
+  const TILE_ASSET_BASE = "../shared/assets/tiles/";
+
   // ---------- deck: standard 144-tile mahjong set ----------
+  // `img` names the real tile artwork in ../shared/assets/tiles/ (CC BY-SA 4.0,
+  // see that folder's CREDITS.md); `glyph` is kept only as a fallback/alt-text
+  // source. `key` is the only field match-checking actually reads, so flowers
+  // and seasons deliberately don't need img/glyph to line up with any specific
+  // real-world flower or season - any flower matches any flower.
   function buildDeck() {
     const deck = [];
-    const add = (cp, group, copies) => {
+    const add = (cp, group, copies, img) => {
       for (let i = 0; i < copies; i++) {
-        deck.push({ glyph: String.fromCodePoint(cp), key: group || cp });
+        deck.push({ glyph: String.fromCodePoint(cp), key: group || cp, img });
       }
     };
-    for (let cp = 0x1f000; cp <= 0x1f003; cp++) add(cp, null, 4); // winds
-    for (let cp = 0x1f004; cp <= 0x1f006; cp++) add(cp, null, 4); // dragons
-    for (let cp = 0x1f007; cp <= 0x1f00f; cp++) add(cp, null, 4); // characters
-    for (let cp = 0x1f010; cp <= 0x1f018; cp++) add(cp, null, 4); // bamboos
-    for (let cp = 0x1f019; cp <= 0x1f021; cp++) add(cp, null, 4); // circles
-    for (let cp = 0x1f022; cp <= 0x1f025; cp++) add(cp, "flower", 1);
-    for (let cp = 0x1f026; cp <= 0x1f029; cp++) add(cp, "season", 1);
+    const winds = ["wind-east", "wind-south", "wind-west", "wind-north"];
+    for (let i = 0; i < 4; i++) add(0x1f000 + i, null, 4, winds[i]);
+    const dragons = ["dragon-red", "dragon-green", "dragon-white"]; // 1F004 Chun, 1F005 Hatsu, 1F006 Haku
+    for (let i = 0; i < 3; i++) add(0x1f004 + i, null, 4, dragons[i]);
+    for (let i = 0; i < 9; i++) add(0x1f007 + i, null, 4, "man" + (i + 1)); // characters
+    for (let i = 0; i < 9; i++) add(0x1f010 + i, null, 4, "sou" + (i + 1)); // bamboos
+    for (let i = 0; i < 9; i++) add(0x1f019 + i, null, 4, "pin" + (i + 1)); // circles
+    const flowers = ["flower-plum", "flower-orchid", "flower-bamboo", "flower-chrysanthemum"];
+    for (let i = 0; i < 4; i++) add(0x1f022 + i, "flower", 1, flowers[i]);
+    const seasons = ["season-spring", "season-summer", "season-autumn", "season-winter"];
+    for (let i = 0; i < 4; i++) add(0x1f026 + i, "season", 1, seasons[i]);
     return deck;
   }
 
@@ -379,6 +397,7 @@
           x, y, z,
           glyph: card.glyph,
           key: card.key,
+          img: card.img,
           removed: false,
           free: false,
           el: null,
@@ -436,7 +455,16 @@
       el.style.left = left + "px";
       el.style.top = top + "px";
       el.style.zIndex = String(t.z * 10 + 1);
-      el.textContent = t.glyph;
+      if (t.img) {
+        const img = document.createElement("img");
+        img.className = "tile-face-img";
+        img.src = TILE_ASSET_BASE + t.img + ".svg";
+        img.alt = t.glyph;
+        img.draggable = false;
+        el.appendChild(img);
+      } else {
+        el.textContent = t.glyph;
+      }
       el.dataset.id = t.id;
       el.addEventListener("click", () => onTileClick(t));
       t.el = el;
@@ -587,10 +615,11 @@
   function shuffleRemaining() {
     const remaining = tiles.filter((t) => !t.removed);
     if (remaining.length === 0) return;
-    const pairs = shuffle(remaining.map((t) => ({ glyph: t.glyph, key: t.key })));
+    const pairs = shuffle(remaining.map((t) => ({ glyph: t.glyph, key: t.key, img: t.img })));
     remaining.forEach((t, i) => {
       t.glyph = pairs[i].glyph;
       t.key = pairs[i].key;
+      t.img = pairs[i].img;
     });
 
     locked = false;

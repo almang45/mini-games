@@ -212,6 +212,8 @@
   background: rgba(0, 0, 0, 0.15);
 }
 
+.tile-face-img { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
+
 .tile-mini, .discard-tile {
   width: 20px;
   height: 26px;

@@ -13,6 +13,10 @@ tables, glossary) live in `guide.html` — linked from the start screen. This
 README is the developer-facing companion: what's implemented, what's
 simplified, and how it's tested.
 
+Tile faces are rendered from real tile artwork in `../shared/assets/tiles/`
+(CC BY-SA 4.0 — see that folder's `CREDITS.md`), not this repo's own MIT
+code license.
+
 ## Project layout
 
 ```

@@ -26,6 +26,13 @@ are identical across projects (the color palette + base styles in
 test suites) — everything else stays local to its own game on purpose, since
 the three UIs are independent by design.
 
+Mahjong Table and Mahjong Solitaire both render real tile artwork from
+`shared/assets/tiles/` rather than relying on the Unicode Mahjong Tile
+characters' inconsistent font support across platforms. Those SVGs are
+CC BY-SA 4.0 (not this repo's own MIT code license) — see
+[shared/assets/tiles/CREDITS.md](shared/assets/tiles/CREDITS.md) for the
+source and required attribution.
+
 ## Local development
 
 No build step. Open any game's `index.html` directly in a browser, or serve
