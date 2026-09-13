@@ -1,27 +1,16 @@
-/* Card Table - presentational layer. Palette/table treatment follows the
-   sibling mahjong-table page for visual family resemblance across this
-   project's static-HTML game collection. */
+/* Card Table - presentational layer. Shared palette, reset, and base button
+   styles live in ../shared/theme.css (linked before this file in
+   index.html/guide.html) so a rebrand touches one file instead of three;
+   only card-specific tokens and layout live here. */
 
 :root {
-  --bg: #0f3d2e;
-  --bg-2: #0a2e22;
-  --panel: rgba(0, 0, 0, 0.25);
-  --panel-strong: rgba(0, 0, 0, 0.4);
-  --ink: #f3ead9;
-  --ink-dim: #cfc3ac;
-  --accent: #ffd166;
   --card-face: #fdf8ee;
   --card-border: #8a7452;
   --card-red: #b3352c;
   --card-black: #1c1c1c;
   --card-back-a: #2a6b4c;
   --card-back-b: #1c4a34;
-  --danger: #e0554f;
-  --ok: #6ad48a;
-  --felt-line: rgba(255, 255, 255, 0.08);
 }
-
-* { box-sizing: border-box; }
 
 /* Author rules below give several [hidden] elements (modals, the seat-setup
    panel) a non-default `display` value, which - per normal CSS cascade rules -
@@ -30,60 +19,10 @@
    !important so toggling the `hidden` property always actually hides. */
 [hidden] { display: none !important; }
 
-html, body {
-  margin: 0;
-  min-height: 100%;
-  background: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-2) 70%);
-  color: var(--ink);
-  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
-body { padding-inline: 12px; }
-
-.app {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding-block: 16px 32px;
-  gap: 16px;
-}
-
-h1 {
-  font-size: 1.4rem;
-  margin: 0;
-  letter-spacing: 0.04em;
-  color: var(--accent);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  text-align: center;
-}
-
 .tagline { margin: 4px 0 0; color: var(--ink-dim); font-size: 0.9rem; text-align: center; }
 .guide-link { color: var(--accent); font-size: 0.85rem; text-decoration: none; }
 .guide-link:hover { text-decoration: underline; }
 
-button {
-  font: inherit;
-  font-size: 0.85rem;
-  background: linear-gradient(180deg, #2a6b4c, #1c4a34);
-  color: var(--ink);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  padding: 9px 16px;
-  cursor: pointer;
-  transition: transform 0.1s ease, filter 0.15s ease;
-}
-button:hover { filter: brightness(1.15); }
-button:active { transform: translateY(1px) scale(0.98); }
-button:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
-
-.btn-primary {
-  background: linear-gradient(180deg, #ffdb85, #e0a83a);
-  color: #2a1c00;
-  border-color: rgba(0, 0, 0, 0.2);
-  font-weight: 600;
-}
 .btn-danger { background: linear-gradient(180deg, #e0736c, #b3352c); }
 .btn-ghost { background: transparent; border-color: rgba(255, 255, 255, 0.25); }
 

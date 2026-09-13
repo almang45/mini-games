@@ -1,0 +1,87 @@
+/* Shared visual theme for the whole Mini Games collection: palette tokens,
+   base reset, and button styles that were previously duplicated verbatim
+   across the root hub page and every game's own css/style.css. Link this
+   file BEFORE a project's own stylesheet so its rules can build on these
+   tokens/selectors. Anything domain-specific (tile faces, card faces, table
+   layout, etc.) stays local to each project's own CSS instead of here. */
+
+:root {
+  --bg: #0f3d2e;
+  --bg-2: #0a2e22;
+  --panel: rgba(0, 0, 0, 0.25);
+  --panel-strong: rgba(0, 0, 0, 0.4);
+  --ink: #f3ead9;
+  --ink-dim: #cfc3ac;
+  --accent: #ffd166;
+  --danger: #e0554f;
+  --ok: #6ad48a;
+  --felt-line: rgba(255, 255, 255, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-2) 70%);
+  color: var(--ink);
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body { padding-inline: 12px; }
+
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-block: 16px 32px;
+  gap: 16px;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 0;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+button {
+  font: inherit;
+  font-size: 0.85rem;
+  background: linear-gradient(180deg, #2a6b4c, #1c4a34);
+  color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: transform 0.1s ease, filter 0.15s ease;
+}
+
+button:hover { filter: brightness(1.15); }
+button:active { transform: translateY(1px) scale(0.98); }
+button:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+
+.btn-primary {
+  background: linear-gradient(180deg, #ffdb85, #e0a83a);
+  color: #2a1c00;
+  border-color: rgba(0, 0, 0, 0.2);
+  font-weight: 600;
+}
+
+/* Pill-shaped back-navigation link, used on every game's index.html (back to
+   the hub) and guide.html (back to the game) - one shared definition instead
+   of the near-identical copy each guide.css previously carried locally. */
+.back-link {
+  color: var(--ink-dim);
+  text-decoration: none;
+  font-size: 0.82rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 5px 12px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.back-link:hover { color: var(--accent); border-color: var(--accent); }

@@ -5,18 +5,7 @@
 // supports what index.html + js/ui.js actually use.
 "use strict";
 
-class FakeClassList {
-  constructor(el) { this.el = el; this._set = new Set(); }
-  add(c) { this._set.add(c); }
-  remove(c) { this._set.delete(c); }
-  toggle(c, force) {
-    const has = this._set.has(c);
-    const want = force === undefined ? !has : !!force;
-    if (want) this._set.add(c); else this._set.delete(c);
-  }
-  contains(c) { return this._set.has(c); }
-  toString() { return Array.from(this._set).join(" "); }
-}
+const { FakeClassList } = require("../../../shared/test/fake-class-list.js");
 
 class FakeElement {
   constructor(tag) {

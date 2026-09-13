@@ -15,17 +15,9 @@
 .guide-header h1 { font-size: 1.5rem; margin: 4px 0 0; }
 .guide-header .tagline { margin: 0; color: var(--ink-dim); font-size: 0.9rem; max-width: 560px; }
 
-.back-link {
-  align-self: flex-start;
-  color: var(--ink-dim);
-  text-decoration: none;
-  font-size: 0.82rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  padding: 5px 12px;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-.back-link:hover { color: var(--accent); border-color: var(--accent); }
+/* .back-link's shared look (color/border/hover) lives in ../shared/theme.css;
+   this guide layout just needs it pinned to the top-left of the flex column. */
+.back-link { align-self: flex-start; }
 
 .guide-layout {
   display: grid;

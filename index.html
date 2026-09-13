@@ -4,25 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mini Games</title>
+<link rel="icon" href="shared/favicon.svg">
+<link rel="stylesheet" href="shared/theme.css">
 <style>
-  :root {
-    --bg: #0f3d2e;
-    --bg-2: #0a2e22;
-    --panel: rgba(0, 0, 0, 0.25);
-    --ink: #f3ead9;
-    --ink-dim: #cfc3ac;
-    --accent: #ffd166;
-    --felt-line: rgba(255, 255, 255, 0.08);
-  }
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0;
-    min-height: 100%;
-    background: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-2) 70%);
-    color: var(--ink);
-    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  }
+  /* Palette, reset, h1, and buttons come from shared/theme.css (linked
+     above); only this hub page's own layout lives here. */
   body { padding-inline: 16px; }
+  h1 { font-size: 1.8rem; }
   .shell {
     max-width: 960px;
     margin: 0 auto;
@@ -31,14 +19,6 @@
     flex-direction: column;
     align-items: center;
     gap: 28px;
-  }
-  h1 {
-    font-size: 1.8rem;
-    margin: 0;
-    letter-spacing: 0.04em;
-    color: var(--accent);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-    text-align: center;
   }
   .tagline { margin: 0; color: var(--ink-dim); text-align: center; max-width: 520px; }
   .grid {
@@ -70,11 +50,8 @@
     transition: filter 0.15s ease;
   }
   .btn:hover { filter: brightness(1.15); }
-  .btn-primary {
-    background: linear-gradient(180deg, #ffdb85, #e0a83a);
-    color: #2a1c00;
-    font-weight: 600;
-  }
+  /* .btn-primary's look comes from shared/theme.css; only the pill-link
+     shape above is specific to these <a> "buttons". */
   .btn-secondary {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.15);

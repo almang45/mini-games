@@ -6,17 +6,7 @@
 // to avoid selector strings entirely so this shim can stay tiny).
 "use strict";
 
-class FakeClassList {
-  constructor() { this._set = new Set(); }
-  add(c) { this._set.add(c); }
-  remove(c) { this._set.delete(c); }
-  toggle(c, force) {
-    const has = this._set.has(c);
-    const want = force === undefined ? !has : !!force;
-    if (want) this._set.add(c); else this._set.delete(c);
-  }
-  contains(c) { return this._set.has(c); }
-}
+const { FakeClassList } = require("../../../shared/test/fake-class-list.js");
 
 class FakeElement {
   constructor(tag) {

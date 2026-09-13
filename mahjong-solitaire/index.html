@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mahjong Solitaire</title>
+<link rel="icon" href="../shared/favicon.svg">
 <style>
   :root {
     --bg: #0f3d2e;
@@ -50,6 +51,17 @@
     width: 100%;
     max-width: 900px;
   }
+
+  .back-link {
+    color: var(--ink-dim);
+    text-decoration: none;
+    font-size: 0.82rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 5px 12px;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .back-link:hover { color: var(--accent); border-color: var(--accent); }
 
   h1 {
     font-size: 1.3rem;
@@ -248,6 +260,7 @@
 <body>
 <div class="app">
   <header>
+    <a class="back-link" href="../index.html">← All Games</a>
     <h1>Mahjong Solitaire</h1>
     <div class="stats">
       <div class="stat">Tiles<b id="statTiles">144</b></div>

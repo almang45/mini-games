@@ -29,7 +29,7 @@ js/ui.js                DOM rendering + input handling
 js/test/*.test.js       plain Node test scripts (run with `node js/test/x.test.js`)
 ```
 
-Run all tests: `for f in js/test/*.test.js; do node "$f"; done`
+Run all tests (from inside this `mahjong-table/` folder): `for f in js/test/*.test.js; do node "$f" || exit 1; done`
 
 ## Known simplifications / rule choices
 

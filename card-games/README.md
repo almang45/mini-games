@@ -45,7 +45,7 @@ js/app.js                    lobby + table controller (screens, seat setup,
 js/test/*.test.js            plain Node test scripts (run with `node js/test/x.test.js`)
 ```
 
-Run all tests: `for f in js/test/*.test.js; do node "$f"; done`
+Run all tests (from inside this `card-games/` folder): `for f in js/test/*.test.js; do node "$f" || exit 1; done`
 
 Every `js/core/*.js` and `js/games/*.js` file follows the same small UMD
 pattern: `module.exports` under Node (used by the tests), `window.X` in the
