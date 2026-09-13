@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mahjong Solitaire</title>
+<style>
+  :root {
+    --bg: #0f3d2e;
+    --bg-2: #0a2e22;
+    --panel: rgba(0, 0, 0, 0.25);
+    --ink: #f3ead9;
+    --ink-dim: #cbb;
+    --accent: #ffd166;
+    --tile-face: #fdf8ee;
+    --tile-face-2: #f1e8d3;
+    --tile-border: #8a7452;
+    --tile-glyph: #1c1c1c;
+    --blocked-overlay: rgba(0, 0, 0, 0.45);
+    --danger: #e0554f;
+    --ok: #6ad48a;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-2) 70%);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100%;
+    padding: 16px 12px 40px;
+    gap: 14px;
+  }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px 18px;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  h1 {
+    font-size: 1.3rem;
+    margin: 0;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    flex: 1 1 auto;
+    text-align: center;
+    min-width: 200px;
+  }
+
+  .stats {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .stat {
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    min-width: 78px;
+    text-align: center;
+  }
+
+  .stat b {
+    display: block;
+    font-size: 1.05rem;
+    color: var(--accent);
+  }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  button {
+    font: inherit;
+    font-size: 0.82rem;
+    background: linear-gradient(180deg, #2a6b4c, #1c4a34);
+    color: var(--ink);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: transform 0.1s ease, filter 0.15s ease;
+  }
+
+  button:hover { filter: brightness(1.15); }
+  button:active { transform: translateY(1px) scale(0.98); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+
+  .board-wrap {
+    width: 100%;
+    max-width: 960px;
+    display: flex;
+    justify-content: center;
+    overflow: visible;
+  }
+
+  #board {
+    position: relative;
+    transform-origin: top center;
+  }
+
+  .tile {
+    position: absolute;
+    width: var(--tw);
+    height: var(--th);
+    border-radius: 7px;
+    background: linear-gradient(160deg, var(--tile-face) 0%, var(--tile-face-2) 100%);
+    border: 1px solid var(--tile-border);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.6) inset,
+      0 -6px 0 -3px rgba(0,0,0,0.18) inset,
+      0 3px 6px rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(var(--tw) * 0.62);
+    line-height: 1;
+    color: var(--tile-glyph);
+    user-select: none;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.15s ease, opacity 0.25s ease;
+  }
+
+  .tile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 7px;
+    pointer-events: none;
+    background: var(--blocked-overlay);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .tile.blocked::after { opacity: 0.55; }
+  .tile.blocked { cursor: not-allowed; }
+
+  .tile.free:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.7) inset,
+      0 -6px 0 -3px rgba(0,0,0,0.18) inset,
+      0 8px 14px rgba(0,0,0,0.5);
+  }
+
+  .tile.selected {
+    outline: 3px solid var(--accent);
+    outline-offset: 1px;
+    transform: translateY(-5px);
+    z-index: 999 !important;
+  }
+
+  .tile.hint {
+    animation: pulse 0.55s ease-in-out 3;
+  }
+
+  .tile.shake {
+    animation: shake 0.32s ease;
+  }
+
+  .tile.removing {
+    opacity: 0;
+    transform: scale(0.4) translateY(-10px);
+    pointer-events: none;
+  }
+
+  @keyframes pulse {
+    0%, 100% { outline-color: var(--accent); }
+    50% { outline-color: var(--ok); }
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+
+  .overlay[hidden] { display: none; }
+
+  .modal {
+    background: #12321f;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px;
+    padding: 26px 30px;
+    text-align: center;
+    max-width: 320px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  .modal h2 {
+    margin: 0 0 8px;
+    color: var(--accent);
+  }
+
+  .modal p {
+    margin: 4px 0 18px;
+    color: var(--ink-dim);
+    font-size: 0.9rem;
+  }
+
+  .modal .controls { margin-top: 4px; }
+
+  footer {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.72rem;
+    text-align: center;
+    max-width: 500px;
+  }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 1.05rem; }
+    .stat { min-width: 64px; padding: 5px 8px; font-size: 0.72rem; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Mahjong Solitaire</h1>
+    <div class="stats">
+      <div class="stat">Tiles<b id="statTiles">144</b></div>
+      <div class="stat">Moves<b id="statMoves">0</b></div>
+      <div class="stat">Time<b id="statTime">00:00</b></div>
+    </div>
+  </header>
+
+  <div class="controls">
+    <button id="btnNew">New Game</button>
+    <button id="btnShuffle">Shuffle</button>
+    <button id="btnHint">Hint</button>
+  </div>
+
+  <div class="board-wrap">
+    <div id="board"></div>
+  </div>
+
+  <footer>Match two identical free tiles to clear them. A tile is free when nothing sits on top of it and at least one long side (left or right) is open. Any Flower matches any Flower; any Season matches any Season.</footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h2 id="modalTitle">You win!</h2>
+    <p id="modalBody"></p>
+    <div class="controls">
+      <button id="modalNew">New Game</button>
+      <button id="modalShuffle">Shuffle Remaining</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- layout: 5 nested layers, 144 cells total ----------
+  const COLS = 15, ROWS = 9;
+  const LAYER_COUNTS = [60, 40, 26, 14, 4]; // z0 = bottom/widest .. z4 = apex
+
+  function generateLayout() {
+    const cx = (COLS - 1) / 2, cy = (ROWS - 1) / 2;
+    const rx = 7.4, ry = 4.4;
+    const cells = [];
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const dx = (x - cx) / rx, dy = (y - cy) / ry;
+        cells.push({ x, y, d: Math.sqrt(dx * dx + dy * dy) });
+      }
+    }
+    cells.sort((a, b) => a.d - b.d || a.y - b.y || a.x - b.x);
+    return LAYER_COUNTS.map((n) => cells.slice(0, n).map((c) => ({ x: c.x, y: c.y })));
+  }
+
+  // ---------- deck: standard 144-tile mahjong set ----------
+  function buildDeck() {
+    const deck = [];
+    const add = (cp, group, copies) => {
+      for (let i = 0; i < copies; i++) {
+        deck.push({ glyph: String.fromCodePoint(cp), key: group || cp });
+      }
+    };
+    for (let cp = 0x1f000; cp <= 0x1f003; cp++) add(cp, null, 4); // winds
+    for (let cp = 0x1f004; cp <= 0x1f006; cp++) add(cp, null, 4); // dragons
+    for (let cp = 0x1f007; cp <= 0x1f00f; cp++) add(cp, null, 4); // characters
+    for (let cp = 0x1f010; cp <= 0x1f018; cp++) add(cp, null, 4); // bamboos
+    for (let cp = 0x1f019; cp <= 0x1f021; cp++) add(cp, null, 4); // circles
+    for (let cp = 0x1f022; cp <= 0x1f025; cp++) add(cp, "flower", 1);
+    for (let cp = 0x1f026; cp <= 0x1f029; cp++) add(cp, "season", 1);
+    return deck;
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  // ---------- geometry ----------
+  const TILE_W = 52, TILE_H = 68;
+  const LAYER_DX = 5, LAYER_DY = -5;
+  const PAD_LEFT = 14, PAD_TOP = 14 + (LAYER_COUNTS.length - 1) * -LAYER_DY;
+
+  const board = document.getElementById("board");
+  const statTiles = document.getElementById("statTiles");
+  const statMoves = document.getElementById("statMoves");
+  const statTime = document.getElementById("statTime");
+  const overlay = document.getElementById("overlay");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalBody = document.getElementById("modalBody");
+
+  let tiles = [];       // flat list of tile state objects
+  let byPos = new Map(); // "x,y,z" -> tile
+  let selected = null;
+  let moves = 0;
+  let removedCount = 0;
+  let timerHandle = null;
+  let seconds = 0;
+  let locked = false;
+
+  function posKey(x, y, z) { return x + "," + y + "," + z; }
+
+  function newGame() {
+    const layout = generateLayout();
+    const deck = shuffle(buildDeck());
+    tiles = [];
+    byPos = new Map();
+    let idx = 0;
+    layout.forEach((cells, z) => {
+      cells.forEach(({ x, y }) => {
+        const card = deck[idx++];
+        const t = {
+          id: "t" + x + "_" + y + "_" + z,
+          x, y, z,
+          glyph: card.glyph,
+          key: card.key,
+          removed: false,
+          free: false,
+          el: null,
+        };
+        tiles.push(t);
+        byPos.set(posKey(x, y, z), t);
+      });
+    });
+
+    selected = null;
+    moves = 0;
+    removedCount = 0;
+    seconds = 0;
+    locked = false;
+    updateStats();
+    startTimer();
+    computeFreedom();
+    render();
+    hideOverlay();
+  }
+
+  function tileAt(x, y, z) {
+    const t = byPos.get(posKey(x, y, z));
+    return t && !t.removed ? t : null;
+  }
+
+  function computeFreedom() {
+    for (const t of tiles) {
+      if (t.removed) continue;
+      let covered = false;
+      for (let z2 = t.z + 1; z2 < LAYER_COUNTS.length; z2++) {
+        if (tileAt(t.x, t.y, z2)) { covered = true; break; }
+      }
+      const openLeft = !tileAt(t.x - 1, t.y, t.z);
+      const openRight = !tileAt(t.x + 1, t.y, t.z);
+      t.free = !covered && (openLeft || openRight);
+    }
+  }
+
+  function render() {
+    board.innerHTML = "";
+    board.style.setProperty("--tw", TILE_W + "px");
+    board.style.setProperty("--th", TILE_H + "px");
+
+    let maxLeft = 0, maxTop = 0;
+    for (const t of tiles) {
+      if (t.removed) continue;
+      const left = PAD_LEFT + t.x * TILE_W + t.z * LAYER_DX;
+      const top = PAD_TOP + t.y * TILE_H + t.z * LAYER_DY;
+      maxLeft = Math.max(maxLeft, left + TILE_W);
+      maxTop = Math.max(maxTop, top + TILE_H);
+
+      const el = document.createElement("div");
+      el.className = "tile" + (t.free ? " free" : " blocked");
+      el.style.left = left + "px";
+      el.style.top = top + "px";
+      el.style.zIndex = String(t.z * 10 + 1);
+      el.textContent = t.glyph;
+      el.dataset.id = t.id;
+      el.addEventListener("click", () => onTileClick(t));
+      t.el = el;
+      board.appendChild(el);
+    }
+
+    board.style.width = (maxLeft + 14) + "px";
+    board.style.height = (maxTop + 14) + "px";
+    fitBoard();
+  }
+
+  function fitBoard() {
+    const wrap = document.querySelector(".board-wrap");
+    const avail = wrap.clientWidth - 8;
+    const natural = parseFloat(board.style.width) || 1;
+    const scale = Math.min(1, avail / natural);
+    board.style.transform = "scale(" + scale + ")";
+    board.parentElement.style.height = (parseFloat(board.style.height) * scale) + "px";
+  }
+  window.addEventListener("resize", fitBoard);
+
+  function updateStats() {
+    statTiles.textContent = String(tiles.length - removedCount);
+    statMoves.textContent = String(moves);
+  }
+
+  function startTimer() {
+    if (timerHandle) clearInterval(timerHandle);
+    timerHandle = setInterval(() => {
+      seconds++;
+      const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+      const s = String(seconds % 60).padStart(2, "0");
+      statTime.textContent = m + ":" + s;
+    }, 1000);
+  }
+
+  function stopTimer() {
+    if (timerHandle) clearInterval(timerHandle);
+    timerHandle = null;
+  }
+
+  function onTileClick(t) {
+    if (locked || t.removed) return;
+    if (!t.free) {
+      flashShake(t.el);
+      return;
+    }
+    if (selected === t) {
+      t.el.classList.remove("selected");
+      selected = null;
+      return;
+    }
+    if (!selected) {
+      selected = t;
+      t.el.classList.add("selected");
+      return;
+    }
+
+    moves++;
+    updateStats();
+
+    if (selected.key === t.key) {
+      const a = selected, b = t;
+      a.el.classList.remove("selected");
+      selected = null;
+      removePair(a, b);
+    } else {
+      flashShake(t.el);
+      flashShake(selected.el);
+      selected.el.classList.remove("selected");
+      selected = null;
+    }
+  }
+
+  function flashShake(el) {
+    el.classList.remove("shake");
+    void el.offsetWidth;
+    el.classList.add("shake");
+  }
+
+  function removePair(a, b) {
+    locked = true;
+    a.el.classList.add("removing");
+    b.el.classList.add("removing");
+    setTimeout(() => {
+      a.removed = true;
+      b.removed = true;
+      removedCount += 2;
+      updateStats();
+      computeFreedom();
+      refreshTileClasses();
+      locked = false;
+
+      if (removedCount === tiles.length) {
+        endGame(true);
+      } else if (!hasAvailableMatch()) {
+        endGame(false);
+      }
+    }, 220);
+  }
+
+  function refreshTileClasses() {
+    for (const t of tiles) {
+      if (t.removed || !t.el) continue;
+      t.el.classList.toggle("free", t.free);
+      t.el.classList.toggle("blocked", !t.free);
+    }
+  }
+
+  function hasAvailableMatch() {
+    const free = tiles.filter((t) => !t.removed && t.free);
+    for (let i = 0; i < free.length; i++) {
+      for (let j = i + 1; j < free.length; j++) {
+        if (free[i].key === free[j].key) return true;
+      }
+    }
+    return false;
+  }
+
+  function findMatch() {
+    const free = tiles.filter((t) => !t.removed && t.free);
+    for (let i = 0; i < free.length; i++) {
+      for (let j = i + 1; j < free.length; j++) {
+        if (free[i].key === free[j].key) return [free[i], free[j]];
+      }
+    }
+    return null;
+  }
+
+  function endGame(won) {
+    stopTimer();
+    locked = true;
+    const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const s = String(seconds % 60).padStart(2, "0");
+    if (won) {
+      modalTitle.textContent = "You win!";
+      modalBody.textContent = "Cleared all 144 tiles in " + moves + " moves, " + m + ":" + s + ".";
+    } else {
+      modalTitle.textContent = "No moves left";
+      modalBody.textContent = tiles.length - removedCount + " tiles remain with no matching pair. Shuffle to keep going, or start over.";
+    }
+    showOverlay();
+  }
+
+  function showOverlay() { overlay.hidden = false; }
+  function hideOverlay() { overlay.hidden = true; }
+
+  function shuffleRemaining() {
+    const remaining = tiles.filter((t) => !t.removed);
+    if (remaining.length === 0) return;
+    const pairs = shuffle(remaining.map((t) => ({ glyph: t.glyph, key: t.key })));
+    remaining.forEach((t, i) => {
+      t.glyph = pairs[i].glyph;
+      t.key = pairs[i].key;
+    });
+
+    locked = false;
+    selected = null;
+    computeFreedom();
+    render();
+    hideOverlay();
+    if (!hasAvailableMatch() && removedCount < tiles.length) {
+      // extremely unlikely with a fresh random shuffle, but guard anyway
+      setTimeout(shuffleRemaining, 0);
+    } else {
+      startTimer();
+    }
+  }
+
+  function hint() {
+    const pair = findMatch();
+    if (!pair) return;
+    pair.forEach((t) => {
+      t.el.classList.remove("hint");
+      void t.el.offsetWidth;
+      t.el.classList.add("hint");
+    });
+  }
+
+  document.getElementById("btnNew").addEventListener("click", newGame);
+  document.getElementById("btnShuffle").addEventListener("click", () => { stopTimer(); shuffleRemaining(); });
+  document.getElementById("btnHint").addEventListener("click", hint);
+  document.getElementById("modalNew").addEventListener("click", newGame);
+  document.getElementById("modalShuffle").addEventListener("click", shuffleRemaining);
+
+  newGame();
+})();
+</script>
+</body>
+</html>

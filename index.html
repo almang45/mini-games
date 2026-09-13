@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini Games</title>
+<style>
+  :root {
+    --bg: #0f3d2e;
+    --bg-2: #0a2e22;
+    --panel: rgba(0, 0, 0, 0.25);
+    --ink: #f3ead9;
+    --ink-dim: #cfc3ac;
+    --accent: #ffd166;
+    --felt-line: rgba(255, 255, 255, 0.08);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-2) 70%);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  body { padding-inline: 16px; }
+  .shell {
+    max-width: 960px;
+    margin: 0 auto;
+    padding-block: 40px 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+  }
+  h1 {
+    font-size: 1.8rem;
+    margin: 0;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    text-align: center;
+  }
+  .tagline { margin: 0; color: var(--ink-dim); text-align: center; max-width: 520px; }
+  .grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--felt-line);
+    border-radius: 16px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  }
+  .card-emoji { font-size: 2rem; line-height: 1; }
+  .card h2 { margin: 0; font-size: 1.15rem; color: var(--ink); }
+  .card p { margin: 0; color: var(--ink-dim); font-size: 0.88rem; line-height: 1.5; flex: 1; }
+  .card-links { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+  .btn {
+    display: inline-block;
+    text-decoration: none;
+    font-size: 0.85rem;
+    border-radius: 8px;
+    padding: 8px 14px;
+    transition: filter 0.15s ease;
+  }
+  .btn:hover { filter: brightness(1.15); }
+  .btn-primary {
+    background: linear-gradient(180deg, #ffdb85, #e0a83a);
+    color: #2a1c00;
+    font-weight: 600;
+  }
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--ink);
+  }
+  footer { color: var(--ink-dim); font-size: 0.78rem; text-align: center; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <h1>Mini Games</h1>
+    <p class="tagline">A small collection of static, no-build browser games. Pick one below — everything runs client-side, nothing to install.</p>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-emoji">🀄</div>
+      <h2>Mahjong Table</h2>
+      <p>Traditional, competitive 4-player mahjong — Japanese Riichi or Chinese Classical rules, 1 human vs 3 AI or full local hot-seat.</p>
+      <div class="card-links">
+        <a class="btn btn-primary" href="mahjong-table/index.html">Play</a>
+        <a class="btn btn-secondary" href="mahjong-table/guide.html">Rules Guide</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🂡</div>
+      <h2>Card Table</h2>
+      <p>Six classic card games in one table shell — Hearts, Crazy Eights, President, Big Two, Chinese Poker, and Blackjack. Any mix of human/AI seats.</p>
+      <div class="card-links">
+        <a class="btn btn-primary" href="card-games/index.html">Play</a>
+        <a class="btn btn-secondary" href="card-games/guide.html">Rules Guide</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🀫</div>
+      <h2>Mahjong Solitaire</h2>
+      <p>The classic single-player tile-matching puzzle — clear the pyramid layout by pairing free, matching tiles.</p>
+      <div class="card-links">
+        <a class="btn btn-primary" href="mahjong-solitaire/index.html">Play</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Source on <a href="https://github.com/almang45/mini-games">GitHub</a>.</p>
+  </footer>
+</div>
+</body>
+</html>

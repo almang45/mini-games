@@ -1,0 +1,166 @@
+/* Rules-guide page. Loaded alongside style.css: reuses its palette variables,
+   button styles, and the actual seat/tile classes (for the table-anatomy demo)
+   so the guide visually matches the game instead of looking like a bolted-on
+   document. Everything below is guide-specific layout/typography. */
+
+.guide-body { padding-inline: 12px; }
+
+.guide-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-block: 20px 48px;
+}
+
+.guide-header { max-width: 720px; margin: 0 auto 24px; text-align: center; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.guide-header h1 { font-size: 1.5rem; margin: 4px 0 0; }
+.guide-header .tagline { margin: 0; color: var(--ink-dim); font-size: 0.9rem; max-width: 560px; }
+
+.back-link {
+  align-self: flex-start;
+  color: var(--ink-dim);
+  text-decoration: none;
+  font-size: 0.82rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 5px 12px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.back-link:hover { color: var(--accent); border-color: var(--accent); }
+
+.guide-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.guide-toc {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 0.85rem;
+}
+.toc-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-dim); margin-bottom: 4px; }
+.guide-toc a { color: var(--ink); text-decoration: none; padding: 4px 6px; border-radius: 6px; }
+.guide-toc a:hover { background: rgba(255, 255, 255, 0.06); color: var(--accent); }
+
+.guide-content {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+  min-width: 0;
+}
+
+.guide-content section {
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 20px 22px;
+  scroll-margin-top: 16px;
+}
+
+.guide-content h2 {
+  margin: 0 0 12px;
+  color: var(--accent);
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+}
+.guide-content h3 { margin: 20px 0 8px; font-size: 0.95rem; color: var(--ink); }
+.guide-content h3:first-of-type { margin-top: 4px; }
+.guide-content p { line-height: 1.55; color: var(--ink); font-size: 0.9rem; }
+.guide-content ul, .guide-content ol { line-height: 1.6; font-size: 0.9rem; padding-left: 1.3em; }
+.guide-content li { margin-bottom: 4px; }
+.guide-content code {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.85em;
+}
+
+.steps { display: flex; flex-direction: column; gap: 8px; }
+
+.callout {
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  margin: 10px 0;
+}
+.callout-info { background: rgba(59, 127, 209, 0.14); border: 1px solid rgba(59, 127, 209, 0.35); }
+
+/* ---------------------------------------------------------------- table anatomy demo */
+
+.anatomy-demo {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.anatomy-seat { max-width: 320px; }
+.anatomy-callouts { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; }
+.anatomy-callouts strong { color: var(--accent); }
+
+@media (max-width: 700px) {
+  .anatomy-demo { grid-template-columns: 1fr; }
+  .anatomy-seat { max-width: none; }
+}
+
+/* ---------------------------------------------------------------- tables */
+
+.ref-table, .yaku-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin: 8px 0 4px;
+}
+.ref-table th, .ref-table td, .yaku-table th, .yaku-table td {
+  border-bottom: 1px solid var(--felt-line);
+  padding: 7px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.ref-table thead th, .yaku-table thead th {
+  color: var(--ink-dim);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.ref-table tr:last-child td, .yaku-table tr:last-child td { border-bottom: none; }
+.ref-table { overflow-x: auto; display: block; }
+.ref-table tbody, .ref-table thead, .ref-table tr { display: table; width: 100%; table-layout: fixed; }
+
+/* ---------------------------------------------------------------- glossary */
+
+.glossary { display: grid; grid-template-columns: 1fr; gap: 2px 16px; font-size: 0.88rem; }
+.glossary dt { color: var(--accent); font-weight: 600; margin-top: 10px; }
+.glossary dt:first-child { margin-top: 0; }
+.glossary dd { margin: 2px 0 0; color: var(--ink-dim); }
+
+@media (min-width: 640px) {
+  .glossary { grid-template-columns: 1fr 1fr; column-gap: 24px; }
+}
+
+/* ---------------------------------------------------------------- responsive */
+
+@media (max-width: 860px) {
+  .guide-layout { grid-template-columns: 1fr; }
+  .guide-toc {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .toc-title { display: none; }
+  .guide-toc a { border: 1px solid rgba(255, 255, 255, 0.1); }
+}
+
+@media (max-width: 420px) {
+  .guide-header h1 { font-size: 1.2rem; }
+  .guide-content section { padding: 16px; }
+}

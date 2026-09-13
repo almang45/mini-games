@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Table — Rules Guide</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/guide.css">
+</head>
+<body class="guide-body">
+<div class="guide-shell">
+
+  <header class="guide-header">
+    <a class="back-link" href="index.html">&larr; Back to Game</a>
+    <h1>Card Table — Rules Guide</h1>
+    <p class="tagline">Six classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
+  </header>
+
+  <div class="guide-layout">
+    <nav class="guide-toc" aria-label="Table of contents">
+      <div class="toc-title">Contents</div>
+      <a href="#quick-start">Quick Start</a>
+      <a href="#anatomy">Reading the Table</a>
+      <a href="#basics">Universal Basics</a>
+      <a href="#hearts">Hearts</a>
+      <a href="#crazy-eights">Crazy Eights</a>
+      <a href="#president">President</a>
+      <a href="#big-two">Big Two</a>
+      <a href="#chinese-poker">Chinese Poker</a>
+      <a href="#blackjack">Blackjack</a>
+      <a href="#simplifications">Simplifications</a>
+      <a href="#glossary">Glossary</a>
+    </nav>
+
+    <main class="guide-content">
+
+      <section id="quick-start">
+        <h2>Quick Start</h2>
+        <ol class="steps">
+          <li>On the start screen, pick a <strong>game</strong> - Hearts, Crazy Eights, President, Big Two, Chinese Poker, or Blackjack.</li>
+          <li>For each of the 4 seats, choose <strong>Human</strong>, <strong>AI</strong>, or (where allowed) <strong>Off</strong>. One human seat plays "vs AI"; every seat set to Human plays local hot-seat, passing the device around the table.</li>
+          <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Draw, Pass, Play Selected, Hit, Stand, Submit, etc.) when one is lit up. Chinese Poker is the one exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
+          <li>In hot-seat mode, a "Pass the device" screen appears between turns so other players can't see your hand until you're ready.</li>
+        </ol>
+      </section>
+
+      <section id="anatomy">
+        <h2>Reading the Table</h2>
+        <p>Every seat around the table shows the same pieces of information:</p>
+        <div class="anatomy-demo">
+          <div class="seat anatomy-seat is-turn">
+            <div class="seat-header">
+              <span class="seat-name">Seat 2</span>
+              <span class="seat-tag">AI</span>
+              <span class="seat-score">7 pts</span>
+            </div>
+            <div class="seat-hand">
+              <div class="card card-black"><div class="card-corner card-corner-tl"><div class="card-rank">A</div><div class="card-suit">&#9824;</div></div><div class="card-pip">&#9824;</div></div>
+              <div class="card card-red"><div class="card-corner card-corner-tl"><div class="card-rank">Q</div><div class="card-suit">&#9829;</div></div><div class="card-pip">&#9829;</div></div>
+              <div class="card card-back"></div>
+            </div>
+          </div>
+          <ul class="anatomy-callouts">
+            <li><strong>Name &amp; tag</strong> - the seat number plus whether it's an AI, a fellow human, or "You".</li>
+            <li><strong>Score/status</strong> - Hearts shows running points, Crazy Eights shows cards left, President shows your finish place once you're out.</li>
+            <li><strong>Glowing border</strong> - the seat outlined in green is the one currently acting.</li>
+            <li><strong>Hand</strong> - your own cards are face up and clickable; every other seat is shown face down, count only.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="basics">
+        <h2>Universal Basics</h2>
+        <p>All six games share one 52-card deck (no jokers) and the same table chrome:</p>
+        <ul>
+          <li><strong>Turn order</strong> runs clockwise from whoever leads (except Blackjack, where every seat plays against the dealer rather than each other, and Chinese Poker, where everyone arranges privately at the same time).</li>
+          <li><strong>Human vs AI</strong>: the AI seats think for about half a second before acting, so you can follow along.</li>
+          <li><strong>Hot-seat privacy</strong>: with more than one human seat, the app never shows a hand that isn't the active player's - it gates every handoff behind a "Pass the device" screen.</li>
+          <li><strong>The log panel</strong> below the table lists the most recent plays, in case you look away for a second.</li>
+        </ul>
+        <div class="callout callout-info">Seat counts differ by game: Hearts, Big Two, and Chinese Poker are always exactly 4 players; Crazy Eights plays with 2-4; President plays with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
+      </section>
+
+      <section id="hearts">
+        <h2>Hearts</h2>
+        <p><strong>Goal:</strong> finish with the fewest points. Each heart is worth 1 point, and the Queen of Spades is worth 13.</p>
+        <h3>Passing</h3>
+        <p>Before each hand, every player passes 3 cards to a neighbor: left, right, across, then no pass at all - and the cycle repeats. Select 3 cards from your hand and confirm to pass them.</p>
+        <h3>Playing a trick</h3>
+        <ul>
+          <li>Whoever holds the 2 of Clubs leads the very first trick, and must lead that exact card.</li>
+          <li>Everyone else must follow the suit that was led if they can. If you can't follow suit, you may play anything.</li>
+          <li>You can't lead a heart until hearts have been "broken" (played to a previous trick) - unless your entire hand is hearts.</li>
+          <li>On the first trick only, you also can't play a heart or the Queen of Spades unless it's all you have left.</li>
+          <li>The highest card of the suit that was led wins the trick and leads the next one.</li>
+        </ul>
+        <h3>Scoring &amp; shooting the moon</h3>
+        <p>When all 13 tricks are played, each player scores the points in the tricks they won. If one player collects <strong>all 26 points</strong> in a single hand (every heart plus the Queen of Spades), they score <strong>0</strong> instead and everyone else takes 26. Hands repeat until someone reaches 100 points - the <strong>lowest</strong> total wins.</p>
+      </section>
+
+      <section id="crazy-eights">
+        <h2>Crazy Eights</h2>
+        <p><strong>Goal:</strong> be the first to empty your hand.</p>
+        <ul>
+          <li>Each player starts with 7 cards (2-player games) or 5 cards (3-4 player games); the rest form the draw pile, with one card flipped to start the discard pile.</li>
+          <li>On your turn, play a card that matches the <strong>suit</strong> or <strong>rank</strong> of the top discard, or play any <strong>8</strong> as a wild card.</li>
+          <li>Playing an 8 lets you declare the suit that continues play - the next player must match your declared suit (or play another 8).</li>
+          <li>If you have no legal play, draw one card. If it's playable, you may play it immediately or keep it and pass; if it isn't playable, your turn ends automatically.</li>
+          <li>If the draw pile runs out, the discard pile (except its top card) is reshuffled into a new draw pile.</li>
+        </ul>
+        <p>First player to play their last card wins.</p>
+      </section>
+
+      <section id="president">
+        <h2>President</h2>
+        <p><strong>Goal:</strong> be the first to empty your hand. Rank order runs low to high: 3, 4, 5, 6, 7, 8, 9, 10, J, Q, K, A, <strong>2</strong> - the 2 is the highest card in the game.</p>
+        <ul>
+          <li>All 52 cards are dealt out evenly; whoever holds the 3 of Clubs leads the first trick.</li>
+          <li>To lead, play one or more cards of <strong>the same rank</strong> (a single, a pair, a triple, or all four) - you choose how many.</li>
+          <li>Everyone after that must either play the <strong>same number of cards</strong> at a <strong>strictly higher rank</strong>, or pass.</li>
+          <li>Once every other player still in the hand has passed in a row, the pile clears and whoever played last leads next with a fresh pile.</li>
+          <li>As soon as your hand is empty you're done for the round - lower finishers keep playing until only one player is left holding cards.</li>
+        </ul>
+        <p>The game ranks everyone by the order they finished in - first out is President, last one holding cards is the Bum.</p>
+      </section>
+
+      <section id="big-two">
+        <h2>Big Two</h2>
+        <p><strong>Goal:</strong> be the first to empty your hand. Rank order is the same as President - low to high: 3 through 10, J, Q, K, A, <strong>2</strong> - and suits break ties for singles and pairs, low to high: &#9827; &#9830; &#9829; &#9824;.</p>
+        <ul>
+          <li>Exactly 4 players, 13 cards each. Whoever holds the 3 of Diamonds leads the first play, and every lead after that is whoever won the previous pile.</li>
+          <li>A play is a <strong>single</strong>, a <strong>pair</strong>, a <strong>triple</strong>, or a <strong>5-card poker hand</strong> (straight, flush, full house, four-of-a-kind, or straight flush - in that strength order). Any other size is illegal.</li>
+          <li>To beat the pile you must play the <strong>same number of cards</strong> in a <strong>stronger</strong> combination of the same shape - a 5-card play can only be beaten by another 5-card play, ranked by poker strength, not by President's simple rank order.</li>
+          <li>Once everyone else still in the hand has passed in a row, the pile clears and the last player to play leads next.</li>
+        </ul>
+        <p>Ranked by finishing order, same as President.</p>
+      </section>
+
+      <section id="chinese-poker">
+        <h2>Chinese Poker</h2>
+        <p><strong>Goal:</strong> arrange your cards into 3 poker hands that beat as many of the other 3 players' hands as possible, row for row.</p>
+        <ul>
+          <li>Exactly 4 players, 13 cards each, one single round per game - no turns, no leading, everyone arranges privately and at the same time.</li>
+          <li>Split your 13 cards into a <strong>Front</strong> (3 cards), <strong>Middle</strong> (5 cards), and <strong>Back</strong> (5 cards) hand. Click a card in your hand to cycle it between Front, Middle, Back, and unassigned; the small badge on each card shows its current row.</li>
+          <li>Your hands must not get <em>weaker</em> going up the rows: Front &le; Middle &le; Back in poker strength. Front hands only recognize high card, pair, or trips (a 3-card hand can't make a straight or flush).</li>
+          <li>Once you submit, your rows are locked. If your rows are out of order, your whole hand is <strong>fouled</strong> and auto-loses all 3 rows to everyone.</li>
+          <li>When all 4 players have submitted, every pair of players compares Front vs Front, Middle vs Middle, and Back vs Back - 1 point for each row you win, -1 for each you lose, across all 6 pairings.</li>
+        </ul>
+        <p>Ranked by total points after the single round's 18 row comparisons.</p>
+      </section>
+
+      <section id="blackjack">
+        <h2>Blackjack</h2>
+        <p><strong>Goal:</strong> get closer to 21 than the dealer without going over. You play against the dealer, not the other seats.</p>
+        <ul>
+          <li>1-4 players, each dealt 2 cards against the dealer's 2 (one dealer card stays face-down until everyone's done). Number cards count face value, J/Q/K count 10, and an Ace counts 11 or 1 - whichever keeps your hand at or under 21.</li>
+          <li>On your turn: <strong>Hit</strong> (take another card), <strong>Stand</strong> (keep your total), or - on your first two cards only, if you can cover the extra bet - <strong>Double Down</strong> (double your bet, take exactly one more card, then automatically stand).</li>
+          <li>Going over 21 is an automatic loss (a <strong>bust</strong>), regardless of what the dealer ends up with.</li>
+          <li>Once every seat has finished, the dealer flips their hole card and must keep hitting until reaching 17 or more, then stops - "standing on all 17s."</li>
+          <li>A 2-card 21 is a <strong>natural blackjack</strong> and pays 1.5x your bet, unless the dealer also has one (a push - bet returned). Otherwise, closer-to-21-without-busting wins your bet back plus that much again; a tie with the dealer pushes.</li>
+          <li>Every hand bets a flat 25 chips. The session runs a fixed 15 rounds, then ends - ranked by final chip count.</li>
+        </ul>
+      </section>
+
+      <section id="simplifications">
+        <h2>Simplifications</h2>
+        <p>This build favors clean, fast games over tournament-exact rulebooks. Notable differences from "official" rules:</p>
+        <table class="ref-table">
+          <thead><tr><th>Game</th><th>Simplified</th></tr></thead>
+          <tbody>
+            <tr><td>Hearts</td><td>Scoring resets each session (no saved match history); the pass cycle is left/right/across/hold, repeating every 4 hands.</td></tr>
+            <tr><td>Crazy Eights</td><td>No point-scoring across multiple hands - the game ends the moment someone empties their hand. No special-action cards besides the wild 8 (no skip/reverse/draw-two).</td></tr>
+            <tr><td>President</td><td>No jokers, no card-exchange between the President and the Bum between rounds, and no "8 clears the pile" or "revolution" house rules - just pure rank climbing.</td></tr>
+            <tr><td>Big Two</td><td>Only singles, pairs, triples, and 5-card poker hands are legal plays - no other combo sizes. 5-card hands rank by standard poker strength (straight &lt; flush &lt; full house &lt; four-of-a-kind &lt; straight flush), a common but not universal house convention.</td></tr>
+            <tr><td>Chinese Poker</td><td>Single round per game (no multi-round match, no running score across deals). No royalty/bonus points for strong hands (three-of-a-kind in front, four-of-a-kind, straight flushes, etc.) - every row win is worth exactly 1 point. A 3-card Front hand only recognizes high card, pair, or trips.</td></tr>
+            <tr><td>Blackjack</td><td>Flat 25-chip bet every round, no betting UI. Hit, Stand, and Double Down only - no splitting pairs, no surrender, no insurance. Dealer always stands on all 17s (including a soft 17). Fixed 15-round session rather than playing until you're out of chips.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="glossary">
+        <h2>Glossary</h2>
+        <dl class="glossary">
+          <dt>Trick</dt><dd>One card from each player, played in turn and won by the best card (Hearts).</dd>
+          <dt>Broken (hearts)</dt><dd>Once a heart has been played to any trick, hearts may be led from then on.</dd>
+          <dt>Shooting the moon</dt><dd>Winning every point-scoring card in a Hearts hand - scores 0 instead of 26.</dd>
+          <dt>Wild card</dt><dd>An 8 in Crazy Eights - playable on anything, and lets you set the next suit.</dd>
+          <dt>Pile</dt><dd>The set of cards currently in play that must be beaten or passed on, in President or Big Two.</dd>
+          <dt>Combo</dt><dd>A legal play shape in Big Two - single, pair, triple, or 5-card poker hand.</dd>
+          <dt>Foul</dt><dd>A Chinese Poker hand whose Front/Middle/Back rows aren't in ascending strength - auto-loses all 3 rows.</dd>
+          <dt>Natural / Blackjack</dt><dd>A 2-card total of 21 (an Ace plus a 10-value card) - pays 1.5x unless the dealer also has one.</dd>
+          <dt>Bust</dt><dd>A hand total over 21 in Blackjack - an automatic loss regardless of the dealer's hand.</dd>
+          <dt>Hot-seat</dt><dd>Multiple human players sharing one device, taking turns with their hand hidden between turns.</dd>
+        </dl>
+      </section>
+
+    </main>
+  </div>
+</div>
+</body>
+</html>

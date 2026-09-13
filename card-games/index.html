@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Table</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ============================= START SCREEN ============================= -->
+  <section class="screen is-active" id="screen-start">
+    <header class="start-header">
+      <h1>Card Table</h1>
+      <p class="tagline">A collection of classic card games - play solo against AI, or hand the device around for hot-seat multiplayer.</p>
+      <a class="guide-link" href="guide.html">How to Play &amp; Rules Guide &rarr;</a>
+    </header>
+
+    <div class="game-grid" id="gameGrid"></div>
+
+    <div class="start-panel" id="seatSetup" hidden>
+      <div class="field">
+        <div class="field-label">Seats</div>
+        <div class="seat-rows" id="seatRows"></div>
+      </div>
+      <div class="start-actions">
+        <button class="btn-primary" id="startBtn" type="button">Start Game</button>
+      </div>
+      <p class="tagline" id="startWarning" style="min-height: 1.2em;"></p>
+    </div>
+  </section>
+
+  <!-- ============================= TABLE SCREEN ============================= -->
+  <section class="screen" id="screen-table">
+    <div class="table-header">
+      <div class="title-block">
+        <span class="game-title" id="tableTitle">Game</span>
+        <span class="round-info" id="tableStatus"></span>
+      </div>
+      <button class="btn-ghost" id="btnBackToLobby" type="button">&larr; Lobby</button>
+    </div>
+
+    <div class="table-wrap" id="tableWrap">
+      <div class="felt-table" id="feltTable"></div>
+    </div>
+
+    <div class="action-bar" id="actionBar"></div>
+    <div class="log-panel" id="logPanel"></div>
+  </section>
+
+  <!-- ============================= MODALS / OVERLAYS ============================= -->
+  <div class="modal-backdrop" id="suitModal" hidden>
+    <div class="modal-card">
+      <h3 style="margin:0;">Choose the new suit</h3>
+      <div class="suit-choice">
+        <button class="suit-black" id="suitBtnC" type="button">&#9827;</button>
+        <button class="suit-red" id="suitBtnD" type="button">&#9830;</button>
+        <button class="suit-red" id="suitBtnH" type="button">&#9829;</button>
+        <button class="suit-black" id="suitBtnS" type="button">&#9824;</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="interstitialOverlay" hidden>
+    <div class="modal-card">
+      <h3 id="interstitialTitle" style="margin:0;">Pass the device</h3>
+      <p class="tagline" style="margin:0;">Everyone else look away - this seat's hand is about to be revealed.</p>
+      <button class="btn-primary" id="btnInterstitialReady" type="button">I'm ready</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="resultOverlay" hidden>
+    <div class="modal-card">
+      <h3 style="margin:0;">Game Over</h3>
+      <table class="score-table">
+        <thead><tr><th>#</th><th>Player</th><th>Result</th></tr></thead>
+        <tbody id="standingsList"></tbody>
+      </table>
+      <div class="start-actions">
+        <button class="btn-primary" id="btnPlayAgain" type="button">Play Again</button>
+        <button class="btn-ghost" id="btnResultLobby" type="button">Back to Lobby</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/core/cards.js"></script>
+<script src="js/core/dom.js"></script>
+<script src="js/games/hearts.js"></script>
+<script src="js/games/crazy-eights.js"></script>
+<script src="js/games/president.js"></script>
+<script src="js/games/big-two.js"></script>
+<script src="js/games/chinese-poker.js"></script>
+<script src="js/games/blackjack.js"></script>
+<script src="js/ui/hearts-ui.js"></script>
+<script src="js/ui/crazy-eights-ui.js"></script>
+<script src="js/ui/president-ui.js"></script>
+<script src="js/ui/big-two-ui.js"></script>
+<script src="js/ui/chinese-poker-ui.js"></script>
+<script src="js/ui/blackjack-ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

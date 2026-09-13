@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mahjong Table</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ============================= START SCREEN ============================= -->
+  <section class="screen" id="screen-start">
+    <header class="start-header">
+      <h1>Mahjong Table</h1>
+      <p class="tagline">Four-player mahjong, played out on one table.</p>
+      <a class="guide-link" href="guide.html">How to Play &amp; Rules Guide →</a>
+    </header>
+
+    <div class="start-panel">
+      <div class="field">
+        <div class="field-label">Ruleset</div>
+        <div class="segmented" id="rulesetChoice">
+          <label class="seg-option">
+            <input type="radio" name="ruleset" value="riichi" checked>
+            <span>Japanese Riichi</span>
+          </label>
+          <label class="seg-option">
+            <input type="radio" name="ruleset" value="classical">
+            <span>Chinese Classical</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Mode</div>
+        <div class="segmented" id="modeChoice">
+          <label class="seg-option">
+            <input type="radio" name="mode" value="ai" checked>
+            <span>You vs 3 AI</span>
+          </label>
+          <label class="seg-option">
+            <input type="radio" name="mode" value="hotseat">
+            <span>Local hot-seat (pass the device)</span>
+          </label>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-start" id="btnStartGame">Start Game</button>
+      <p class="engine-warning" id="engineWarning" hidden>
+        The rules engine failed to load. Check the browser console for details.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================= TABLE SCREEN ============================= -->
+  <section class="screen" id="screen-table" hidden>
+
+    <div class="table-wrap">
+      <div class="mahjong-table" id="mahjongTable">
+
+        <div class="seat pos-top" id="seat-0" data-seat="0">
+          <div class="seat-header">
+            <span class="wind-badge" data-role="wind">-</span>
+            <span class="seat-name" data-role="name">Seat</span>
+            <span class="dealer-marker" data-role="dealer" hidden>Dealer</span>
+            <span class="riichi-stick" data-role="riichi" hidden title="Riichi declared"></span>
+            <span class="seat-score" data-role="score">25000</span>
+          </div>
+          <div class="seat-melds" data-role="melds"></div>
+          <div class="seat-discards" data-role="discards"></div>
+          <div class="seat-hand" data-role="hand"></div>
+        </div>
+
+        <div class="seat pos-right" id="seat-1" data-seat="1">
+          <div class="seat-header">
+            <span class="wind-badge" data-role="wind">-</span>
+            <span class="seat-name" data-role="name">Seat</span>
+            <span class="dealer-marker" data-role="dealer" hidden>Dealer</span>
+            <span class="riichi-stick" data-role="riichi" hidden title="Riichi declared"></span>
+            <span class="seat-score" data-role="score">25000</span>
+          </div>
+          <div class="seat-melds" data-role="melds"></div>
+          <div class="seat-discards" data-role="discards"></div>
+          <div class="seat-hand" data-role="hand"></div>
+        </div>
+
+        <div class="seat pos-bottom" id="seat-2" data-seat="2">
+          <div class="seat-header">
+            <span class="wind-badge" data-role="wind">-</span>
+            <span class="seat-name" data-role="name">Seat</span>
+            <span class="dealer-marker" data-role="dealer" hidden>Dealer</span>
+            <span class="riichi-stick" data-role="riichi" hidden title="Riichi declared"></span>
+            <span class="seat-score" data-role="score">25000</span>
+          </div>
+          <div class="seat-melds" data-role="melds"></div>
+          <div class="seat-discards" data-role="discards"></div>
+          <div class="seat-hand" data-role="hand"></div>
+        </div>
+
+        <div class="seat pos-left" id="seat-3" data-seat="3">
+          <div class="seat-header">
+            <span class="wind-badge" data-role="wind">-</span>
+            <span class="seat-name" data-role="name">Seat</span>
+            <span class="dealer-marker" data-role="dealer" hidden>Dealer</span>
+            <span class="riichi-stick" data-role="riichi" hidden title="Riichi declared"></span>
+            <span class="seat-score" data-role="score">25000</span>
+          </div>
+          <div class="seat-melds" data-role="melds"></div>
+          <div class="seat-discards" data-role="discards"></div>
+          <div class="seat-hand" data-role="hand"></div>
+        </div>
+
+        <div class="table-center" id="tableCenter">
+          <div class="center-info">
+            <div class="info-chip" id="roundIndicator">East 1</div>
+            <div class="info-chip" id="honbaIndicator">0 honba</div>
+            <div class="info-chip" id="wallCount">Wall 70</div>
+            <div class="info-chip" id="riichiPot">Sticks 0</div>
+          </div>
+          <div class="dora-area" id="doraArea" hidden>
+            <span class="dora-label">Dora ind.</span>
+            <div class="dora-tiles" id="doraTiles"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="action-bar" id="actionBar">
+      <div class="turn-actions" id="turnActions" hidden>
+        <span class="action-hint">Your turn</span>
+        <button class="btn btn-action" id="btnRiichi" disabled>Riichi</button>
+        <button class="btn btn-action" id="btnTsumo" disabled>Tsumo</button>
+        <div class="kan-options" id="kanOptions"></div>
+      </div>
+      <div class="call-actions" id="callActions" hidden></div>
+    </div>
+
+    <div class="event-log" id="eventLog" aria-live="polite"></div>
+  </section>
+
+  <!-- ============================= GAME OVER SCREEN ============================= -->
+  <section class="screen" id="screen-gameover" hidden>
+    <h1>Game Over</h1>
+    <div class="standings-list" id="finalStandings"></div>
+    <button class="btn btn-primary" id="btnBackToStart">New Game</button>
+  </section>
+
+</div>
+
+<!-- ============================= HOT-SEAT INTERSTITIAL ============================= -->
+<div class="overlay" id="passDeviceOverlay" hidden>
+  <div class="modal pass-modal">
+    <h2 id="passDeviceTitle">Pass the device to South</h2>
+    <p>Make sure no other player can see the screen, then continue.</p>
+    <button class="btn btn-primary" id="btnPassReady">Ready</button>
+  </div>
+</div>
+
+<!-- ============================= HAND RESULT MODAL (win) ============================= -->
+<div class="overlay" id="resultOverlay" hidden>
+  <div class="modal modal-result">
+    <h2 id="resultTitle">Result</h2>
+    <div class="yaku-list" id="resultYaku"></div>
+    <div class="result-points" id="resultPoints"></div>
+    <div class="score-changes" id="resultScoreChanges"></div>
+    <button class="btn btn-primary" id="btnContinueHand">Continue</button>
+  </div>
+</div>
+
+<!-- ============================= EXHAUSTIVE DRAW MODAL ============================= -->
+<div class="overlay" id="drawOverlay" hidden>
+  <div class="modal modal-draw">
+    <h2>Exhaustive Draw</h2>
+    <div class="tenpai-list" id="drawTenpaiList"></div>
+    <button class="btn btn-primary" id="btnContinueDraw">Continue</button>
+  </div>
+</div>
+
+<script src="js/tiles.js"></script>
+<script src="js/hand.js"></script>
+<script src="js/yaku-riichi.js"></script>
+<script src="js/score-riichi.js"></script>
+<script src="js/score-classical.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

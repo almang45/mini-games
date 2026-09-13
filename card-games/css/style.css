@@ -1,0 +1,343 @@
+/* Card Table - presentational layer. Palette/table treatment follows the
+   sibling mahjong-table page for visual family resemblance across this
+   project's static-HTML game collection. */
+
+:root {
+  --bg: #0f3d2e;
+  --bg-2: #0a2e22;
+  --panel: rgba(0, 0, 0, 0.25);
+  --panel-strong: rgba(0, 0, 0, 0.4);
+  --ink: #f3ead9;
+  --ink-dim: #cfc3ac;
+  --accent: #ffd166;
+  --card-face: #fdf8ee;
+  --card-border: #8a7452;
+  --card-red: #b3352c;
+  --card-black: #1c1c1c;
+  --card-back-a: #2a6b4c;
+  --card-back-b: #1c4a34;
+  --danger: #e0554f;
+  --ok: #6ad48a;
+  --felt-line: rgba(255, 255, 255, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+/* Author rules below give several [hidden] elements (modals, the seat-setup
+   panel) a non-default `display` value, which - per normal CSS cascade rules -
+   silently overrides the browser's built-in `[hidden]{display:none}` UA
+   style even though nothing here looks wrong in isolation. Restate it with
+   !important so toggling the `hidden` property always actually hides. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-2) 70%);
+  color: var(--ink);
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body { padding-inline: 12px; }
+
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-block: 16px 32px;
+  gap: 16px;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 0;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+.tagline { margin: 4px 0 0; color: var(--ink-dim); font-size: 0.9rem; text-align: center; }
+.guide-link { color: var(--accent); font-size: 0.85rem; text-decoration: none; }
+.guide-link:hover { text-decoration: underline; }
+
+button {
+  font: inherit;
+  font-size: 0.85rem;
+  background: linear-gradient(180deg, #2a6b4c, #1c4a34);
+  color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: transform 0.1s ease, filter 0.15s ease;
+}
+button:hover { filter: brightness(1.15); }
+button:active { transform: translateY(1px) scale(0.98); }
+button:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+
+.btn-primary {
+  background: linear-gradient(180deg, #ffdb85, #e0a83a);
+  color: #2a1c00;
+  border-color: rgba(0, 0, 0, 0.2);
+  font-weight: 600;
+}
+.btn-danger { background: linear-gradient(180deg, #e0736c, #b3352c); }
+.btn-ghost { background: transparent; border-color: rgba(255, 255, 255, 0.25); }
+
+.screen { width: 100%; display: none; flex-direction: column; align-items: center; gap: 16px; }
+.screen.is-active { display: flex; }
+
+/* ------------------------------------------------------------- start screen */
+
+.start-header { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+.game-card {
+  background: var(--panel);
+  border: 1px solid var(--felt-line);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.game-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+.game-card.is-selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.game-card h3 { margin: 0; color: var(--accent); font-size: 1.05rem; }
+.game-card p { margin: 0; color: var(--ink-dim); font-size: 0.82rem; line-height: 1.4; }
+.game-card .game-meta { font-size: 0.72rem; color: var(--ink-dim); opacity: 0.8; }
+
+.start-panel {
+  width: 100%;
+  max-width: 560px;
+  background: var(--panel);
+  border: 1px solid var(--felt-line);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field-label { font-size: 0.78rem; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+
+.seat-rows { display: flex; flex-direction: column; gap: 8px; }
+.seat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel-strong);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.seat-row .seat-row-label { flex: 0 0 78px; font-weight: 600; font-size: 0.85rem; }
+.seat-row .segmented { flex: 1; }
+
+.segmented { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid var(--felt-line); }
+.seg-option {
+  flex: 1;
+  text-align: center;
+  padding: 7px 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background: transparent;
+  color: var(--ink-dim);
+  border-right: 1px solid var(--felt-line);
+}
+.seg-option:last-child { border-right: none; }
+.seg-option.is-active { background: var(--accent); color: #2a1c00; font-weight: 600; }
+.seg-option.is-disabled { opacity: 0.35; cursor: not-allowed; }
+
+.start-actions { display: flex; justify-content: center; gap: 10px; }
+
+/* -------------------------------------------------------------- table screen */
+
+.table-wrap {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 140px 1fr 140px;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas: "top top top" "left center right" "bottom bottom bottom";
+  gap: 10px;
+  align-items: center;
+}
+
+.felt-table {
+  grid-area: center;
+  background: radial-gradient(ellipse at center, #164a35 0%, #0d3225 100%);
+  border-radius: 16px;
+  border: 6px solid #0a2419;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 12px;
+}
+
+.seat { display: flex; flex-direction: column; gap: 6px; align-items: center; min-width: 0; }
+.seat.pos-top { grid-area: top; }
+.seat.pos-right { grid-area: right; }
+.seat.pos-bottom { grid-area: bottom; }
+.seat.pos-left { grid-area: left; }
+.seat.pos-bottom { padding-top: 4px; }
+
+.seat-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel-strong);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+}
+.seat-header .seat-name { font-weight: 600; }
+.seat-header .seat-tag { font-size: 0.68rem; color: var(--ink-dim); }
+.seat.is-turn .seat-header { box-shadow: 0 0 0 2px var(--ok); }
+.seat-header .seat-score { margin-left: 6px; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+.seat-hand { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; min-height: 70px; }
+.seat.pos-left .seat-hand, .seat.pos-right .seat-hand { flex-direction: column; }
+
+/* --------------------------------------------------------------- card faces */
+
+.card {
+  width: 46px;
+  height: 64px;
+  background: var(--card-face);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  position: relative;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+  user-select: none;
+}
+.card.card-small { width: 32px; height: 45px; }
+.card.card-selected { transform: translateY(-10px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); }
+.card.selectable, .card[data-clickable] { cursor: pointer; }
+.card:not(.card-disabled):not(.card-back):hover { transform: translateY(-4px); }
+.card-disabled { filter: grayscale(0.5) brightness(0.8); cursor: not-allowed; }
+
+.card-back {
+  background: repeating-linear-gradient(45deg, var(--card-back-a), var(--card-back-a) 6px, var(--card-back-b) 6px, var(--card-back-b) 12px);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.card-corner { position: absolute; line-height: 1; font-weight: 700; font-size: 0.72rem; text-align: center; }
+.card-corner-tl { top: 3px; left: 4px; }
+.card-corner-br { bottom: 3px; right: 4px; transform: rotate(180deg); }
+.card-small .card-corner { font-size: 0.6rem; }
+.card-pip { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; opacity: 0.85; }
+.card-small .card-pip { font-size: 1rem; }
+.card-red .card-rank, .card-red .card-suit, .card-red .card-pip { color: var(--card-red); }
+.card-black .card-rank, .card-black .card-suit, .card-black .card-pip { color: var(--card-black); }
+
+.card-tag {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1.3;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: #2a1c00;
+}
+
+.pile-area { display: flex; gap: -18px; align-items: center; justify-content: center; }
+.pile-area .card + .card { margin-left: -18px; }
+.center-label { position: absolute; top: 6px; left: 0; right: 0; text-align: center; font-size: 0.7rem; color: var(--ink-dim); letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* Unlike .center-label, this sits in normal document flow - used when more
+   than one caption stacks vertically (Chinese Poker's Front/Middle/Back
+   row previews), where absolute positioning would pile every caption on
+   top of the others at the same spot. */
+.row-label { text-align: center; font-size: 0.7rem; color: var(--ink-dim); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px; }
+
+/* Chinese Poker row previews: small cards shown fully side by side (no
+   overlap) so every rank/suit stays legible even at 32px card width, unlike
+   .pile-area's overlapping fan which is tuned for full-size cards. */
+.row-cards { display: flex; gap: 3px; align-items: center; justify-content: center; flex-wrap: wrap; }
+
+/* Chinese Poker post-game showdown: every seat's Front/Middle/Back reveal,
+   laid out as a wrapping grid of per-seat cards so all 4 arrangements are
+   visible at once instead of just a log summary. */
+.showdown-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; padding: 6px 2px; max-height: 100%; overflow-y: auto; }
+.showdown-seat { background: rgba(0, 0, 0, 0.18); border-radius: 8px; padding: 6px 8px; min-width: 150px; }
+.showdown-seat-name { text-align: center; font-weight: 600; font-size: 0.8rem; margin-bottom: 2px; }
+
+.trick-slot { position: absolute; width: 46px; height: 64px; }
+.trick-slot.pos-bottom { bottom: 8px; left: 50%; transform: translateX(-50%); }
+.trick-slot.pos-top { top: 8px; left: 50%; transform: translateX(-50%); }
+.trick-slot.pos-left { left: 8px; top: 50%; transform: translateY(-50%); }
+.trick-slot.pos-right { right: 8px; top: 50%; transform: translateY(-50%); }
+
+/* ------------------------------------------------------------------ chrome */
+
+.table-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.table-header .title-block { display: flex; flex-direction: column; }
+.table-header .title-block .game-title { color: var(--accent); font-weight: 700; }
+.table-header .title-block .round-info { font-size: 0.78rem; color: var(--ink-dim); }
+
+.action-bar { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; width: 100%; }
+
+.log-panel {
+  width: 100%;
+  max-height: 110px;
+  overflow-y: auto;
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.log-panel .log-entry.is-fresh { color: var(--ink); }
+
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: center; justify-content: center; z-index: 20;
+}
+.modal-card {
+  background: var(--bg-2); border: 1px solid var(--felt-line); border-radius: 12px;
+  padding: 20px; display: flex; flex-direction: column; gap: 12px; max-width: 340px; text-align: center;
+}
+.suit-choice { display: flex; gap: 10px; justify-content: center; }
+.suit-choice button { font-size: 1.4rem; width: 54px; height: 54px; padding: 0; }
+.suit-choice button.suit-red { color: var(--card-red); background: var(--card-face); }
+.suit-choice button.suit-black { color: var(--card-black); background: var(--card-face); }
+
+.score-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.score-table th, .score-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--felt-line); }
+.score-table th { color: var(--accent); }
+
+@media (max-width: 640px) {
+  .table-wrap { grid-template-columns: 70px 1fr 70px; }
+  .card { width: 36px; height: 50px; }
+  .card-corner { font-size: 0.58rem; }
+  .card-pip { font-size: 1rem; }
+  .seat-row .seat-row-label { flex-basis: 60px; font-size: 0.78rem; }
+}

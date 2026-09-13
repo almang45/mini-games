@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mahjong Table — Rules Guide</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/guide.css">
+</head>
+<body class="guide-body">
+<div class="guide-shell">
+
+  <header class="guide-header">
+    <a class="back-link" href="index.html">← Back to Game</a>
+    <h1>Mahjong Table — Rules Guide</h1>
+    <p class="tagline">Everything you need to sit down at the table: how to read it, how to play, and exactly how each ruleset scores.</p>
+  </header>
+
+  <div class="guide-layout">
+    <nav class="guide-toc" aria-label="Table of contents">
+      <div class="toc-title">Contents</div>
+      <a href="#quick-start">Quick Start</a>
+      <a href="#anatomy">Reading the Table</a>
+      <a href="#basics">Universal Basics</a>
+      <a href="#controls">Controls Reference</a>
+      <a href="#riichi">Japanese Riichi</a>
+      <a href="#classical">Chinese Classical</a>
+      <a href="#glossary">Glossary</a>
+      <a href="#simplifications">Simplifications</a>
+    </nav>
+
+    <main class="guide-content">
+
+      <section id="quick-start">
+        <h2>Quick Start</h2>
+        <ol class="steps">
+          <li>On the start screen, pick a <strong>ruleset</strong> — Japanese Riichi or Chinese Classical — and a <strong>mode</strong> — You vs 3 AI, or local hot-seat (4 humans passing one device).</li>
+          <li>On your turn, either <strong>click a tile in your hand</strong> to discard it, or use a button in the action bar (Riichi, Tsumo, or a Kan option) if it's lit up.</li>
+          <li>When someone else discards a tile you can call, a call panel appears — choose Pon / Chi / Kan / Ron, or Pass.</li>
+          <li>In hot-seat mode, the app shows a "Pass the device" screen between turns so other players can't see your hand.</li>
+        </ol>
+      </section>
+
+      <section id="anatomy">
+        <h2>Reading the Table</h2>
+        <p>Every seat panel around the table shows the same pieces of information:</p>
+        <div class="anatomy-demo">
+          <div class="seat anatomy-seat">
+            <div class="seat-header">
+              <span class="wind-badge">南</span>
+              <span class="seat-name">South (You)</span>
+              <span class="dealer-marker">Dealer</span>
+              <span class="riichi-stick" title="Riichi declared"></span>
+              <span class="seat-score">27400</span>
+            </div>
+            <div class="seat-melds">
+              <div class="meld-group">
+                <div class="tile-mini">🀇</div><div class="tile-mini">🀈</div><div class="tile-mini">🀉</div>
+              </div>
+            </div>
+            <div class="seat-discards">
+              <div class="discard-tile">🀐</div><div class="discard-tile">🀃</div><div class="discard-tile">🀆</div>
+            </div>
+            <div class="seat-hand">
+              <div class="hand-tile">🀙</div><div class="hand-tile">🀚</div><div class="hand-tile">🀛</div>
+              <div class="hand-tile drawn">🀜</div>
+            </div>
+          </div>
+          <ul class="anatomy-callouts">
+            <li><strong>Wind badge</strong> — this seat's own seat wind (changes each hand as the deal rotates).</li>
+            <li><strong>Dealer marker</strong> — shown only on the current dealer (East); the dealer's hand pays/wins double.</li>
+            <li><strong>Riichi stick</strong> — appears once this seat has declared Riichi (Riichi ruleset only).</li>
+            <li><strong>Score</strong> — running point total.</li>
+            <li><strong>Melds</strong> — called/completed sets (chi, pon, kan) laid face-up.</li>
+            <li><strong>Discards</strong> — every tile this seat has thrown away this hand, in order.</li>
+            <li><strong>Hand</strong> — this seat's concealed tiles; the most recently drawn tile is outlined.</li>
+          </ul>
+        </div>
+        <p>The table center shows the round (e.g. "East 1"), honba count, tiles left in the wall, and the riichi-stick pot. In Riichi, a dora indicator strip appears once the hand starts.</p>
+      </section>
+
+      <section id="basics">
+        <h2>Universal Basics</h2>
+        <p>Both rulesets share the same skeleton: four seats, a shuffled wall of tiles, and a repeating draw/discard cycle.</p>
+        <ul>
+          <li><strong>Goal</strong>: be the first to complete a hand of <strong>4 sets + 1 pair</strong> (14 tiles total counting the winning tile) — or, in either ruleset, the special all-pairs shape <strong>Seven Pairs</strong>. A "set" is either a <em>run</em> (3 consecutive tiles, same suit), a <em>triplet</em> (3 identical tiles), or a <em>kan</em> (4 identical tiles).</li>
+          <li><strong>Turn order</strong> is counter-clockwise: East → South → West → North → East…</li>
+          <li><strong>Each turn</strong>: draw a tile, then discard one (unless you complete your hand and declare a win instead).</li>
+          <li><strong>Calls</strong>, made on someone else's discard, jump the normal turn order:
+            <ul>
+              <li><strong>Chi</strong> — claim the tile to complete a run; only the player to your left's discard is eligible.</li>
+              <li><strong>Pon</strong> — claim the tile to complete a triplet; any seat's discard is eligible.</li>
+              <li><strong>Kan</strong> — claim the tile to complete a set of 4; draws a bonus replacement tile afterward.</li>
+              <li><strong>Ron</strong> — claim the tile as your winning tile, ending the hand immediately.</li>
+            </ul>
+            Ron always outranks Pon/Kan, which outrank Chi, if more than one seat wants the same discard.
+          </li>
+          <li>A hand also ends in an <strong>exhaustive draw</strong> if the wall runs out before anyone wins.</li>
+        </ul>
+      </section>
+
+      <section id="controls">
+        <h2>Controls Reference</h2>
+        <table class="ref-table">
+          <thead><tr><th>Control</th><th>When it appears</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>Click a hand tile</td><td>Your turn, no riichi lock</td><td>Discards that tile.</td></tr>
+            <tr><td><strong>Riichi</strong> button</td><td>Riichi ruleset, your turn, hand is closed and one discard away from tenpai (waiting), score ≥ 1000</td><td>Declares Riichi: locks your hand (you may only discard the tile you just drew from then on) and puts 1000 points into the table's riichi-stick pot in exchange for extra yaku and revealing ura-dora if you win.</td></tr>
+            <tr><td><strong>Tsumo</strong> button</td><td>Your just-drawn tile completes your hand</td><td>Declares a self-drawn win.</td></tr>
+            <tr><td>Kan options</td><td>You hold 4-of-a-kind, or can add a 4th tile to an existing pon</td><td>Declares a closed or added kan; you draw a replacement tile and (Riichi) a new dora indicator flips.</td></tr>
+            <tr><td><strong>Pon / Chi / Kan / Ron</strong> (call panel)</td><td>Someone else just discarded a tile you can legally call</td><td>Claims the discard as described above.</td></tr>
+            <tr><td><strong>Pass</strong></td><td>Same call panel</td><td>Declines the call; play continues normally.</td></tr>
+            <tr><td><strong>Ready</strong></td><td>Hot-seat mode, between turns</td><td>Confirms the device has been handed to the next player before their hand is shown.</td></tr>
+            <tr><td><strong>Continue</strong></td><td>After a win or exhaustive draw</td><td>Dismisses the result popup and starts the next hand.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ============================= RIICHI ============================= -->
+      <section id="riichi">
+        <h2>Japanese Riichi</h2>
+
+        <h3>Hand shape &amp; winning</h3>
+        <p>A winning hand is either <strong>4 sets + 1 pair</strong>, <strong>Seven Pairs</strong> (7 unique pairs, hand must be fully closed), or the rare <strong>Kokushi Musou</strong> shape (one of each terminal/honor tile, plus a pair among them). On top of having the right shape, you need at least one <strong>yaku</strong> (scoring pattern) to actually win — a shape with zero yaku cannot be declared.</p>
+
+        <h3>Riichi, dora, and related mechanics</h3>
+        <ul>
+          <li><strong>Riichi</strong>: declare it when your hand is closed, ≥1000 points, and one tile away from complete (tenpai). Costs 1000 points (returned to whoever eventually wins the riichi-stick pot). After declaring, you can only discard the tile you just drew — no more hand rearranging.</li>
+          <li><strong>Ippatsu</strong>: win within your very next go-around after declaring riichi, with no calls made by anyone in between.</li>
+          <li><strong>Dora</strong>: bonus-point indicator tiles revealed at hand start (and one more per kan). Each dora tile in your hand adds 1 han. <strong>Ura-dora</strong> (hidden dora) only counts if you declared riichi and then won.</li>
+          <li><strong>Furiten</strong>: if any tile that would complete your hand is sitting in your own discard pile, you cannot Ron (you may still Tsumo). This implementation only tracks <em>permanent</em> furiten — see Simplifications below.</li>
+          <li><strong>Kan</strong>: closed (ankan) from 4 tiles in hand, or added (shouminkan) by adding a 4th tile to your own pon. Either draws a replacement tile from the dead wall and flips a new dora indicator. Once you've declared riichi, you can no longer kan.</li>
+        </ul>
+
+        <h3>Yaku (scoring patterns)</h3>
+        <p>Every winning hand needs at least one of these. Han values shown are <strong>closed hand</strong> / <strong>open hand</strong> where they differ.</p>
+        <table class="yaku-table">
+          <thead><tr><th>Yaku</th><th>Han</th><th>Requirement</th></tr></thead>
+          <tbody>
+            <tr><td>Riichi</td><td>1</td><td>Declared riichi this hand.</td></tr>
+            <tr><td>Double Riichi</td><td>2</td><td>Riichi declared on your very first discard, before any call at the table.</td></tr>
+            <tr><td>Ippatsu</td><td>1</td><td>Won within one go-around of riichi, no calls in between.</td></tr>
+            <tr><td>Menzen Tsumo</td><td>1</td><td>Self-drawn win with a fully closed hand.</td></tr>
+            <tr><td>Pinfu</td><td>1</td><td>Closed hand, all runs, non-yakuhai pair, two-sided wait.</td></tr>
+            <tr><td>Tanyao (All Simples)</td><td>1</td><td>No terminals (1s/9s) or honor tiles anywhere in the hand.</td></tr>
+            <tr><td>Iipeikou</td><td>1</td><td>Closed hand, two identical runs (e.g. 234m + 234m).</td></tr>
+            <tr><td>Yakuhai</td><td>1 each</td><td>A triplet/kan of a dragon, your seat wind, or the round wind (each qualifying group counts separately).</td></tr>
+            <tr><td>Haitei / Houtei</td><td>1</td><td>Tsumo on the very last wall tile / Ron on the very last discard.</td></tr>
+            <tr><td>Rinshan Kaihou</td><td>1</td><td>Tsumo on a kan's replacement tile.</td></tr>
+            <tr><td>Chankan</td><td>1</td><td>Ron by robbing someone else's added kan.</td></tr>
+            <tr><td>Sanshoku Doujun</td><td>2 / 1</td><td>The same run in all three suits (e.g. 456m/456p/456s).</td></tr>
+            <tr><td>Ittsu (Pure Straight)</td><td>2 / 1</td><td>1-9 of one suit as three runs (123/456/789).</td></tr>
+            <tr><td>Chanta</td><td>2 / 1</td><td>Every set and the pair contain a terminal or honor.</td></tr>
+            <tr><td>Junchan</td><td>3 / 2</td><td>Like Chanta, but terminals only — no honors anywhere.</td></tr>
+            <tr><td>Toitoitsu (All Triplets)</td><td>2</td><td>All four sets are triplets/kans.</td></tr>
+            <tr><td>Sanankou</td><td>2</td><td>Three concealed triplets/kans.</td></tr>
+            <tr><td>Honroutou</td><td>2</td><td>Every tile is a terminal or honor (with triplets, not runs).</td></tr>
+            <tr><td>Shousangen</td><td>2</td><td>Two dragon triplets + the third dragon as the pair.</td></tr>
+            <tr><td>Ryanpeikou</td><td>3</td><td>Closed hand, two separate pairs of identical runs.</td></tr>
+            <tr><td>Honitsu</td><td>3 / 2</td><td>One suit plus honors only.</td></tr>
+            <tr><td>Chinitsu</td><td>6 / 5</td><td>One suit only, no honors at all.</td></tr>
+            <tr><td>Chiitoitsu (Seven Pairs)</td><td>2</td><td>Seven unique pairs; hand must be closed.</td></tr>
+            <tr><td>Dora / Ura-dora</td><td>1 each</td><td>Not a yaku by itself — only counts alongside a real yaku.</td></tr>
+          </tbody>
+        </table>
+        <p class="callout callout-info">Yakuman (limit hands, 13 han): <strong>Kokushi Musou</strong>, <strong>Suuankou</strong> (four concealed triplets), <strong>Daisangen</strong> (all three dragon triplets), <strong>Shousuushi</strong> / <strong>Daisuushi</strong> (three or four wind triplets), <strong>Tsuuiisou</strong> (all honors), <strong>Chinroutou</strong> (all terminals), <strong>Ryuuiisou</strong> (all green tiles). See Simplifications for the two classic yakuman this build does <em>not</em> implement.</p>
+
+        <h3>Fu (bonus points)</h3>
+        <p>Fu adds a second scoring dimension on top of han. Start at 20 and add:</p>
+        <table class="ref-table">
+          <tbody>
+            <tr><td>Triplet, simple tiles</td><td>open +2 / closed +4</td></tr>
+            <tr><td>Triplet, terminal or honor</td><td>open +4 / closed +8</td></tr>
+            <tr><td>Kan, simple tiles</td><td>open +8 / closed +16</td></tr>
+            <tr><td>Kan, terminal or honor</td><td>open +16 / closed +32</td></tr>
+            <tr><td>Pair is a dragon, your seat wind, or the round wind</td><td>+2 each (a double-wind pair, e.g. dealer's East-round pair, stacks to +4)</td></tr>
+            <tr><td>Wait was penchan / kanchan / tanki</td><td>+2</td></tr>
+            <tr><td>Won by tsumo</td><td>+2</td></tr>
+            <tr><td>Won by ron with a closed hand</td><td>+10</td></tr>
+          </tbody>
+        </table>
+        <p>Total is rounded up to the nearest 10. <strong>Pinfu</strong> is a fixed exception: 20 fu on tsumo, 30 fu on ron, ignoring the table above. Chiitoitsu is always exactly 25 fu.</p>
+
+        <h3>Scoring reference</h3>
+        <p>Base points = <code>fu × 2^(2+han)</code>, capped at the Mangan value once it would exceed 2000 — then fixed tiers take over at 5+ han. A few common results (points paid, non-dealer winner):</p>
+        <table class="ref-table">
+          <thead><tr><th>Han / Fu</th><th>Ron (paid by discarder)</th><th>Tsumo (dealer / each non-dealer)</th></tr></thead>
+          <tbody>
+            <tr><td>1 han, 30 fu</td><td>1000</td><td>500 / 300</td></tr>
+            <tr><td>2 han, 30 fu</td><td>2000</td><td>1000 / 500</td></tr>
+            <tr><td>3 han, 30 fu</td><td>3900</td><td>2000 / 1000</td></tr>
+            <tr><td>4 han, 30 fu</td><td>7700</td><td>3900 / 2000</td></tr>
+            <tr><td>Mangan (5 han, or capped)</td><td>8000</td><td>4000 / 2000</td></tr>
+            <tr><td>Haneman (6-7 han)</td><td>12000</td><td>6000 / 3000</td></tr>
+            <tr><td>Baiman (8-10 han)</td><td>16000</td><td>8000 / 4000</td></tr>
+            <tr><td>Sanbaiman (11-12 han)</td><td>24000</td><td>12000 / 6000</td></tr>
+            <tr><td>Yakuman (13+ han)</td><td>32000</td><td>16000 / 8000</td></tr>
+          </tbody>
+        </table>
+        <p>The dealer pays/receives 1.5× these non-dealer figures (e.g. a dealer Ron win at 3han/30fu is 5800, and on Tsumo every other seat pays 2000 instead of splitting dealer/non-dealer amounts). Add 300 per honba on ron, or 100-per-payer per honba on tsumo, on top of the table above.</p>
+
+        <h3>Game length</h3>
+        <p>A full game is a <strong>hanchan</strong>: East round then South round, 4 hands each (8 total, more with repeats/draws), or it ends early if any player's score drops below zero.</p>
+      </section>
+
+      <!-- ============================= CLASSICAL ============================= -->
+      <section id="classical">
+        <h2>Chinese Classical</h2>
+        <p class="callout callout-info">"Chinese Classical" scoring was never standardized the way modern competitive Riichi is — regional rule sets differ significantly. This build uses one clearly-defined, internally consistent <strong>doubling-point</strong> variant, documented in full below rather than assumed.</p>
+
+        <h3>Hand shape &amp; winning</h3>
+        <p>Same target shape as Riichi's basic case: <strong>4 sets + 1 pair</strong>, or <strong>Seven Pairs</strong>. There is no riichi declaration, no dora, and no ura-dora in this ruleset — none of those are classical concepts.</p>
+
+        <h3>Scoring: doubling points</h3>
+        <p>Score = <code>8 base points × 2^(doubles)</code>, capped at 8 doubles (2048 points), doubled again for the dealer. Each pattern below contributes doubles; a hand can combine several. A few shapes (All Honors, All Terminals, Great Three/Four Dragons or Winds) score at the maximum instantly regardless of anything else.</p>
+        <table class="yaku-table">
+          <thead><tr><th>Pattern</th><th>Doubles</th></tr></thead>
+          <tbody>
+            <tr><td>Seven Pairs</td><td>2</td></tr>
+            <tr><td>Concealed Hand (won by discard, fully closed)</td><td>1</td></tr>
+            <tr><td>Self-Drawn</td><td>1</td></tr>
+            <tr><td>Closed Wait (tanki / kanchan / penchan)</td><td>1</td></tr>
+            <tr><td>Dragon Triplet</td><td>1 (per dragon)</td></tr>
+            <tr><td>Seat Wind Triplet</td><td>1</td></tr>
+            <tr><td>Round Wind Triplet</td><td>1</td></tr>
+            <tr><td>Small Three Dragons (2 dragon triplets + dragon pair)</td><td>2</td></tr>
+            <tr><td>Small Four Winds (3 wind triplets + wind pair)</td><td>3</td></tr>
+            <tr><td>All Triplets (Peng Peng Hu)</td><td>1</td></tr>
+            <tr><td>All Simples</td><td>1</td></tr>
+            <tr><td>Half Flush (one suit + honors)</td><td>1</td></tr>
+            <tr><td>Full Flush (one suit, no honors)</td><td>3</td></tr>
+          </tbody>
+        </table>
+        <table class="ref-table">
+          <thead><tr><th>Doubles</th><th>Non-dealer score</th><th>Dealer score</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>8</td><td>16</td></tr>
+            <tr><td>1</td><td>16</td><td>32</td></tr>
+            <tr><td>2</td><td>32</td><td>64</td></tr>
+            <tr><td>3</td><td>64</td><td>128</td></tr>
+            <tr><td>4</td><td>128</td><td>256</td></tr>
+            <tr><td>5+</td><td>doubles again each step, capping at 2048 / 4096</td><td></td></tr>
+          </tbody>
+        </table>
+
+        <h3>Payment convention</h3>
+        <p>This is the biggest practical difference from Riichi:</p>
+        <ul>
+          <li><strong>Won off a discard</strong>: only the discarder pays the full score.</li>
+          <li><strong>Won by self-draw</strong>: <em>every</em> other player pays the full score (not split three ways).</li>
+          <li><strong>Dealer win</strong>: whichever of the above applies, the payment amount is doubled.</li>
+        </ul>
+
+        <h3>Game length</h3>
+        <p>Played as a fixed number of hands (round limit set at game start) rather than Riichi's East+South structure.</p>
+      </section>
+
+      <section id="glossary">
+        <h2>Glossary</h2>
+        <dl class="glossary">
+          <dt>Tenpai</dt><dd>One tile away from a complete hand.</dd>
+          <dt>Noten</dt><dd>Not tenpai — more than one tile away from complete.</dd>
+          <dt>Shanten</dt><dd>How many tiles away from tenpai a hand is (0 = tenpai already).</dd>
+          <dt>Menzen</dt><dd>A hand with no open (called) melds — fully concealed except possibly closed kans.</dd>
+          <dt>Ron</dt><dd>Winning by claiming someone else's discard.</dd>
+          <dt>Tsumo</dt><dd>Winning by self-draw.</dd>
+          <dt>Chi / Pon / Kan</dt><dd>Calling a discard to complete a run / triplet / set-of-four.</dd>
+          <dt>Ankan / Minkan / Shouminkan</dt><dd>A kan formed from your own concealed tiles / claimed from a discard / added onto your own existing pon.</dd>
+          <dt>Honba</dt><dd>A repeat-hand counter that adds a small bonus to the winner's score each time it's non-zero.</dd>
+          <dt>Furiten</dt><dd>Being blocked from declaring Ron because a winning tile is already in your own discards.</dd>
+          <dt>Dora</dt><dd>A bonus tile (Riichi only) that adds han but is not itself a yaku.</dd>
+          <dt>Yaku</dt><dd>A named scoring pattern; at least one is required to win in Riichi.</dd>
+          <dt>Han / Fu</dt><dd>The two inputs to the Riichi point formula — yaku count and a separate bonus-point tally.</dd>
+          <dt>Renchan</dt><dd>The dealer keeping the deal for another hand (win, or tenpai at a draw).</dd>
+        </dl>
+      </section>
+
+      <section id="simplifications">
+        <h2>Known Simplifications</h2>
+        <p>This is a from-scratch implementation, not a port of an existing engine. A few real-world rule edge cases were deliberately simplified for scope; none of them affect the core play experience, but competitive players should know about them:</p>
+        <ul>
+          <li><strong>Furiten</strong> is permanent-only — the temporary "missed my own ron this go-around" and "furiten until my next draw after riichi" variants aren't modeled separately.</li>
+          <li><strong>No riichi eligibility check on wall size</strong> — real rules forbid declaring riichi with fewer than 4 tiles left in the live wall; this build doesn't enforce that cutoff.</li>
+          <li><strong>No kan after riichi</strong> — the real rule allows it only when it provably doesn't change your wait; rather than implement that check, it's disabled outright once you've declared.</li>
+          <li><strong>Chankan (robbing a kan)</strong> only applies to added kans, not the rare case of robbing a closed kan for Kokushi Musou.</li>
+          <li><strong>Two yakuman aren't implemented</strong>: Tenhou/Chiihou/Renhou (winning on the very first uncalled go-around) and Chuurenpoutou (Nine Gates) / Suukantsu (Four Kans) are out of scope for this build.</li>
+          <li><strong>Chinese Classical has no minimum-pattern requirement</strong> — many real regional rule sets require at least one scoring pattern (or a minimum point value) to declare a win at all ("no chicken hands"); this build lets any complete hand shape win, even for the base 8 points with zero doubles.</li>
+          <li><strong>Chinese Classical scoring itself is a custom variant</strong> (see the callout in that section above) rather than a transcription of one specific regional rule set, since no single standard exists.</li>
+          <li><strong>Exhaustive-draw dealer retention in Classical</strong> always keeps the deal with the same dealer, rather than following any particular region's convention.</li>
+          <li>No manual in-browser playtest was performed while building this — correctness was verified with an automated test suite (100,000+ assertions) instead, including a scripted simulation of real UI clicks. See the project README for full test details.</li>
+        </ul>
+      </section>
+
+    </main>
+  </div>
+</div>
+</body>
+</html>
