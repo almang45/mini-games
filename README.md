@@ -22,9 +22,11 @@ suite (see [mahjong-solitaire/README.md](mahjong-solitaire/README.md)).
 
 A `shared/` folder at the repo root holds the handful of things that really
 are identical across projects (the color palette + base styles in
-`shared/theme.css`, the favicon, and one DOM-shim primitive reused by both
-test suites) — everything else stays local to its own game on purpose, since
-the three UIs are independent by design.
+`shared/theme.css` and one DOM-shim primitive reused by both test suites)
+— everything else stays local to its own game on purpose, since the three
+UIs are independent by design. `shared/favicon.svg` (a generic dice icon)
+backs only the top-level hub page; each game has its own `favicon.png`
+representing that specific game, also used as its icon on the hub.
 
 Mahjong Table and Mahjong Solitaire both render real tile artwork from
 `shared/assets/tiles/` rather than relying on the Unicode Mahjong Tile
