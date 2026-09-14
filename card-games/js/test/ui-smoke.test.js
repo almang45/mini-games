@@ -28,6 +28,7 @@ const GIN_RUMMY = require("../games/gin-rummy.js"); global.GIN_RUMMY = GIN_RUMMY
 const OH_HELL = require("../games/oh-hell.js"); global.OH_HELL = OH_HELL;
 const EUCHRE = require("../games/euchre.js"); global.EUCHRE = EUCHRE;
 const HOLDEM = require("../games/texas-holdem.js"); global.HOLDEM = HOLDEM;
+const CRIBBAGE = require("../games/cribbage.js"); global.CRIBBAGE = CRIBBAGE;
 require("../ui/hearts-ui.js");
 require("../ui/crazy-eights-ui.js");
 require("../ui/president-ui.js");
@@ -39,6 +40,7 @@ require("../ui/gin-rummy-ui.js");
 require("../ui/oh-hell-ui.js");
 require("../ui/euchre-ui.js");
 require("../ui/texas-holdem-ui.js");
+require("../ui/cribbage-ui.js");
 const app = require("../app.js");
 global.document._fireDOMContentLoaded();
 
@@ -179,11 +181,17 @@ function holdemHumanMove(state, seat) {
   return app.clickAction(action.type === "fold" ? "Fold" : buttons().find((b) => b.primary).label);
 }
 
+function cribbageHumanMove(state, seat) {
+  if (state.hand.phase === "pegging") return app.playCard(seat, CRIBBAGE.aiChoosePeg(state, seat));
+  CRIBBAGE.aiChooseDiscard(state, seat).forEach((c) => app.playCard(seat, c)); // selects both
+  return app.clickAction("Send to Crib (2/2)");
+}
+
 const HUMAN_MOVE = {
   hearts: heartsHumanMove, "crazy-eights": ceHumanMove, president: presHumanMove,
   "big-two": bigTwoHumanMove, "chinese-poker": cpHumanMove, blackjack: bjHumanMove,
   spades: spadesHumanMove, "gin-rummy": ginHumanMove, "oh-hell": ohHellHumanMove,
-  euchre: euchreHumanMove, "texas-holdem": holdemHumanMove,
+  euchre: euchreHumanMove, "texas-holdem": holdemHumanMove, cribbage: cribbageHumanMove,
 };
 
 async function driveGame({ maxHumanSteps = 1500, maxTicks = 4000 } = {}) {
@@ -232,6 +240,7 @@ async function run() {
     ["euchre", ["human", "ai", "ai", "ai"]],
     ["texas-holdem", ["human", "ai", "off", "off"]],
     ["texas-holdem", ["human", "ai", "ai", "ai"]],
+    ["cribbage", ["human", "ai", "off", "off"]],
   ];
   for (const [key, seats] of vsAiConfigs) {
     setupSeats(key, seats);
@@ -259,6 +268,7 @@ async function run() {
     ["oh-hell", ["human", "human", "human", "human"], 1500],
     ["euchre", ["human", "human", "human", "human"], 3000],
     ["texas-holdem", ["human", "human", "human", "off"], 1500],
+    ["cribbage", ["human", "human", "off", "off"], 1500],
   ];
   for (const [key, seats, maxHumanSteps] of hotseatConfigs) {
     setupSeats(key, seats);

@@ -15,7 +15,7 @@
   <header class="guide-header">
     <a class="back-link" href="index.html">&larr; Back to Game</a>
     <h1>Card Table — Rules Guide</h1>
-    <p class="tagline">Eleven classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
+    <p class="tagline">Twelve classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
   </header>
 
   <div class="guide-layout">
@@ -32,6 +32,7 @@
       <a href="#president">President</a>
       <a href="#big-two">Big Two</a>
       <a href="#gin-rummy">Gin Rummy</a>
+      <a href="#cribbage">Cribbage</a>
       <a href="#chinese-poker">Chinese Poker</a>
       <a href="#texas-holdem">Texas Hold'em</a>
       <a href="#blackjack">Blackjack</a>
@@ -44,9 +45,9 @@
       <section id="quick-start">
         <h2>Quick Start</h2>
         <ol class="steps">
-          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Oh Hell, Euchre, Crazy Eights, President, Big Two, Gin Rummy, Chinese Poker, Texas Hold'em, or Blackjack.</li>
-          <li>For each of the 4 seats, choose <strong>Human</strong>, <strong>AI</strong>, or (where allowed) <strong>Off</strong>. One human seat plays "vs AI"; every seat set to Human plays local hot-seat, passing the device around the table. Picking a game that seats fewer players (Gin Rummy) switches the extra seats Off for you, AI seats first.</li>
-          <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Bid, Draw, Pass, Play Selected, Knock, Call, Raise, Hit, Stand, Submit, etc.) when one is lit up. In Gin Rummy, click a card to select it and then press Discard or Knock. Chinese Poker is the other exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
+          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Oh Hell, Euchre, Crazy Eights, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, or Blackjack.</li>
+          <li>For each of the 4 seats, choose <strong>Human</strong>, <strong>AI</strong>, or (where allowed) <strong>Off</strong>. One human seat plays "vs AI"; every seat set to Human plays local hot-seat, passing the device around the table. Picking a game that seats fewer players (Gin Rummy, Cribbage) switches the extra seats Off for you, AI seats first.</li>
+          <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Bid, Draw, Pass, Play Selected, Knock, Call, Raise, Hit, Stand, Submit, etc.) when one is lit up. In Gin Rummy, click a card to select it and then press Discard or Knock. In Cribbage, click two cards and press Send to Crib. Chinese Poker is the other exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
           <li>In hot-seat mode, a "Pass the device" screen appears between turns so other players can't see your hand until you're ready.</li>
         </ol>
       </section>
@@ -85,7 +86,7 @@
           <li><strong>Hot-seat privacy</strong>: with more than one human seat, the app never shows a hand that isn't the active player's - it gates every handoff behind a "Pass the device" screen.</li>
           <li><strong>The log panel</strong> below the table lists the most recent plays, in case you look away for a second.</li>
         </ul>
-        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Euchre, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy is always exactly 2; Crazy Eights and Texas Hold'em play with 2-4; President and Oh Hell play with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
+        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Euchre, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy and Cribbage are always exactly 2; Crazy Eights and Texas Hold'em play with 2-4; President and Oh Hell play with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
       </section>
 
       <section id="hearts">
@@ -241,6 +242,30 @@
         <p>Points carry over from hand to hand, and the deal alternates, until someone reaches 100.</p>
       </section>
 
+      <section id="cribbage">
+        <h2>Cribbage</h2>
+        <p><strong>Goal:</strong> be the first to 121 points. Exactly 2 players, and the deal alternates every hand.</p>
+        <h3>The deal and the crib</h3>
+        <ul>
+          <li>Each player gets 6 cards and lays away 2 of them face down into the <strong>crib</strong>, an extra hand that scores for the dealer. Click two cards, then press <strong>Send to Crib</strong>.</li>
+          <li>A card from the rest of the deck is turned up as the <strong>starter</strong>. If it's a jack, the dealer scores 2 "for his heels".</li>
+        </ul>
+        <h3>Pegging</h3>
+        <ul>
+          <li>Starting with the non-dealer, players take turns laying one card face up and adding it to a running count. Aces are 1, face cards 10, other cards their number. The count can never go past 31.</li>
+          <li>Score as you play: <strong>2</strong> for making the count exactly 15 or 31; <strong>2</strong> for pairing the card just played, <strong>6</strong> for three of a kind, <strong>12</strong> for four; and 1 per card for a <strong>run</strong> of 3 or more ranks in a row among the latest cards, in any order.</li>
+          <li>If you can't play without passing 31, that's a <strong>go</strong>, and the other player keeps playing while they can. Whoever laid the last card scores 1 (nothing extra if it made 31), and the count starts again from 0. The table plays go out for you.</li>
+          <li>The last card of the hand also scores 1.</li>
+        </ul>
+        <h3>The show</h3>
+        <ul>
+          <li>Each hand is counted with the starter as a fifth card: the non-dealer's hand first, then the dealer's hand, then the crib.</li>
+          <li><strong>2</strong> for every combination adding up to 15, <strong>2</strong> for every pair, 1 per card for each run (a duplicated rank makes a second run), <strong>4</strong> for four hand cards of one suit (5 if the starter matches; the crib only scores a 5-card flush), and 1 for <strong>nobs</strong>, the jack of the starter's suit.</li>
+          <li>The best possible hand is worth 29: three 5s and a jack, with the fourth 5 turned up as the starter in the jack's suit.</li>
+        </ul>
+        <p>The game ends the moment someone reaches 121, even halfway through pegging or the show.</p>
+      </section>
+
       <section id="chinese-poker">
         <h2>Chinese Poker</h2>
         <p><strong>Goal:</strong> arrange your cards into 3 poker hands that beat as many of the other 3 players' hands as possible, row for row.</p>
@@ -305,6 +330,7 @@
             <tr><td>President</td><td>No jokers, no card-exchange between the President and the Bum between rounds, and no "8 clears the pile" or "revolution" house rules - just pure rank climbing.</td></tr>
             <tr><td>Big Two</td><td>Only singles, pairs, triples, and 5-card poker hands are legal plays - no other combo sizes. 5-card hands rank by standard poker strength (straight &lt; flush &lt; full house &lt; four-of-a-kind &lt; straight flush), a common but not universal house convention.</td></tr>
             <tr><td>Gin Rummy</td><td>No game bonus, line or box bonuses, or shutout doubling - hand points simply add up to 100. No first-turn upcard offer: the first player just draws from either pile. No Big Gin. Lay-offs are placed automatically and greedily, so a rare better lay-off can be missed.</td></tr>
+            <tr><td>Cribbage</td><td>Scores are kept as numbers, not pegs on a board, and there is no skunk bonus. Go is played out automatically, every point is counted for you (no muggins), and Seat 1 always deals first instead of cutting for the deal.</td></tr>
             <tr><td>Chinese Poker</td><td>Single round per game (no multi-round match, no running score across deals). No royalty/bonus points for strong hands (three-of-a-kind in front, four-of-a-kind, straight flushes, etc.) - every row win is worth exactly 1 point. A 3-card Front hand only recognizes high card, pair, or trips.</td></tr>
             <tr><td>Texas Hold'em</td><td>Blinds stay at 10/20 with no antes, and the session is a fixed 20 hands. Any raise reopens the betting, even an all-in too short to be a full raise. Every hand left at the showdown is shown; there is no mucking a losing hand.</td></tr>
             <tr><td>Blackjack</td><td>Flat 25-chip bet every round, no betting UI. Hit, Stand, and Double Down only - no splitting pairs, no surrender, no insurance. Dealer always stands on all 17s (including a soft 17). Fixed 15-round session rather than playing until you're out of chips.</td></tr>
@@ -334,6 +360,11 @@
           <dt>Gin</dt><dd>Knocking with no deadwood at all - a 25-point bonus, and the defender can't lay off.</dd>
           <dt>Undercut</dt><dd>A Gin Rummy knock where the defender's deadwood is equal or lower - the defender scores instead, plus 25.</dd>
           <dt>Lay off</dt><dd>After a knock, adding the defender's deadwood to the knocker's melds so it no longer counts.</dd>
+          <dt>Crib</dt><dd>The 4 cards both Cribbage players lay away. It scores for the dealer after both hands.</dd>
+          <dt>Starter</dt><dd>The card turned up after the Cribbage discard. It counts as a fifth card in both hands and the crib.</dd>
+          <dt>Pegging</dt><dd>The Cribbage play phase: cards go down one at a time, scoring for 15s, 31s, pairs and runs.</dd>
+          <dt>Go</dt><dd>Being unable to play without passing 31 in Cribbage. The last player to lay a card scores 1.</dd>
+          <dt>Nobs</dt><dd>The jack of the starter's suit in a Cribbage hand or crib, worth 1. A jack turned up as the starter is "his heels", worth 2 to the dealer.</dd>
           <dt>Wild card</dt><dd>An 8 in Crazy Eights - playable on anything, and lets you set the next suit.</dd>
           <dt>Pile</dt><dd>The set of cards currently in play that must be beaten or passed on, in President or Big Two.</dd>
           <dt>Combo</dt><dd>A legal play shape in Big Two - single, pair, triple, or 5-card poker hand.</dd>

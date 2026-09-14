@@ -3,7 +3,7 @@
 A small collection of classic card games — static HTML/CSS/JS, no build step,
 no server. Open `index.html` directly in a browser.
 
-Eleven games, each seatable from 1-4 players depending on the game:
+Twelve games, each seatable from 1-4 players depending on the game:
 
 - **Hearts** — 4 players, trick-taking, avoid points, dodge the moon
 - **Spades** — 4 players in two partnerships, bid tricks, spades trump, nil and bags, to 500
@@ -13,6 +13,7 @@ Eleven games, each seatable from 1-4 players depending on the game:
 - **President** — 3-4 players, shed your hand, climbing sets
 - **Big Two** — 4 players, shed your hand, singles/pairs/triples/5-card poker hands
 - **Gin Rummy** — 2 players, draw and discard into melds, knock or go gin, to 100
+- **Cribbage** — 2 players, lay away to the crib, peg to 31, count fifteens/pairs/runs, to 121
 - **Chinese Poker** — 4 players, one deal, arrange 3 poker hands and score head-to-head
 - **Texas Hold'em** — 2-4 players, no-limit with 10/20 blinds and side pots, 20-hand session
 - **Blackjack** — 1-4 players vs. the dealer, hit/stand/double, 15-round session
@@ -43,6 +44,7 @@ js/games/crazy-eights.js     Crazy Eights rules engine + AI
 js/games/president.js        President rules engine + AI
 js/games/big-two.js          Big Two rules engine + AI
 js/games/gin-rummy.js        Gin Rummy rules engine + AI (meld search, lay-offs)
+js/games/cribbage.js         Cribbage rules engine + AI (pegging, hand counting)
 js/games/chinese-poker.js    Chinese Poker rules engine + AI
 js/games/texas-holdem.js     Texas Hold'em rules engine + AI (7-card evaluator, side pots)
 js/games/blackjack.js        Blackjack rules engine + AI
@@ -54,6 +56,7 @@ js/ui/crazy-eights-ui.js     binds Crazy Eights state to the shared table shell
 js/ui/president-ui.js        binds President state to the shared table shell
 js/ui/big-two-ui.js          binds Big Two state to the shared table shell
 js/ui/gin-rummy-ui.js        binds Gin Rummy state to the shared table shell
+js/ui/cribbage-ui.js         binds Cribbage state to the shared table shell
 js/ui/chinese-poker-ui.js    binds Chinese Poker state to the shared table shell
 js/ui/texas-holdem-ui.js     binds Texas Hold'em state to the shared table shell
 js/ui/blackjack-ui.js        binds Blackjack state to the shared table shell
@@ -119,6 +122,16 @@ etc., which the Node tests populate manually before requiring them — see
   best arrangement, which can miss the rare case where breaking a defender
   meld would lay off more.
 - A non-knock discard that leaves 2 or fewer stock cards voids the hand.
+
+**Cribbage:**
+- Two players, six-card deals, first to 121. The game stops the moment a
+  score reaches 121, even mid-pegging or mid-show.
+- No cut for the first deal (Seat 1 deals first), no board or pegs, no skunk
+  bonus and no muggins: every point is counted automatically.
+- Go is resolved by the engine, so there's no Go button; a player who can't
+  play just waits until the count resets.
+- A crib flush needs all five cards including the starter; a hand flush of
+  four scores 4, or 5 when the starter matches.
 
 **Crazy Eights:**
 - The only special card is the wild 8 — no skip/reverse/draw-two/draw-four
@@ -199,7 +212,7 @@ etc., which the Node tests populate manually before requiring them — see
 - Fixed 15-round session, then the game ends and seats are ranked by final
   chip count — not an open-ended "play until you're broke" session.
 
-**AI opponents (all eleven games):** heuristic, not a full game-tree search —
+**AI opponents (all twelve games):** heuristic, not a full game-tree search —
 they play legally and reasonably (Hearts: duck under the current trick
 winner when possible, dump dangerous cards — the Queen of Spades and high
 spades/hearts — when void; Spades: bid a rule-of-thumb trick count from
@@ -216,7 +229,11 @@ trump with a boss trump as makers, and don't overtake a partner who is
 already winning (AI makers make it about 86% of the time in AI-only games);
 Gin Rummy: take the discard only when it lands in a meld, discard for the
 lowest resulting deadwood and shed high unconnected cards first, knock
-early but hold out for a low count mid-hand to avoid undercuts; Crazy Eights: hold 8s back until forced, prefer
+early but hold out for a low count mid-hand to avoid undercuts; Cribbage: keep
+the four cards with the best average hand over every possible starter, nudged
+by what the two discards add to (or give away in) the crib, and peg for the
+most points now while avoiding counts of 5 or 21 that a ten-card turns into
+15 or 31; Crazy Eights: hold 8s back until forced, prefer
 suits it holds more of; President/Big Two: lead the lowest legal group, beat
 the pile as cheaply as possible; Chinese Poker: build the strongest possible
 Back hand first, then the strongest Middle that still keeps Front ≤ Middle
@@ -237,14 +254,15 @@ environment this was built in, so testing happens on two levels:
 
 1. **Engine tests** (`cards.test.js`, `hearts.test.js`, `spades.test.js`,
    `oh-hell.test.js`, `euchre.test.js`, `crazy-eights.test.js`, `president.test.js`, `big-two.test.js`,
-   `gin-rummy.test.js`, `chinese-poker.test.js`, `texas-holdem.test.js`, `blackjack.test.js`)
+   `gin-rummy.test.js`, `cribbage.test.js`, `chinese-poker.test.js`, `texas-holdem.test.js`, `blackjack.test.js`)
    exercise each rules engine directly in Node: rule checks against
    hand-built scenarios (forced leads, moon shots, illegal plays,
    pile-clearing edge cases around a player finishing mid-round, hand
    evaluation and foul detection, Hold'em's 7-card evaluator against a
    brute-force best-of-21 search, side pots and odd-chip splits, blackjack settlement math via rigged
    fixture states, Spades contract/Nil/bag scoring, Gin Rummy meld search,
-   lay-offs and knock/undercut/gin settlement), deck conservation, and dozens
+   lay-offs and knock/undercut/gin settlement, Cribbage counting from the
+   29 hand to crib flushes, and go/31/last-card pegging), deck conservation, and dozens
    of full randomized AI-vs-AI
    games per player count to catch stuck states, non-terminating games, or a
    degenerate AI.
