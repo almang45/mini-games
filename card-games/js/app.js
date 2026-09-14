@@ -238,6 +238,7 @@
   function backToLobby() {
     clearTimeout(aiTimer);
     hideInterstitial();
+    $("resultOverlay").hidden = true;
     showScreen("screen-start");
   }
 
