@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spider Solitaire</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+  :root {
+    --card-face: #fdf8ee;
+    --card-border: #8a7452;
+    --card-red: #b3352c;
+    --card-black: #1c1c1c;
+  }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px 18px;
+    width: 100%;
+    max-width: 900px;
+  }
+  header h1 { flex: 1 1 auto; min-width: 180px; }
+
+  .stats, .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--felt-line);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    min-width: 72px;
+    text-align: center;
+  }
+  .stat b { display: block; font-size: 1.05rem; color: var(--accent); }
+
+  select, .deal-form input {
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--ink);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  select { background: #1c4a34; }
+  .controls label, .deal-form { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  .deal-form input { width: 7.5em; background: var(--panel-strong); }
+
+  .status { margin: 0; min-height: 1.3em; font-size: 0.85rem; color: var(--ink-dim); text-align: center; }
+
+  /* 10 columns must fit the viewport minus body padding (24px) and 9 gaps. */
+  .table {
+    --gap: 5px;
+    --cw: min(76px, calc((100vw - 24px - 9 * var(--gap)) / 10));
+    --ch: calc(var(--cw) * 1.4);
+    display: grid;
+    grid-template-columns: repeat(10, var(--cw));
+    gap: 16px var(--gap);
+  }
+
+  .slot {
+    position: relative;
+    height: var(--ch);
+    border: 1px dashed rgba(255, 255, 255, 0.28);
+    border-radius: calc(var(--cw) * 0.09);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.2);
+    font-size: calc(var(--cw) * 0.4);
+  }
+  .slot > .card { position: absolute; top: -1px; left: -1px; }
+  .slot.completed { background: rgba(0, 0, 0, 0.12); }
+  .slot.completed:first-of-type { grid-column: 3; }
+  /* The stock is a button; undo theme.css's button look. */
+  button.stock { padding: 0; background: transparent; color: rgba(255, 255, 255, 0.35); cursor: pointer; }
+  button.stock:hover, button.stock:active { transform: none; }
+  .badge {
+    position: absolute;
+    bottom: -6px;
+    right: -6px;
+    z-index: 1;
+    min-width: 1.5em;
+    padding: 1px 5px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #2a1c00;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .column { display: flex; flex-direction: column; min-height: calc(var(--ch) * 2.5); padding-bottom: 16px; cursor: pointer; --squeeze: -0.72; }
+  .column > .slot { flex: none; }
+  .column > .card + .card { margin-top: calc(var(--ch) * var(--squeeze)); }
+  .column > .card.down + .card { margin-top: calc(var(--ch) * -0.86); }
+
+  /* Face-up cards are buttons for keyboard play; undo theme.css's button look. */
+  .card {
+    flex: none;
+    position: relative;
+    width: var(--cw);
+    height: var(--ch);
+    padding: 0;
+    border-radius: calc(var(--cw) * 0.09);
+    background: var(--card-face);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+    color: var(--card-black);
+    font-weight: 700;
+    text-align: left;
+    transition: none;
+  }
+  .card.down { background: repeating-linear-gradient(135deg, #2152a8 0 5px, #2f66c9 5px 10px); border-color: rgba(255, 255, 255, 0.55); }
+  .card.red { color: var(--card-red); }
+  .card .corner {
+    position: absolute;
+    top: calc(var(--cw) * 0.05);
+    left: calc(var(--cw) * 0.07);
+    font-size: calc(var(--cw) * 0.27);
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .card .pip {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--ch) * 0.12);
+    text-align: center;
+    font-size: calc(var(--cw) * 0.5);
+    line-height: 1;
+  }
+  .card.selected { background: #fff0bf; outline: 3px solid var(--accent); outline-offset: -2px; }
+  .card.hint, .slot.hint { outline: 3px dashed var(--ok); outline-offset: 2px; }
+  .card.shake { animation: shake 0.3s ease; }
+  @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  .overlay[hidden] { display: none; }
+  .modal {
+    background: #12321f;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 26px 30px;
+    text-align: center;
+    max-width: 340px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .modal h2 { margin: 0 0 8px; color: var(--accent); }
+  .modal p { margin: 4px 0 18px; color: var(--ink-dim); font-size: 0.9rem; }
+
+  footer { color: var(--ink-dim); font-size: 0.75rem; text-align: center; max-width: 640px; line-height: 1.5; }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 1.05rem; }
+    .stat { min-width: 60px; padding: 5px 8px; font-size: 0.72rem; }
+    .table { row-gap: 12px; }
+    .badge { font-size: 0.6rem; padding: 0 3px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card.shake { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="back-link" href="../index.html">← All Games</a>
+    <h1>Spider Solitaire</h1>
+    <div class="stats">
+      <div class="stat">Deal<b id="statDeal">#1</b></div>
+      <div class="stat">Moves<b id="statMoves">0</b></div>
+      <div class="stat">Score<b id="statScore">500</b></div>
+    </div>
+  </header>
+
+  <div class="controls">
+    <label>Suits
+      <select id="suits">
+        <option value="1">1 suit</option>
+        <option value="2">2 suits</option>
+        <option value="4">4 suits</option>
+      </select>
+    </label>
+    <button id="btnNew" type="button">New Game</button>
+    <button id="btnRestart" type="button">Restart</button>
+    <button id="btnUndo" type="button">Undo</button>
+    <button id="btnHint" type="button">Hint</button>
+    <form class="deal-form" id="dealForm">
+      <label for="dealInput">Deal #</label>
+      <input id="dealInput" type="number" min="1" max="1000000" inputmode="numeric" required>
+      <button type="submit">Play</button>
+    </form>
+  </div>
+
+  <p class="status" id="status" aria-live="polite"></p>
+
+  <div class="table">
+    <button class="slot stock" id="stock" type="button"></button>
+    <div class="slot completed"></div>
+    <div class="slot completed"></div>
+    <div class="slot completed"></div>
+    <div class="slot completed"></div>
+    <div class="slot completed"></div>
+    <div class="slot completed"></div>
+    <div class="slot completed"></div>
+    <div class="slot completed"></div>
+    <div class="column"></div>
+    <div class="column"></div>
+    <div class="column"></div>
+    <div class="column"></div>
+    <div class="column"></div>
+    <div class="column"></div>
+    <div class="column"></div>
+    <div class="column"></div>
+    <div class="column"></div>
+    <div class="column"></div>
+  </div>
+
+  <footer>Build down by one rank in any suit, but only a run of one suit in order moves together. A King-to-Ace run of one suit leaves the table; clear all eight to win. Click the stock to deal a card onto every column, once none is empty. Click a card (or a run) and then where it should go, or double-click to send it to its best spot. The page link carries the suits and deal number, so you can share a deal.</footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h2>You win!</h2>
+    <p id="winBody"></p>
+    <div class="controls">
+      <button class="btn-primary" id="modalNew" type="button">New Game</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/spider.js"></script>
+<script>
+(function () {
+  "use strict";
+  const S = window.SPIDER;
+  const SUIT_GLYPH = { C: "♣", D: "♦", H: "♥", S: "♠" };
+  const SUIT_NAME = { C: "clubs", D: "diamonds", H: "hearts", S: "spades" };
+  const RANK_LABEL = ["", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+  const RANK_NAME = ["", "Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"];
+  const CLASSIC_DEALS = 32000;
+  const $ = (id) => document.getElementById(id);
+  const columnEls = [...document.querySelectorAll(".column")];
+  const completedEls = [...document.querySelectorAll(".slot.completed")];
+
+  let state = null;
+  let selection = null; // {from, count}: the run currently picked up
+  let hint = null; // {from, count, to} shown while its run is the selection, or "deal"
+  let completedShown = 0;
+
+  const cardName = (card) => RANK_LABEL[card.rank] + SUIT_GLYPH[card.suit];
+
+  function cardFace(tag, card) {
+    const el = document.createElement(tag);
+    el.className = "card" + (S.isRed(card) ? " red" : "");
+    el.setAttribute("aria-label", RANK_NAME[card.rank] + " of " + SUIT_NAME[card.suit]);
+    const corner = document.createElement("span");
+    corner.className = "corner";
+    corner.textContent = cardName(card);
+    const pip = document.createElement("span");
+    pip.className = "pip";
+    pip.textContent = SUIT_GLYPH[card.suit];
+    el.append(corner, pip);
+    return el;
+  }
+
+  function cardBack() {
+    const el = document.createElement("div");
+    el.className = "card down";
+    return el;
+  }
+
+  function render() {
+    $("statDeal").textContent = "#" + state.number;
+    $("statMoves").textContent = String(state.moves);
+    $("statScore").textContent = String(state.score);
+    $("btnUndo").disabled = state.history.length === 0;
+
+    const stock = $("stock");
+    stock.textContent = state.stock.length ? "" : "↻";
+    stock.classList.toggle("hint", hint === "deal");
+    if (state.stock.length) {
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = String(S.dealsLeft(state));
+      stock.append(cardBack(), badge);
+    }
+    stock.setAttribute("aria-label", "Stock, " + S.dealsLeft(state) + " deal" + (S.dealsLeft(state) === 1 ? "" : "s") + " left");
+
+    completedEls.forEach((el, i) => {
+      el.textContent = "";
+      if (state.completed[i]) el.appendChild(cardFace("div", { rank: 13, suit: state.completed[i] }));
+    });
+
+    columnEls.forEach((el, index) => {
+      el.textContent = "";
+      const cards = state.columns[index];
+      el.style.setProperty("--squeeze", cards.length > 12 ? "-0.8" : "-0.72");
+      el.setAttribute("aria-label", "Column " + (index + 1) + ", " + cards.length + " cards");
+      if (cards.length === 0) {
+        const slot = document.createElement("div");
+        slot.className = "slot";
+        el.appendChild(slot);
+      }
+      cards.forEach((card, k) => {
+        if (!card.faceUp) {
+          el.appendChild(cardBack());
+          return;
+        }
+        const count = cards.length - k;
+        const btn = cardFace("button", card);
+        btn.type = "button";
+        btn.dataset.column = String(index);
+        btn.dataset.count = String(count);
+        if (selection && selection.from === index && count <= selection.count) btn.classList.add("selected");
+        btn.addEventListener("click", (e) => { e.stopPropagation(); onCardClick(index, count); });
+        btn.addEventListener("dblclick", (e) => { e.stopPropagation(); onQuickMove(index, count); });
+        el.appendChild(btn);
+      });
+    });
+
+    if (hint && hint !== "deal" && selection && hint.from === selection.from && hint.count === selection.count) {
+      columnEls[hint.to].lastElementChild.classList.add("hint");
+    }
+  }
+
+  const buttonFor = (index, count) => document.querySelector('.card[data-column="' + index + '"][data-count="' + count + '"]');
+  const setStatus = (text) => { $("status").textContent = text; };
+
+  function shake(el) {
+    if (!el) return;
+    el.classList.remove("shake");
+    void el.offsetWidth;
+    el.classList.add("shake");
+  }
+
+  // Returns the re-rendered button, since render() replaces the one clicked.
+  function select(index, count) {
+    hint = null;
+    if (count > S.runLength(state.columns[index])) {
+      selection = null;
+      render();
+      setStatus("Only a run of one suit in order can move together.");
+      shake(buttonFor(index, count));
+      return null;
+    }
+    selection = { from: index, count };
+    setStatus("");
+    render();
+    const again = buttonFor(index, count);
+    if (again) again.focus();
+    return again;
+  }
+
+  // Returns whether the picked-up run moved.
+  function tryMove(to) {
+    const { from, count } = selection;
+    if (!S.canMove(state, from, count, to)) return false;
+    S.move(state, from, count, to);
+    selection = null;
+    hint = null;
+    setStatus("");
+    afterMove();
+    return true;
+  }
+
+  function onCardClick(index, count) {
+    if (!selection) { select(index, count); return; }
+    if (selection.from === index) {
+      if (selection.count === count) {
+        selection = null;
+        hint = null;
+        setStatus("");
+        render();
+      } else {
+        select(index, count);
+      }
+      return;
+    }
+    if (tryMove(index)) return;
+    const picked = select(index, count);
+    if (picked) {
+      setStatus("Can't move there. A run goes onto a card one rank higher, or into an empty column.");
+      shake(picked);
+    }
+  }
+
+  function onColumnClick(index) {
+    if (!selection) return;
+    if (selection.from === index || !tryMove(index)) {
+      const refused = selection.from !== index;
+      selection = null;
+      hint = null;
+      render();
+      setStatus(refused ? "Can't move there." : "");
+    }
+  }
+
+  function onQuickMove(index, count) {
+    selection = null;
+    hint = null;
+    if (count <= S.runLength(state.columns[index]) && S.quickMove(state, index, count) !== null) {
+      setStatus("");
+      afterMove();
+    } else {
+      render();
+      setStatus("Those cards have nowhere to go.");
+    }
+  }
+
+  function onStockClick() {
+    selection = null;
+    hint = null;
+    if (state.stock.length === 0) {
+      render();
+      setStatus("The stock is empty.");
+    } else if (!S.canDeal(state)) {
+      render();
+      setStatus("Fill every empty column before dealing.");
+    } else {
+      S.dealRow(state);
+      setStatus("");
+      afterMove();
+    }
+  }
+
+  function afterMove() {
+    render();
+    if (state.completed.length > completedShown) setStatus("Suit complete!");
+    completedShown = state.completed.length;
+    if (S.isWon(state)) {
+      $("winBody").textContent = "Deal #" + state.number + " with " + state.suits + " suit" + (state.suits === 1 ? "" : "s") +
+        " in " + state.moves + " moves, score " + state.score + ".";
+      $("overlay").hidden = false;
+    } else if (state.stock.length === 0 && S.hints(state).length === 0) {
+      setStatus("No useful moves left. Undo some moves or start a new deal.");
+    }
+  }
+
+  function showHint() {
+    const best = S.hints(state)[0];
+    if (best) {
+      hint = best;
+      selection = { from: best.from, count: best.count };
+      render();
+      const lead = state.columns[best.from][state.columns[best.from].length - best.count];
+      const target = state.columns[best.to];
+      const where = target.length ? "onto " + cardName(target[target.length - 1]) : "into the empty column";
+      setStatus("Hint: move " + cardName(lead) + (best.count > 1 ? " and the cards on it" : "") + " " + where + ". Click the marked spot.");
+      return;
+    }
+    selection = null;
+    if (S.canDeal(state)) {
+      hint = "deal";
+      render();
+      setStatus("Hint: deal a new row from the stock.");
+    } else {
+      hint = null;
+      render();
+      setStatus(state.stock.length
+        ? "Move any card into the empty column, then deal."
+        : "No useful moves left. Undo some moves or start a new deal.");
+    }
+  }
+
+  function startDeal(suits, number) {
+    state = S.createGame(suits, number);
+    selection = null;
+    hint = null;
+    completedShown = 0;
+    history.replaceState(null, "", "#" + suits + "-" + number);
+    $("dealInput").value = number;
+    $("suits").value = String(suits);
+    $("overlay").hidden = true;
+    setStatus("");
+    render();
+  }
+
+  function dealFromHash() {
+    const match = /^#([124])-(\d+)$/.exec(location.hash);
+    const number = match && Number(match[2]);
+    return match && number >= 1 && number <= S.MAX_DEAL ? { suits: Number(match[1]), number } : null;
+  }
+
+  const randomDeal = () => 1 + Math.floor(Math.random() * CLASSIC_DEALS);
+  const chosenSuits = () => Number($("suits").value);
+
+  columnEls.forEach((el, index) => el.addEventListener("click", () => onColumnClick(index)));
+  $("stock").addEventListener("click", onStockClick);
+  $("btnNew").addEventListener("click", () => startDeal(chosenSuits(), randomDeal()));
+  $("modalNew").addEventListener("click", () => startDeal(chosenSuits(), randomDeal()));
+  $("suits").addEventListener("change", () => startDeal(chosenSuits(), randomDeal()));
+  $("btnRestart").addEventListener("click", () => startDeal(state.suits, state.number));
+  $("btnHint").addEventListener("click", showHint);
+  $("btnUndo").addEventListener("click", () => {
+    selection = null;
+    hint = null;
+    if (S.undo(state)) {
+      completedShown = state.completed.length;
+      setStatus("");
+      render();
+    }
+  });
+  $("dealForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const n = Number($("dealInput").value);
+    if (Number.isInteger(n) && n >= 1 && n <= S.MAX_DEAL) startDeal(chosenSuits(), n);
+    else setStatus("Deal numbers run from 1 to " + S.MAX_DEAL + ".");
+  });
+  window.addEventListener("hashchange", () => {
+    const deal = dealFromHash();
+    if (deal && (deal.suits !== state.suits || deal.number !== state.number)) startDeal(deal.suits, deal.number);
+  });
+
+  const initial = dealFromHash();
+  if (initial) startDeal(initial.suits, initial.number);
+  else startDeal(1, randomDeal());
+})();
+</script>
+</body>
+</html>
