@@ -23,18 +23,32 @@ The deal box accepts any number up to 1,000,000.
 - **Undo:** there's no limit. One undo reverses a move together with any
   autoplay it triggered.
 
-The game doesn't detect a position with no moves left. Undo and Restart are
-the ways out.
+## Hints and dead ends
+
+**Hint** runs a solver from the current position. The solver is a best-first
+search that plays moves exactly as the game does, autoplay included. It ignores
+column order and cell order, so positions that differ only in those count once.
+If it finds a win, the page picks up the first move's cards and marks where
+they go. The search stops after 100,000 positions. That's under a second, and
+enough for 994 of Microsoft deals #1–1000 from the start. When the search
+stops early, the page says it couldn't find a solution quickly. When every
+reachable position has been tried, it says there is no way to win from there.
+Deal #11982, the famous impossible deal, gets that answer.
+
+After every move a much smaller search (3,000 positions) runs. It only
+speaks up when it has proven the game can no longer be won.
 
 ## Layout
 
 - `index.html`: the page, its styles, and the UI wiring.
-- `js/freecell.js`: the rules engine, with no DOM code (`window.FREECELL`, or
-  `require()` in Node).
+- `js/freecell.js`: the rules engine and solver, with no DOM code
+  (`window.FREECELL`, or `require()` in Node).
 - `js/test/freecell.test.js`: Node tests. They check deals #1 and #617
   against Microsoft's layouts, move and supermove rules, autoplay safety,
   quick-move order, and 30 random-play games for card conservation and
-  undo-to-start.
+  undo-to-start. For the solver, they replay found solutions through `move()`
+  and prove #11982 unsolvable. They also check that the move generator offers
+  only legal moves and misses no useful one.
 
 ## Tests
 

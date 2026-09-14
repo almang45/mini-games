@@ -114,6 +114,7 @@
     line-height: 1;
   }
   .card.selected { background: #fff0bf; outline: 3px solid var(--accent); outline-offset: -2px; }
+  .card.hint, .slot.hint { outline: 3px dashed var(--ok); outline-offset: 2px; }
   .card.shake { animation: shake 0.3s ease; }
   @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 
@@ -156,6 +157,7 @@
     <button id="btnNew" type="button">New Game</button>
     <button id="btnRestart" type="button">Restart</button>
     <button id="btnUndo" type="button">Undo</button>
+    <button id="btnHint" type="button">Hint</button>
     <form class="deal-form" id="dealForm">
       <label for="dealInput">Deal #</label>
       <input id="dealInput" type="number" min="1" max="1000000" inputmode="numeric" required>
@@ -206,6 +208,10 @@
   const SUIT_NAME = { C: "clubs", D: "diamonds", H: "hearts", S: "spades" };
   const RANK_NAME = ["", "Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"];
   const CLASSIC_DEALS = 32000;
+  // Solves nearly every deal in well under a second on the main thread, so no Worker (which file:// can't load).
+  const HINT_POSITIONS = 100000;
+  // Cheap enough to run after every move; it only speaks up when it has proven the game lost.
+  const DEAD_END_POSITIONS = 3000;
   const $ = (id) => document.getElementById(id);
   const cellEls = [...document.querySelectorAll(".slot.cell")];
   const foundationEls = [...document.querySelectorAll(".slot.foundation")];
@@ -213,6 +219,7 @@
 
   let state = null;
   let selection = null; // the move source currently picked up
+  let hint = null; // {from, to} being shown; it stays marked while its cards are still the selection
   let seconds = 0, timerHandle = null;
 
   function cardFace(tag, card) {
@@ -267,6 +274,52 @@
       }
       cards.forEach((card, k) => el.appendChild(cardButton(card, { type: "cascade", index, count: cards.length - k })));
     });
+    // Cells and foundations aren't rebuilt by render, so an old mark has to be cleared by hand.
+    document.querySelectorAll(".slot.hint").forEach((el) => el.classList.remove("hint"));
+    if (hint && hint.from === selection) hintTargetEl(hint.to).classList.add("hint");
+  }
+
+  function hintTargetEl(to) {
+    if (to.type === "cell") return cellEls[to.index];
+    if (to.type === "foundation") return foundationEls.find((el) => el.dataset.suit === pickedCards(hint.from)[0].suit);
+    const col = cascadeEls[to.index];
+    return col.lastElementChild;
+  }
+
+  const cardName = (card) => (card.rank === 10 ? "10" : F.RANKS[card.rank - 1]) + SUIT_GLYPH[card.suit];
+
+  function describeMove({ from, to }) {
+    const cards = pickedCards(from);
+    const extra = cards.length - 1;
+    let what = cardName(cards[0]) + (extra ? " (with the " + extra + " card" + (extra === 1 ? "" : "s") + " on it)" : "");
+    if (to.type === "foundation") return what + " to its foundation";
+    if (to.type === "cell") return what + " to a free cell";
+    const target = state.cascades[to.index];
+    return what + (target.length ? " onto " + cardName(target[target.length - 1]) : " to an empty column");
+  }
+
+  function showHint() {
+    if (F.isWon(state)) return;
+    setStatus("Looking for a solution…");
+    $("btnHint").disabled = true;
+    // Let the status paint before the search blocks the page.
+    setTimeout(() => {
+      $("btnHint").disabled = false;
+      const found = F.solve(state, HINT_POSITIONS);
+      if (found.result === "unsolvable") {
+        selection = null;
+        render();
+        setStatus("No way to win from here. Undo some moves or restart the deal.");
+      } else if (found.result === "gave-up") {
+        setStatus("Couldn't find a solution quickly. This position may still be winnable.");
+      } else {
+        hint = found.moves[0];
+        selection = hint.from;
+        render();
+        setStatus("Hint: move " + describeMove(hint) + ". The cards are picked up; click the marked spot. " +
+          found.moves.length + " move" + (found.moves.length === 1 ? "" : "s") + " to win from here.");
+      }
+    }, 30);
   }
 
   function setStatus(text) { $("status").textContent = text; }
@@ -369,6 +422,8 @@
       stopTimer();
       $("winBody").textContent = "Deal #" + state.number + " in " + state.moves + " moves, " + formatTime() + ".";
       $("overlay").hidden = false;
+    } else if (F.solve(state, DEAD_END_POSITIONS).result === "unsolvable") {
+      setStatus("No way to win from here. Undo some moves or restart the deal.");
     }
   }
 
@@ -413,6 +468,7 @@
   $("btnNew").addEventListener("click", () => startDeal(randomDeal()));
   $("modalNew").addEventListener("click", () => startDeal(randomDeal()));
   $("btnRestart").addEventListener("click", () => startDeal(state.number));
+  $("btnHint").addEventListener("click", showHint);
   $("btnUndo").addEventListener("click", () => {
     selection = null;
     if (F.undo(state)) { setStatus(""); render(); }

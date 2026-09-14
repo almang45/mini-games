@@ -183,9 +183,146 @@
     return to;
   }
 
+  // ----------------------------------------------------------------- solver
+
+  const FOUNDATION = { type: "foundation" };
+  const fits = (onto, card) => onto.rank === card.rank + 1 && isRed(onto) !== isRed(card);
+
+  // How many cards at the bottom of a column already form a movable run.
+  function runLength(col) {
+    let n = col.length ? 1 : 0;
+    while (n < col.length && fits(col[col.length - n - 1], col[col.length - n])) n++;
+    return n;
+  }
+
+  // Every move worth trying, as {from, to}. Skips duplicates that only differ
+  // by which empty cell or empty column they use, and moving a whole column into an empty one.
+  function candidateMoves(state) {
+    const moves = [];
+    const freeCell = state.cells.indexOf(null);
+    const emptyColumn = state.cascades.findIndex((col) => col.length === 0);
+    const limit = maxMovable(state, false);
+    const emptyLimit = emptyColumn >= 0 ? maxMovable(state, true) : 0;
+
+    state.cells.forEach((card, index) => {
+      if (!card) return;
+      const from = { type: "cell", index };
+      if (state.foundations[card.suit] === card.rank - 1) moves.push({ from, to: FOUNDATION });
+      state.cascades.forEach((col, target) => {
+        if (col.length && fits(col[col.length - 1], card)) moves.push({ from, to: { type: "cascade", index: target } });
+      });
+      if (emptyColumn >= 0) moves.push({ from, to: { type: "cascade", index: emptyColumn } });
+    });
+
+    state.cascades.forEach((col, index) => {
+      if (!col.length) return;
+      const top = col[col.length - 1];
+      const run = runLength(col);
+      if (state.foundations[top.suit] === top.rank - 1) moves.push({ from: { type: "cascade", index, count: 1 }, to: FOUNDATION });
+      state.cascades.forEach((target, t) => {
+        if (t === index || !target.length) return;
+        const count = target[target.length - 1].rank - top.rank;
+        if (count >= 1 && count <= run && count <= limit && fits(target[target.length - 1], col[col.length - count])) {
+          moves.push({ from: { type: "cascade", index, count }, to: { type: "cascade", index: t } });
+        }
+      });
+      for (let count = 1; count <= Math.min(run, emptyLimit, col.length - 1); count++) {
+        moves.push({ from: { type: "cascade", index, count }, to: { type: "cascade", index: emptyColumn } });
+      }
+      if (freeCell >= 0) moves.push({ from: { type: "cascade", index, count: 1 }, to: { type: "cell", index: freeCell } });
+    });
+    return moves;
+  }
+
+  const cardCode = (card) => String.fromCharCode(48 + (card.rank - 1) * 4 + SUITS.indexOf(card.suit));
+
+  // Column order and cell order don't change what can happen next, so they're sorted out of the key.
+  function positionKey(state) {
+    const cascades = state.cascades.map((col) => col.map(cardCode).join("")).sort();
+    const cells = state.cells.filter(Boolean).map(cardCode).sort();
+    return cascades.join("|") + "/" + cells.join("");
+  }
+
+  // Lower is closer to solved: cards still out, cards sitting on a lower card they block, and full cells.
+  function estimate(state) {
+    let blocking = 0;
+    for (const col of state.cascades) {
+      let lowest = 14;
+      for (const card of col) {
+        if (card.rank > lowest) blocking++;
+        else lowest = card.rank;
+      }
+    }
+    const home = state.foundations.C + state.foundations.D + state.foundations.H + state.foundations.S;
+    return 52 - home + blocking + state.cells.filter(Boolean).length;
+  }
+
+  function heapPush(heap, node) {
+    let i = heap.push(node) - 1;
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (heap[parent].priority <= node.priority) break;
+      heap[i] = heap[parent];
+      i = parent;
+    }
+    heap[i] = node;
+  }
+
+  function heapPop(heap) {
+    const top = heap[0];
+    const last = heap.pop();
+    if (heap.length) {
+      let i = 0;
+      for (;;) {
+        const left = 2 * i + 1, right = left + 1;
+        let child = left;
+        if (right < heap.length && heap[right].priority < heap[left].priority) child = right;
+        if (child >= heap.length || heap[child].priority >= last.priority) break;
+        heap[i] = heap[child];
+        i = child;
+      }
+      heap[i] = last;
+    }
+    return top;
+  }
+
+  // Best-first search from the current position, playing moves exactly as move() does.
+  // {result: "solved", moves}, "unsolvable" once every reachable position has been
+  // tried, or "gave-up" after maxPositions without an answer.
+  function solve(state, maxPositions) {
+    const budget = maxPositions || 100000;
+    const root = snapshot(state);
+    if (isWon(root)) return { result: "solved", moves: [] };
+    const seen = new Set([positionKey(root)]);
+    const heap = [];
+    heapPush(heap, { priority: 0, position: root, depth: 0, trail: null });
+    while (heap.length) {
+      const node = heapPop(heap);
+      for (const step of candidateMoves(node.position)) {
+        const next = snapshot(node.position);
+        applyMove(next, step.from, step.to);
+        autoPlay(next);
+        const key = positionKey(next);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const trail = { step, parent: node.trail };
+        if (isWon(next)) {
+          const moves = [];
+          for (let t = trail; t; t = t.parent) moves.unshift(t.step);
+          return { result: "solved", moves };
+        }
+        if (seen.size >= budget) return { result: "gave-up" };
+        // A little weight on depth keeps solutions from wandering; hints should look purposeful.
+        heapPush(heap, { priority: estimate(next) * 2 + node.depth * 0.5, position: next, depth: node.depth + 1, trail });
+      }
+    }
+    return { result: "unsolvable" };
+  }
+
   const api = {
     SUITS, RANKS, CELL_COUNT, CASCADE_COUNT, MAX_DEAL,
     isRed, isRun, deal, createGame, canMove, maxMovable, move, isSafeToFoundation, autoPlay, undo, isWon, quickMove,
+    candidateMoves, solve,
   };
 
   if (typeof module !== "undefined" && module.exports) {
