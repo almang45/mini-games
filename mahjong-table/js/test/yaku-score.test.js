@@ -80,6 +80,27 @@ function hanNames(result) { return result.yaku.map((y) => y.name); }
   ok("yakuhai-only han = 1", result.han === 1, result);
   ok("fu = 40 (20 base + 4 open-honor-pon + 8 concealed-terminal-triplet + 2 tsumo)", result.fu === 40, result);
   ok("no menzen tsumo on open hand", !hanNames(result).includes("Menzen Tsumo"), result);
+  ok("fu items list where the 40 fu came from",
+    result.fuItems.map((i) => i.label + " " + i.fu).join(", ") === "Base 20, Open triplet, Chun 4, Closed triplet, 9 Bamboo 8, Tsumo 2", result.fuItems);
+}
+
+// --- open tanyao, all runs, two-sided ron: 20 fu of items counts as 30 ---
+{
+  const concealedCounts = countsFromNotations(["2m", "3m", "4m", "2p", "3p", "4p", "6s", "7s", "8s", "5m", "5m"]);
+  const result = yakuRiichi.evaluateWin({
+    concealedCounts,
+    openMelds: [{ type: "chi", tiles: [tiles.indexOf("s", 4), tiles.indexOf("s", 5), tiles.indexOf("s", 6)], concealed: false }],
+    winTile: tiles.indexOf("p", 2),
+    winBy: "ron",
+    seatWind: EAST,
+    roundWind: EAST,
+    flags: {},
+    doraIndicators: [],
+    uraDoraIndicators: [],
+  });
+  ok("open tanyao ron is 30 fu, not 20", result && result.han === 1 && result.fu === 30, result);
+  ok("the open ron minimum is an item", result.fuItems.some((i) => i.label === "Open ron minimum" && i.fu === 10), result.fuItems);
+  ok("open 1 han 30 fu ron pays 1000", scoreRiichi.computeScore(result.han, result.fu, false, "ron").total === 1000);
 }
 
 // --- Toitoitsu + Sanankou (shanpon ron, one triplet opened by the ron tile) ---
@@ -159,6 +180,29 @@ function hanNames(result) { return result.yaku.map((y) => y.name); }
   });
   ok("kokushi is a valid win", !!result);
   ok("kokushi is yakuman", result.isYakuman && result.han === 13, result);
+}
+
+// --- a ron tile that fits both a run and a triplet is scored the better way ---
+{
+  // 3m completes the 1-2 edge wait (333m stays a closed triplet) or the 3m triplet
+  // (shanpon, triplet counts as open). Edge: 20+4+4+2+2(Chun pair)+10 = 42 -> 50.
+  // Counting both the edge wait and the open triplet would give 40 -> 40.
+  const result = yakuRiichi.evaluateWin({
+    concealedCounts: countsFromNotations(["1m", "2m", "3m", "3m", "3m", "3m", "4s", "4s", "4s", "7p", "8p", "9p", "7z", "7z"]),
+    openMelds: [], winTile: tiles.indexOf("m", 3), winBy: "ron",
+    seatWind: tiles.indexOf("z", 2), roundWind: EAST, flags: { riichi: true }, doraIndicators: [], uraDoraIndicators: [],
+  });
+  ok("edge-wait reading wins: 1 han 50 fu", result && result.han === 1 && result.fu === 50, result);
+  ok("the 3m triplet stays closed in that reading", result.fuItems.some((i) => i.label === "Closed triplet, 3 Characters"), result.fuItems);
+
+  // 4m finishes 2-3m two-sided, so all three triplets stay concealed: sanankou + tanyao.
+  const sanankou = yakuRiichi.evaluateWin({
+    concealedCounts: countsFromNotations(["2m", "3m", "4m", "4m", "4m", "4m", "6s", "6s", "6s", "8p", "8p", "8p", "5s", "5s"]),
+    openMelds: [], winTile: tiles.indexOf("m", 4), winBy: "ron",
+    seatWind: tiles.indexOf("z", 2), roundWind: EAST, flags: {}, doraIndicators: [], uraDoraIndicators: [],
+  });
+  ok("run reading keeps sanankou on ron", sanankou && hanNames(sanankou).includes("Sanankou (Three Concealed Triplets)") && sanankou.han === 3, sanankou);
+  ok("sanankou reading is 50 fu", sanankou.fu === 50, sanankou);
 }
 
 // --- No-yaku hand must be rejected ---
