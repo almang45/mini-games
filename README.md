@@ -13,20 +13,23 @@ bundler and no server.
 | **[Mahjong Table](mahjong-table/)** | Traditional, competitive 4-player mahjong — Japanese Riichi or Chinese Classical rules, 1 human vs 3 AI or full local hot-seat. |
 | **[Card Table](card-games/)** | Six classic card games in one shared table shell — Hearts, Crazy Eights, President, Big Two, Chinese Poker, Blackjack. |
 | **[Mahjong Solitaire](mahjong-solitaire/)** | Classic single-player tile-matching puzzle. |
+| **[Klondike Solitaire](klondike-solitaire/)** | Classic single-player card game — build runs, fill the four foundations. |
 
-Each game folder is self-contained (its own README, tests, and CSS/JS) and
-can be opened directly via its own `index.html` without the others. Mahjong
-Solitaire is the exception worth calling out: it's simple enough to ship as
-a single file, so its README is a few lines and it has no separate test
-suite (see [mahjong-solitaire/README.md](mahjong-solitaire/README.md)).
+Each game folder is self-contained (its own README and CSS/JS) and can be
+opened directly via its own `index.html` without the others. Mahjong
+Solitaire and Klondike Solitaire are the exception worth calling out: both
+are simple enough to ship as a single file, so their READMEs are a few
+lines and neither has a separate test suite (see
+[mahjong-solitaire/README.md](mahjong-solitaire/README.md) and
+[klondike-solitaire/README.md](klondike-solitaire/README.md)).
 
 A `shared/` folder at the repo root holds the handful of things that really
 are identical across projects (the color palette + base styles in
 `shared/theme.css` and one DOM-shim primitive reused by both test suites)
-— everything else stays local to its own game on purpose, since the three
-UIs are independent by design. `shared/favicon.svg` (a generic dice icon)
-backs only the top-level hub page; each game has its own `favicon.png`
-representing that specific game, also used as its icon on the hub.
+— everything else stays local to its own game on purpose, since each game's
+UI is independent by design. `shared/favicon.svg` (a generic dice icon)
+backs only the top-level hub page; each game has its own favicon (PNG or
+SVG) representing that specific game, also used as its icon on the hub.
 
 Mahjong Table and Mahjong Solitaire both render real tile artwork from
 `shared/assets/tiles/` rather than relying on the Unicode Mahjong Tile
