@@ -286,6 +286,9 @@
 
 @media (max-width: 640px) {
   .table-wrap { grid-template-columns: 70px 1fr 70px; }
+  /* Side seats only get 70px: let the header wrap instead of pushing the page sideways. */
+  .seat.pos-left .seat-header, .seat.pos-right .seat-header { flex-wrap: wrap; justify-content: center; padding: 4px 6px; border-radius: 12px; text-align: center; }
+  .seat.pos-left .seat-score, .seat.pos-right .seat-score { margin-left: 0; }
   .card { width: 36px; height: 50px; }
   .card-corner { font-size: 0.58rem; }
   .card-pip { font-size: 1rem; }

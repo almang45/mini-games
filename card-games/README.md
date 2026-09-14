@@ -3,10 +3,11 @@
 A small collection of classic card games — static HTML/CSS/JS, no build step,
 no server. Open `index.html` directly in a browser.
 
-Eight games, each seatable from 1-4 players depending on the game:
+Nine games, each seatable from 1-4 players depending on the game:
 
 - **Hearts** — 4 players, trick-taking, avoid points, dodge the moon
 - **Spades** — 4 players in two partnerships, bid tricks, spades trump, nil and bags, to 500
+- **Oh Hell** — 3-4 players, hands shrink 7 to 1 and back, turned-card trump, only exact bids score
 - **Crazy Eights** — 2-4 players, shed your hand, wild 8s
 - **President** — 3-4 players, shed your hand, climbing sets
 - **Big Two** — 4 players, shed your hand, singles/pairs/triples/5-card poker hands
@@ -34,6 +35,7 @@ js/core/cards.js             card model: deck build, shuffle, rank helpers
 js/core/dom.js               generic DOM helpers (card rendering, seat layout)
 js/games/hearts.js           Hearts rules engine + AI
 js/games/spades.js           Spades rules engine + AI
+js/games/oh-hell.js          Oh Hell rules engine + AI
 js/games/crazy-eights.js     Crazy Eights rules engine + AI
 js/games/president.js        President rules engine + AI
 js/games/big-two.js          Big Two rules engine + AI
@@ -42,6 +44,7 @@ js/games/chinese-poker.js    Chinese Poker rules engine + AI
 js/games/blackjack.js        Blackjack rules engine + AI
 js/ui/hearts-ui.js           binds Hearts state to the shared table shell
 js/ui/spades-ui.js           binds Spades state to the shared table shell
+js/ui/oh-hell-ui.js          binds Oh Hell state to the shared table shell
 js/ui/crazy-eights-ui.js     binds Crazy Eights state to the shared table shell
 js/ui/president-ui.js        binds President state to the shared table shell
 js/ui/big-two-ui.js          binds Big Two state to the shared table shell
@@ -82,6 +85,15 @@ etc., which the Node tests populate manually before requiring them — see
 - The game ends when a team reaches 500 with scores unequal (ties keep
   playing), or when a team falls to -200.
 - The human's bid stepper starts at the AI's suggested bid for that hand.
+
+**Oh Hell:**
+- 13 rounds with hands of 7, 6, ... 1, ... 6, 7 cards at both 3 and 4 seats
+  (tables that deal up to 10 or 13 cards play longer games). Every round has a
+  trump suit from the turned card; there are no no-trump rounds.
+- Scoring is exact-or-nothing: 10 + bid for an exact bid, 0 otherwise. No
+  per-trick points and no penalty scale for missing by more.
+- The dealer's hook rule is enforced; the stepper can reach the forbidden
+  number but the submit button stays disabled on it.
 
 **Gin Rummy:**
 - Aces are low (A-2-3 is a run, Q-K-A isn't); deadwood counts A=1, 2-10 face
@@ -161,13 +173,17 @@ etc., which the Node tests populate manually before requiring them — see
 - Fixed 15-round session, then the game ends and seats are ranked by final
   chip count — not an open-ended "play until you're broke" session.
 
-**AI opponents (all eight games):** heuristic, not a full game-tree search —
+**AI opponents (all nine games):** heuristic, not a full game-tree search —
 they play legally and reasonably (Hearts: duck under the current trick
 winner when possible, dump dangerous cards — the Queen of Spades and high
 spades/hearts — when void; Spades: bid a rule-of-thumb trick count from
 high cards, spade length and short suits, lead sure winners while tricks
 are still needed, duck with the highest losing card when bidding Nil or once
 the contract is made, and don't overtake a partner who is already winning;
+Oh Hell: bid the nearest legal number to a weighted count of honors, trump
+length and ruffable voids (it makes about half its bids in AI-only games),
+chase tricks with sure winners until the bid is reached, then shed the
+highest card that still loses;
 Gin Rummy: take the discard only when it lands in a meld, discard for the
 lowest resulting deadwood and shed high unconnected cards first, knock
 early but hold out for a low count mid-hand to avoid undercuts; Crazy Eights: hold 8s back until forced, prefer
@@ -186,7 +202,7 @@ No headless browser (Playwright/Puppeteer/jsdom) was available in the
 environment this was built in, so testing happens on two levels:
 
 1. **Engine tests** (`cards.test.js`, `hearts.test.js`, `spades.test.js`,
-   `crazy-eights.test.js`, `president.test.js`, `big-two.test.js`,
+   `oh-hell.test.js`, `crazy-eights.test.js`, `president.test.js`, `big-two.test.js`,
    `gin-rummy.test.js`, `chinese-poker.test.js`, `blackjack.test.js`)
    exercise each rules engine directly in Node: rule checks against
    hand-built scenarios (forced leads, moon shots, illegal plays,

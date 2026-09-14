@@ -25,6 +25,7 @@ const CHINESE_POKER = require("../games/chinese-poker.js"); global.CHINESE_POKER
 const BLACKJACK = require("../games/blackjack.js"); global.BLACKJACK = BLACKJACK;
 const SPADES = require("../games/spades.js"); global.SPADES = SPADES;
 const GIN_RUMMY = require("../games/gin-rummy.js"); global.GIN_RUMMY = GIN_RUMMY;
+const OH_HELL = require("../games/oh-hell.js"); global.OH_HELL = OH_HELL;
 require("../ui/hearts-ui.js");
 require("../ui/crazy-eights-ui.js");
 require("../ui/president-ui.js");
@@ -33,6 +34,7 @@ require("../ui/chinese-poker-ui.js");
 require("../ui/blackjack-ui.js");
 require("../ui/spades-ui.js");
 require("../ui/gin-rummy-ui.js");
+require("../ui/oh-hell-ui.js");
 const app = require("../app.js");
 global.document._fireDOMContentLoaded();
 
@@ -137,10 +139,23 @@ function ginHumanMove(state, seat) {
   app.clickAction(!knock ? "Discard " + CARDS.cardLabel(card) : deadwood === 0 ? "Gin!" : "Knock (" + deadwood + " deadwood)");
 }
 
+// Stepping down can land on the dealer's forbidden bid; stepping back up
+// returns to the AI's own (always legal) estimate.
+function ohHellHumanMove(state, seat) {
+  if (state.round.phase !== "bidding") {
+    app.playCard(seat, OH_HELL.aiChoosePlay(state, seat));
+    return;
+  }
+  const buttons = () => app.getCurrentGame().actionButtons(state, seat);
+  if (!buttons().find((b) => b.label === "−").disabled) app.clickAction("−");
+  if (buttons().find((b) => b.primary).disabled) app.clickAction("+");
+  app.clickAction(buttons().find((b) => b.primary).label);
+}
+
 const HUMAN_MOVE = {
   hearts: heartsHumanMove, "crazy-eights": ceHumanMove, president: presHumanMove,
   "big-two": bigTwoHumanMove, "chinese-poker": cpHumanMove, blackjack: bjHumanMove,
-  spades: spadesHumanMove, "gin-rummy": ginHumanMove,
+  spades: spadesHumanMove, "gin-rummy": ginHumanMove, "oh-hell": ohHellHumanMove,
 };
 
 async function driveGame({ maxHumanSteps = 1500, maxTicks = 4000 } = {}) {
@@ -184,6 +199,8 @@ async function run() {
     ["blackjack", ["human", "ai", "ai", "ai"]],
     ["spades", ["human", "ai", "ai", "ai"]],
     ["gin-rummy", ["human", "ai", "off", "off"]],
+    ["oh-hell", ["human", "ai", "ai", "off"]],
+    ["oh-hell", ["human", "ai", "ai", "ai"]],
   ];
   for (const [key, seats] of vsAiConfigs) {
     setupSeats(key, seats);
@@ -208,6 +225,7 @@ async function run() {
     ["blackjack", ["human", "human", "human", "human"], 1500],
     ["spades", ["human", "human", "human", "human"], 4000],
     ["gin-rummy", ["human", "human", "off", "off"], 3000],
+    ["oh-hell", ["human", "human", "human", "human"], 1500],
   ];
   for (const [key, seats, maxHumanSteps] of hotseatConfigs) {
     setupSeats(key, seats);

@@ -15,7 +15,7 @@
   <header class="guide-header">
     <a class="back-link" href="index.html">&larr; Back to Game</a>
     <h1>Card Table — Rules Guide</h1>
-    <p class="tagline">Eight classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
+    <p class="tagline">Nine classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
   </header>
 
   <div class="guide-layout">
@@ -26,6 +26,7 @@
       <a href="#basics">Universal Basics</a>
       <a href="#hearts">Hearts</a>
       <a href="#spades">Spades</a>
+      <a href="#oh-hell">Oh Hell</a>
       <a href="#crazy-eights">Crazy Eights</a>
       <a href="#president">President</a>
       <a href="#big-two">Big Two</a>
@@ -41,7 +42,7 @@
       <section id="quick-start">
         <h2>Quick Start</h2>
         <ol class="steps">
-          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Crazy Eights, President, Big Two, Gin Rummy, Chinese Poker, or Blackjack.</li>
+          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Oh Hell, Crazy Eights, President, Big Two, Gin Rummy, Chinese Poker, or Blackjack.</li>
           <li>For each of the 4 seats, choose <strong>Human</strong>, <strong>AI</strong>, or (where allowed) <strong>Off</strong>. One human seat plays "vs AI"; every seat set to Human plays local hot-seat, passing the device around the table. Picking a game that seats fewer players (Gin Rummy) switches the extra seats Off for you, AI seats first.</li>
           <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Bid, Draw, Pass, Play Selected, Knock, Hit, Stand, Submit, etc.) when one is lit up. In Gin Rummy, click a card to select it and then press Discard or Knock. Chinese Poker is the other exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
           <li>In hot-seat mode, a "Pass the device" screen appears between turns so other players can't see your hand until you're ready.</li>
@@ -75,14 +76,14 @@
 
       <section id="basics">
         <h2>Universal Basics</h2>
-        <p>All eight games share one 52-card deck (no jokers) and the same table chrome:</p>
+        <p>All nine games share one 52-card deck (no jokers) and the same table chrome:</p>
         <ul>
           <li><strong>Turn order</strong> runs clockwise from whoever leads (except Blackjack, where every seat plays against the dealer rather than each other, and Chinese Poker, where everyone arranges privately at the same time).</li>
           <li><strong>Human vs AI</strong>: the AI seats think for about half a second before acting, so you can follow along.</li>
           <li><strong>Hot-seat privacy</strong>: with more than one human seat, the app never shows a hand that isn't the active player's - it gates every handoff behind a "Pass the device" screen.</li>
           <li><strong>The log panel</strong> below the table lists the most recent plays, in case you look away for a second.</li>
         </ul>
-        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy is always exactly 2; Crazy Eights plays with 2-4; President plays with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
+        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy is always exactly 2; Crazy Eights plays with 2-4; President and Oh Hell play with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
       </section>
 
       <section id="hearts">
@@ -126,6 +127,29 @@
           <li><strong>Bags add up:</strong> every time a team's bags reach 10, it loses 100 points.</li>
         </ul>
         <p>Rounds continue until a team reaches 500 points with more than the other team, and wins, or a team drops to -200, and loses.</p>
+      </section>
+
+      <section id="oh-hell">
+        <h2>Oh Hell</h2>
+        <p><strong>Goal:</strong> take exactly as many tricks as you bid, no more and no fewer. 3-4 players, each playing for themselves.</p>
+        <h3>The deal</h3>
+        <ul>
+          <li>The game runs 13 rounds. Hands start at 7 cards, shrink by one each round down to 1, then grow back to 7.</li>
+          <li>After the deal, the next card is turned face up. Its suit is <strong>trump</strong> for the round.</li>
+        </ul>
+        <h3>Bidding</h3>
+        <ul>
+          <li>Starting to the dealer's left, everyone bids how many tricks they will take, from 0 up to the hand size.</li>
+          <li>The dealer bids last and may not bid the number that makes all bids add up to the hand size, so someone always misses. The table won't let the dealer submit that bid.</li>
+          <li>Your bid starts at the AI's suggestion for your hand; use &minus; and + to change it.</li>
+        </ul>
+        <h3>Playing a trick</h3>
+        <ul>
+          <li>The first bidder leads the first trick. Follow the suit led if you can; otherwise play anything, trump included.</li>
+          <li>The highest trump wins the trick. With no trump in it, the highest card of the suit led wins. Trump may be led at any time.</li>
+        </ul>
+        <h3>Scoring</h3>
+        <p>Take exactly your bid and score <strong>10 plus your bid</strong> (a bid of 0 made is worth 10). Take any other number and score nothing. After the 13th round, the highest total wins.</p>
       </section>
 
       <section id="crazy-eights">
@@ -227,6 +251,7 @@
           <tbody>
             <tr><td>Hearts</td><td>Scoring resets each session (no saved match history); the pass cycle is left/right/across/hold, repeating every 4 hands.</td></tr>
             <tr><td>Spades</td><td>No Blind Nil, no minimum team bid, and no bonus for winning all 13 tricks. A failed Nil's tricks still count toward the partner's contract and bags. If a team reaches 500 but the scores are tied, play continues.</td></tr>
+            <tr><td>Oh Hell</td><td>Hands run 7 down to 1 and back to 7 for every table size, with no no-trump rounds. Only exact bids score (10 + bid); there are no per-trick points for missed bids.</td></tr>
             <tr><td>Crazy Eights</td><td>No point-scoring across multiple hands - the game ends the moment someone empties their hand. No special-action cards besides the wild 8 (no skip/reverse/draw-two).</td></tr>
             <tr><td>President</td><td>No jokers, no card-exchange between the President and the Bum between rounds, and no "8 clears the pile" or "revolution" house rules - just pure rank climbing.</td></tr>
             <tr><td>Big Two</td><td>Only singles, pairs, triples, and 5-card poker hands are legal plays - no other combo sizes. 5-card hands rank by standard poker strength (straight &lt; flush &lt; full house &lt; four-of-a-kind &lt; straight flush), a common but not universal house convention.</td></tr>
@@ -243,7 +268,8 @@
           <dt>Trick</dt><dd>One card from each player, played in turn and won by the best card (Hearts, Spades).</dd>
           <dt>Broken (hearts, spades)</dt><dd>Once a heart (in Hearts) or a spade (in Spades) has been played to any trick, that suit may be led from then on.</dd>
           <dt>Shooting the moon</dt><dd>Winning every point-scoring card in a Hearts hand - scores 0 instead of 26.</dd>
-          <dt>Trump</dt><dd>A suit that beats every other suit - spades, in Spades.</dd>
+          <dt>Trump</dt><dd>A suit that beats every other suit - spades, in Spades; the turned card's suit, in Oh Hell.</dd>
+          <dt>Hook</dt><dd>The Oh Hell dealer's restriction: the last bid can't make the total equal the number of tricks.</dd>
           <dt>Contract</dt><dd>A Spades team's combined bid (not counting Nil) - the number of tricks it must win.</dd>
           <dt>Nil</dt><dd>A Spades bid of zero tricks: +100 if you win none, -100 if you win any.</dd>
           <dt>Bag</dt><dd>A trick won beyond a Spades team's contract - worth 1 point, but every 10 bags cost 100.</dd>
