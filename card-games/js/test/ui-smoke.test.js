@@ -26,6 +26,7 @@ const BLACKJACK = require("../games/blackjack.js"); global.BLACKJACK = BLACKJACK
 const SPADES = require("../games/spades.js"); global.SPADES = SPADES;
 const GIN_RUMMY = require("../games/gin-rummy.js"); global.GIN_RUMMY = GIN_RUMMY;
 const OH_HELL = require("../games/oh-hell.js"); global.OH_HELL = OH_HELL;
+const EUCHRE = require("../games/euchre.js"); global.EUCHRE = EUCHRE;
 require("../ui/hearts-ui.js");
 require("../ui/crazy-eights-ui.js");
 require("../ui/president-ui.js");
@@ -35,6 +36,7 @@ require("../ui/blackjack-ui.js");
 require("../ui/spades-ui.js");
 require("../ui/gin-rummy-ui.js");
 require("../ui/oh-hell-ui.js");
+require("../ui/euchre-ui.js");
 const app = require("../app.js");
 global.document._fireDOMContentLoaded();
 
@@ -152,10 +154,23 @@ function ohHellHumanMove(state, seat) {
   app.clickAction(buttons().find((b) => b.primary).label);
 }
 
+function euchreHumanMove(state, seat) {
+  const h = state.hand;
+  if (h.phase === "playing") return app.playCard(seat, EUCHRE.aiChoosePlay(state, seat));
+  if (h.phase === "discard") return app.playCard(seat, EUCHRE.aiChooseDiscard(h.hands[seat], h.trump));
+  if (h.phase === "order") {
+    const order = (seat === state.dealerSeat ? "Pick Up " : "Order Up ") + CARDS.cardLabel(h.upcard);
+    return app.clickAction(EUCHRE.aiWantsOrder(state, seat) ? order : "Pass");
+  }
+  const suit = EUCHRE.aiChooseName(state, seat);
+  return app.clickAction(suit ? "Name " + CARDS.suitName(suit) : "Pass");
+}
+
 const HUMAN_MOVE = {
   hearts: heartsHumanMove, "crazy-eights": ceHumanMove, president: presHumanMove,
   "big-two": bigTwoHumanMove, "chinese-poker": cpHumanMove, blackjack: bjHumanMove,
   spades: spadesHumanMove, "gin-rummy": ginHumanMove, "oh-hell": ohHellHumanMove,
+  euchre: euchreHumanMove,
 };
 
 async function driveGame({ maxHumanSteps = 1500, maxTicks = 4000 } = {}) {
@@ -201,6 +216,7 @@ async function run() {
     ["gin-rummy", ["human", "ai", "off", "off"]],
     ["oh-hell", ["human", "ai", "ai", "off"]],
     ["oh-hell", ["human", "ai", "ai", "ai"]],
+    ["euchre", ["human", "ai", "ai", "ai"]],
   ];
   for (const [key, seats] of vsAiConfigs) {
     setupSeats(key, seats);
@@ -226,6 +242,7 @@ async function run() {
     ["spades", ["human", "human", "human", "human"], 4000],
     ["gin-rummy", ["human", "human", "off", "off"], 3000],
     ["oh-hell", ["human", "human", "human", "human"], 1500],
+    ["euchre", ["human", "human", "human", "human"], 3000],
   ];
   for (const [key, seats, maxHumanSteps] of hotseatConfigs) {
     setupSeats(key, seats);

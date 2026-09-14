@@ -8,6 +8,7 @@
     hearts: window.HEARTS_UI,
     spades: window.SPADES_UI,
     "oh-hell": window.OH_HELL_UI,
+    euchre: window.EUCHRE_UI,
     "crazy-eights": window.CE_UI,
     president: window.PRESIDENT_UI,
     "big-two": window.BIG_TWO_UI,
@@ -15,7 +16,7 @@
     "chinese-poker": window.CHINESE_POKER_UI,
     blackjack: window.BLACKJACK_UI,
   };
-  const GAME_ORDER = ["hearts", "spades", "oh-hell", "crazy-eights", "president", "big-two", "gin-rummy", "chinese-poker", "blackjack"];
+  const GAME_ORDER = ["hearts", "spades", "oh-hell", "euchre", "crazy-eights", "president", "big-two", "gin-rummy", "chinese-poker", "blackjack"];
 
   let selectedGameKey = null;
   let seatConfig = ["human", "ai", "ai", "ai"];

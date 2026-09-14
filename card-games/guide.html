@@ -15,7 +15,7 @@
   <header class="guide-header">
     <a class="back-link" href="index.html">&larr; Back to Game</a>
     <h1>Card Table — Rules Guide</h1>
-    <p class="tagline">Nine classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
+    <p class="tagline">Ten classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
   </header>
 
   <div class="guide-layout">
@@ -27,6 +27,7 @@
       <a href="#hearts">Hearts</a>
       <a href="#spades">Spades</a>
       <a href="#oh-hell">Oh Hell</a>
+      <a href="#euchre">Euchre</a>
       <a href="#crazy-eights">Crazy Eights</a>
       <a href="#president">President</a>
       <a href="#big-two">Big Two</a>
@@ -42,7 +43,7 @@
       <section id="quick-start">
         <h2>Quick Start</h2>
         <ol class="steps">
-          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Oh Hell, Crazy Eights, President, Big Two, Gin Rummy, Chinese Poker, or Blackjack.</li>
+          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Oh Hell, Euchre, Crazy Eights, President, Big Two, Gin Rummy, Chinese Poker, or Blackjack.</li>
           <li>For each of the 4 seats, choose <strong>Human</strong>, <strong>AI</strong>, or (where allowed) <strong>Off</strong>. One human seat plays "vs AI"; every seat set to Human plays local hot-seat, passing the device around the table. Picking a game that seats fewer players (Gin Rummy) switches the extra seats Off for you, AI seats first.</li>
           <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Bid, Draw, Pass, Play Selected, Knock, Hit, Stand, Submit, etc.) when one is lit up. In Gin Rummy, click a card to select it and then press Discard or Knock. Chinese Poker is the other exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
           <li>In hot-seat mode, a "Pass the device" screen appears between turns so other players can't see your hand until you're ready.</li>
@@ -76,14 +77,14 @@
 
       <section id="basics">
         <h2>Universal Basics</h2>
-        <p>All nine games share one 52-card deck (no jokers) and the same table chrome:</p>
+        <p>Every game uses a standard deck with no jokers (Euchre keeps only the 9s through Aces, 24 cards) and the same table chrome:</p>
         <ul>
           <li><strong>Turn order</strong> runs clockwise from whoever leads (except Blackjack, where every seat plays against the dealer rather than each other, and Chinese Poker, where everyone arranges privately at the same time).</li>
           <li><strong>Human vs AI</strong>: the AI seats think for about half a second before acting, so you can follow along.</li>
           <li><strong>Hot-seat privacy</strong>: with more than one human seat, the app never shows a hand that isn't the active player's - it gates every handoff behind a "Pass the device" screen.</li>
           <li><strong>The log panel</strong> below the table lists the most recent plays, in case you look away for a second.</li>
         </ul>
-        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy is always exactly 2; Crazy Eights plays with 2-4; President and Oh Hell play with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
+        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Euchre, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy is always exactly 2; Crazy Eights plays with 2-4; President and Oh Hell play with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
       </section>
 
       <section id="hearts">
@@ -150,6 +151,28 @@
         </ul>
         <h3>Scoring</h3>
         <p>Take exactly your bid and score <strong>10 plus your bid</strong> (a bid of 0 made is worth 10). Take any other number and score nothing. After the 13th round, the highest total wins.</p>
+      </section>
+
+      <section id="euchre">
+        <h2>Euchre</h2>
+        <p><strong>Goal:</strong> with your partner across the table, take at least 3 of the 5 tricks when your team picks trump. The first team to 10 points wins.</p>
+        <h3>Cards and bowers</h3>
+        <ul>
+          <li>Only the 9, 10, J, Q, K and A of each suit are used, 24 cards in all. Everyone gets 5, and the next card is turned face up.</li>
+          <li>Once trump is set, the jack of trump is the <strong>right bower</strong>, the highest card. The other jack of the same colour is the <strong>left bower</strong>, the second highest. The left bower counts as a trump for every rule, following suit included. Below them come the A, K, Q, 10 and 9 of trump.</li>
+          <li>Bowers carry a <strong>Right</strong> or <strong>Left</strong> badge in your hand, so you don't misread them.</li>
+        </ul>
+        <h3>Calling trump</h3>
+        <ul>
+          <li><strong>First round:</strong> starting to the dealer's left, each player may <strong>order up</strong> the turned card, making its suit trump, or pass. The dealer may <strong>pick it up</strong> instead. Either way, the dealer takes the card and discards one face down; click the card you want to discard.</li>
+          <li><strong>Second round:</strong> if all four pass, the card is turned down. Going around again, each player may name any other suit, or pass. The dealer can't pass this time ("stick the dealer"), so every hand is played.</li>
+          <li>The team that chose trump are the <strong>makers</strong>.</li>
+        </ul>
+        <h3>Playing and scoring</h3>
+        <ul>
+          <li>The player left of the dealer leads. Follow the suit led if you can, remembering that the left bower is a trump and not its printed suit. Otherwise, play anything. The highest trump wins, or else the highest card of the suit led.</li>
+          <li>Makers who take 3 or 4 tricks score <strong>1</strong>. Taking all 5 is a <strong>march</strong> and scores <strong>2</strong>. Makers who take fewer than 3 are <strong>euchred</strong>, and the defenders score <strong>2</strong>.</li>
+        </ul>
       </section>
 
       <section id="crazy-eights">
@@ -252,6 +275,7 @@
             <tr><td>Hearts</td><td>Scoring resets each session (no saved match history); the pass cycle is left/right/across/hold, repeating every 4 hands.</td></tr>
             <tr><td>Spades</td><td>No Blind Nil, no minimum team bid, and no bonus for winning all 13 tricks. A failed Nil's tricks still count toward the partner's contract and bags. If a team reaches 500 but the scores are tied, play continues.</td></tr>
             <tr><td>Oh Hell</td><td>Hands run 7 down to 1 and back to 7 for every table size, with no no-trump rounds. Only exact bids score (10 + bid); there are no per-trick points for missed bids.</td></tr>
+            <tr><td>Euchre</td><td>No going alone, so no 4-point loner hands. The dealer is always stuck in the second round, and there are no misdeal or "farmer's hand" redeals.</td></tr>
             <tr><td>Crazy Eights</td><td>No point-scoring across multiple hands - the game ends the moment someone empties their hand. No special-action cards besides the wild 8 (no skip/reverse/draw-two).</td></tr>
             <tr><td>President</td><td>No jokers, no card-exchange between the President and the Bum between rounds, and no "8 clears the pile" or "revolution" house rules - just pure rank climbing.</td></tr>
             <tr><td>Big Two</td><td>Only singles, pairs, triples, and 5-card poker hands are legal plays - no other combo sizes. 5-card hands rank by standard poker strength (straight &lt; flush &lt; full house &lt; four-of-a-kind &lt; straight flush), a common but not universal house convention.</td></tr>
@@ -270,6 +294,11 @@
           <dt>Shooting the moon</dt><dd>Winning every point-scoring card in a Hearts hand - scores 0 instead of 26.</dd>
           <dt>Trump</dt><dd>A suit that beats every other suit - spades, in Spades; the turned card's suit, in Oh Hell.</dd>
           <dt>Hook</dt><dd>The Oh Hell dealer's restriction: the last bid can't make the total equal the number of tricks.</dd>
+          <dt>Bower</dt><dd>In Euchre, the jack of trump (right bower, the highest card) or the other jack of the same colour (left bower, second highest, played as a trump).</dd>
+          <dt>Order up</dt><dd>A first-round Euchre call telling the dealer to take the turned card, which makes its suit trump.</dd>
+          <dt>Makers</dt><dd>The Euchre team that chose trump. They need 3 of the 5 tricks.</dd>
+          <dt>Euchred</dt><dd>Makers who take fewer than 3 tricks. The defenders score 2.</dd>
+          <dt>March</dt><dd>Makers taking all 5 tricks in Euchre, worth 2 points.</dd>
           <dt>Contract</dt><dd>A Spades team's combined bid (not counting Nil) - the number of tricks it must win.</dd>
           <dt>Nil</dt><dd>A Spades bid of zero tricks: +100 if you win none, -100 if you win any.</dd>
           <dt>Bag</dt><dd>A trick won beyond a Spades team's contract - worth 1 point, but every 10 bags cost 100.</dd>
