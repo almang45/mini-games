@@ -8,43 +8,11 @@
 <link rel="stylesheet" href="../shared/theme.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
-  /* Trainer-only layout. Tile faces (.hand-tile, .tile-mini, .tile-face-img)
-     come from css/style.css so they match the table exactly. */
-  .trainer-stats { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-  .trainer-stat {
-    background: var(--panel); border: 1px solid var(--felt-line); border-radius: 8px;
-    padding: 6px 14px; font-size: 0.8rem; text-align: center; min-width: 84px;
-  }
-  .trainer-stat b { display: block; font-size: 1.05rem; color: var(--accent); }
-
-  .trainer-panel {
-    width: 100%;
-    max-width: 780px;
-    background: radial-gradient(ellipse at center, #1a5c40 0%, #0d3d29 100%);
-    border: 1px solid var(--felt-line);
-    border-radius: 18px;
-    padding: 22px 10px 18px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-  }
-
-  .trainer-hand { display: flex; justify-content: center; gap: 3px; }
-  /* 14 tiles must fit one row down to ~360px wide screens. */
-  .trainer-hand .hand-tile {
-    width: min(48px, calc((100vw - 80px) / 14.6));
-    height: auto;
-    aspect-ratio: 48 / 64;
-    padding: 2px;
-  }
+  /* Trainer-only layout. Tile faces and the practice-page panel, stats and
+     verdict come from css/style.css, shared with scoring-quiz.html. */
   .trainer-hand .hand-tile.drawn { margin-left: min(12px, 2vw); outline: none; }
   .trainer-hand .hand-tile.is-best { box-shadow: 0 0 0 3px var(--ok), 0 2px 4px rgba(0, 0, 0, 0.35); }
   .trainer-hand .hand-tile.is-pick { transform: translateY(-8px); outline: 3px solid var(--accent); outline-offset: 1px; }
-
-  .verdict { margin: 0; min-height: 1.4em; font-size: 0.95rem; text-align: center; }
-  .verdict.is-correct { color: var(--ok); }
-  .verdict.is-wrong { color: var(--danger); }
 
   .analysis-wrap { width: 100%; overflow-x: auto; }
   .analysis { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
@@ -55,12 +23,6 @@
   .analysis tr.is-pick td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
   .analysis .cut { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
   .analysis .waits { display: flex; flex-wrap: wrap; gap: 2px; }
-
-  .how-to {
-    width: 100%; max-width: 780px; background: var(--panel); border: 1px solid var(--felt-line);
-    border-radius: 10px; padding: 10px 14px; font-size: 0.85rem; color: var(--ink-dim);
-  }
-  .how-to summary { cursor: pointer; color: var(--ink); }
 </style>
 </head>
 <body>

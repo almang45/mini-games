@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scoring Quiz — Mahjong Table</title>
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  /* Quiz-only layout. The stats, felt panel, hand row and verdict come from css/style.css. */
+  [hidden] { display: none !important; }
+  .quiz-situation { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .quiz-situation li {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--panel-strong); border-radius: 999px; padding: 3px 10px; font-size: 0.8rem;
+  }
+  .trainer-hand .hand-tile.is-win { margin-left: min(12px, 2vw); outline: 3px solid var(--accent); outline-offset: 1px; }
+  .quiz-melds { gap: min(10px, 2vw); }
+
+  .quiz-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; max-width: 420px; }
+  .quiz-choice {
+    font: inherit; font-size: 1rem; font-variant-numeric: tabular-nums; padding: 10px;
+    background: var(--panel-strong); color: var(--ink); border: 1px solid var(--felt-line); border-radius: 8px;
+  }
+  .quiz-choice:hover { border-color: var(--accent); }
+  .quiz-choice:disabled { opacity: 1; cursor: default; }
+  .quiz-choice.is-answer { border-color: var(--ok); box-shadow: 0 0 0 2px var(--ok); }
+  .quiz-choice.is-wrong-pick { border-color: var(--danger); box-shadow: 0 0 0 2px var(--danger); }
+
+  .quiz-breakdown { width: 100%; max-width: 520px; display: grid; gap: 12px; font-size: 0.85rem; }
+  .quiz-breakdown h2 { margin: 0 0 2px; font-size: 0.72rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; }
+  .quiz-rows { list-style: none; margin: 0; padding: 0; }
+  .quiz-rows li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 2px; border-bottom: 1px solid var(--felt-line); }
+  .quiz-rows li span:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .quiz-rows li.total { border-bottom: 0; font-weight: 600; }
+  .quiz-steps { margin: 0; padding-left: 20px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="start-header">
+    <a class="back-link" href="index.html">← Mahjong Table</a>
+    <h1>Scoring Quiz</h1>
+    <p class="tagline">Someone just won with this hand. What does it pay?</p>
+  </header>
+
+  <div class="trainer-stats">
+    <div class="trainer-stat">Correct<b id="statScore">0 / 0</b></div>
+    <div class="trainer-stat">Streak<b id="statStreak">0</b></div>
+  </div>
+
+  <div class="trainer-panel">
+    <ul class="quiz-situation" id="situation" aria-label="Situation"></ul>
+    <div class="trainer-hand" id="hand" role="group" aria-label="Winning hand"></div>
+    <div class="trainer-hand quiz-melds" id="melds" role="group" aria-label="Called melds" hidden></div>
+    <div class="quiz-choices" id="choices" role="group" aria-label="Payment"></div>
+    <p class="verdict" id="verdict">Pick what the winner is paid.</p>
+    <div class="quiz-breakdown" id="breakdown" hidden>
+      <section><h2>Han</h2><ul class="quiz-rows" id="hanRows"></ul></section>
+      <section id="fuSection"><h2>Fu</h2><ul class="quiz-rows" id="fuRows"></ul></section>
+      <section><h2>Payment</h2><ol class="quiz-steps" id="steps"></ol></section>
+    </div>
+    <button class="btn-primary" id="btnNext" type="button" hidden>Next Hand</button>
+  </div>
+
+  <details class="how-to">
+    <summary>Rules this quiz uses</summary>
+    <p>Every hand is a real win, scored by the same engine as the Riichi table. Yaku and dora give <strong>han</strong>; the hand's groups, wait and how it was won give <strong>fu</strong>. Base points are <code>fu × 2^(han+2)</code>, capped at mangan. When a hand can be read more than one way, the highest score counts.</p>
+    <p>Tsumo answers read <em>dealer pays / each non-dealer pays</em>. When the dealer wins by tsumo, all three pay the same ("all"). There is one dora indicator and no ura-dora, red fives, honba or riichi sticks. There is no kiriage mangan either, so 4 han 30 fu pays 7700. The <a href="guide.html">rules guide</a> has the full yaku and fu tables.</p>
+  </details>
+</div>
+
+<script src="js/tiles.js"></script>
+<script src="js/hand.js"></script>
+<script src="js/yaku-riichi.js"></script>
+<script src="js/score-riichi.js"></script>
+<script src="js/quiz.js"></script>
+<script>
+(function () {
+  "use strict";
+  const { tiles, scoreRiichi, quiz } = window.MJ;
+  const TILE_ASSET_BASE = "../shared/assets/tiles/";
+  const $ = (id) => document.getElementById(id);
+
+  let q = null;
+  let answered = false;
+  let correct = 0, total = 0, streak = 0;
+
+  function tileNode(className, kind) {
+    const node = document.createElement("span");
+    node.className = className;
+    const img = document.createElement("img");
+    img.className = "tile-face-img";
+    img.src = TILE_ASSET_BASE + tiles.assetOf(kind);
+    img.alt = tiles.nameOf(kind);
+    img.draggable = false;
+    node.appendChild(img);
+    return node;
+  }
+
+  function chip(text, kind) {
+    const li = document.createElement("li");
+    li.textContent = text;
+    if (kind !== undefined) li.appendChild(tileNode("tile-mini", kind));
+    return li;
+  }
+
+  function addRow(list, label, value, className) {
+    const li = document.createElement("li");
+    if (className) li.className = className;
+    const name = document.createElement("span");
+    name.textContent = label;
+    const amount = document.createElement("span");
+    amount.textContent = value;
+    li.append(name, amount);
+    list.appendChild(li);
+  }
+
+  function renderQuestion() {
+    const situation = $("situation");
+    situation.textContent = "";
+    situation.append(
+      chip((q.winBy === "ron" ? "Ron" : "Tsumo") + " on", q.winTile),
+      chip(q.isDealer ? "Dealer (East seat)" : tiles.nameOf(q.seatWind) + " seat"),
+      chip(tiles.nameOf(q.roundWind) + " round"),
+    );
+    if (q.riichi) situation.appendChild(chip("Riichi"));
+    situation.appendChild(chip("Dora indicator", q.doraIndicator));
+
+    const rest = q.concealedCounts.slice();
+    rest[q.winTile]--;
+    const handEl = $("hand");
+    handEl.textContent = "";
+    tiles.kindsFromCounts(rest).forEach((kind) => handEl.appendChild(tileNode("hand-tile", kind)));
+    handEl.appendChild(tileNode("hand-tile is-win", q.winTile));
+
+    const melds = $("melds");
+    melds.textContent = "";
+    q.openMelds.forEach((m) => {
+      const group = document.createElement("div");
+      group.className = "meld-group";
+      group.setAttribute("aria-label", m.type === "chi" ? "Chi" : "Pon");
+      m.tiles.forEach((kind) => group.appendChild(tileNode("hand-tile", kind)));
+      melds.appendChild(group);
+    });
+    melds.hidden = q.openMelds.length === 0;
+
+    const choices = $("choices");
+    choices.textContent = "";
+    q.choices.forEach((label) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "quiz-choice";
+      btn.textContent = label;
+      btn.addEventListener("click", () => pick(btn));
+      choices.appendChild(btn);
+    });
+  }
+
+  function renderBreakdown() {
+    const r = q.result;
+    const hanRows = $("hanRows");
+    hanRows.textContent = "";
+    r.yaku.forEach((y) => addRow(hanRows, y.name, y.yakuman ? "Yakuman" : y.han + " han"));
+    addRow(hanRows, "Total", r.isYakuman ? scoreRiichi.limitName(r.han) : r.han + " han", "total");
+
+    const fuRows = $("fuRows");
+    fuRows.textContent = "";
+    r.fuItems.forEach((item) => addRow(fuRows, item.label, "+" + item.fu));
+    const rawFu = r.fuItems.reduce((a, item) => a + item.fu, 0);
+    addRow(fuRows, "Total", (rawFu === r.fu ? "" : rawFu + " → ") + r.fu + " fu", "total");
+    $("fuSection").hidden = r.isYakuman;
+
+    const steps = $("steps");
+    steps.textContent = "";
+    quiz.paymentSteps(r.han, r.fu, q.isDealer, q.winBy).forEach((text) => {
+      const li = document.createElement("li");
+      li.textContent = text;
+      steps.appendChild(li);
+    });
+    $("breakdown").hidden = false;
+  }
+
+  function pick(btn) {
+    if (answered) return;
+    answered = true;
+    const right = btn.textContent === q.answer;
+    total++;
+    if (right) { correct++; streak++; } else { streak = 0; }
+    [...$("choices").children].forEach((b) => {
+      b.disabled = true;
+      if (b.textContent === q.answer) b.classList.add("is-answer");
+    });
+    if (!right) btn.classList.add("is-wrong-pick");
+
+    const r = q.result;
+    const limit = scoreRiichi.limitName(r.han) || (scoreRiichi.basePoints(r.han, r.fu) === 2000 ? "Mangan" : null);
+    const shape = r.isYakuman ? limit : r.han + " han " + r.fu + " fu" + (limit ? " (" + limit + ")" : "");
+    const verdict = $("verdict");
+    verdict.className = "verdict " + (right ? "is-correct" : "is-wrong");
+    verdict.textContent = right ? "Correct: " + shape + " pays " + q.answer + "." : "It pays " + q.answer + ": " + shape + ".";
+    $("statScore").textContent = correct + " / " + total;
+    $("statStreak").textContent = String(streak);
+    renderBreakdown();
+    $("btnNext").hidden = false;
+    $("btnNext").focus();
+  }
+
+  function nextHand() {
+    q = quiz.dealQuestion();
+    answered = false;
+    $("verdict").className = "verdict";
+    $("verdict").textContent = "Pick what the winner is paid.";
+    $("breakdown").hidden = true;
+    $("btnNext").hidden = true;
+    renderQuestion();
+  }
+
+  $("btnNext").addEventListener("click", nextHand);
+  nextHand();
+})();
+</script>
+</body>
+</html>
