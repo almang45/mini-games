@@ -125,12 +125,34 @@
     max-width: 960px;
     display: flex;
     justify-content: center;
-    overflow: visible;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
   }
 
   #board {
     position: relative;
     transform-origin: top center;
+  }
+
+  .zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .zoom-controls button {
+    width: 34px;
+    padding: 8px 0;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  #zoomLabel {
+    min-width: 42px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--ink-dim);
   }
 
   .tile {
@@ -192,6 +214,8 @@
   }
 
   .tile.hint {
+    outline: 3px solid var(--accent);
+    outline-offset: 1px;
     animation: pulse 0.55s ease-in-out 3;
   }
 
@@ -280,6 +304,11 @@
     <button id="btnNew">New Game</button>
     <button id="btnShuffle">Shuffle</button>
     <button id="btnHint">Hint</button>
+    <div class="zoom-controls">
+      <button id="btnZoomOut" type="button" aria-label="Zoom out">&minus;</button>
+      <span id="zoomLabel">100%</span>
+      <button id="btnZoomIn" type="button" aria-label="Zoom in">+</button>
+    </div>
   </div>
 
   <div class="board-wrap">
@@ -364,6 +393,27 @@
   const LAYER_DX = 5, LAYER_DY = -5;
   const PAD_LEFT = 14, PAD_TOP = 14 + (LAYER_COUNTS.length - 1) * -LAYER_DY;
 
+  // The elliptical layout's occupied columns/rows don't start at 0 (e.g. the
+  // widest layer only spans columns 2-12 of a 0-14 grid), so raw
+  // PAD + coord*TILE math leaves a lopsided dead margin on one side. Measure
+  // the true bounding box once (the layout is deterministic, same every
+  // game) and normalize every tile position against it so the rendered
+  // board is tightly and evenly framed.
+  const BOARD_BOUNDS = (() => {
+    let minLeft = Infinity, maxLeft = -Infinity, minTop = Infinity, maxTop = -Infinity;
+    generateLayout().forEach((cells, z) => {
+      cells.forEach(({ x, y }) => {
+        const left = PAD_LEFT + x * TILE_W + z * LAYER_DX;
+        const top = PAD_TOP + y * TILE_H + z * LAYER_DY;
+        minLeft = Math.min(minLeft, left);
+        maxLeft = Math.max(maxLeft, left + TILE_W);
+        minTop = Math.min(minTop, top);
+        maxTop = Math.max(maxTop, top + TILE_H);
+      });
+    });
+    return { minLeft, maxLeft, minTop, maxTop };
+  })();
+
   const board = document.getElementById("board");
   const statTiles = document.getElementById("statTiles");
   const statMoves = document.getElementById("statMoves");
@@ -380,6 +430,7 @@
   let timerHandle = null;
   let seconds = 0;
   let locked = false;
+  let userZoom = 1;
 
   function posKey(x, y, z) { return x + "," + y + "," + z; }
 
@@ -442,13 +493,10 @@
     board.style.setProperty("--tw", TILE_W + "px");
     board.style.setProperty("--th", TILE_H + "px");
 
-    let maxLeft = 0, maxTop = 0;
     for (const t of tiles) {
       if (t.removed) continue;
-      const left = PAD_LEFT + t.x * TILE_W + t.z * LAYER_DX;
-      const top = PAD_TOP + t.y * TILE_H + t.z * LAYER_DY;
-      maxLeft = Math.max(maxLeft, left + TILE_W);
-      maxTop = Math.max(maxTop, top + TILE_H);
+      const left = PAD_LEFT + t.x * TILE_W + t.z * LAYER_DX - BOARD_BOUNDS.minLeft;
+      const top = PAD_TOP + t.y * TILE_H + t.z * LAYER_DY - BOARD_BOUNDS.minTop;
 
       const el = document.createElement("div");
       el.className = "tile" + (t.free ? " free" : " blocked");
@@ -471,8 +519,8 @@
       board.appendChild(el);
     }
 
-    board.style.width = (maxLeft + 14) + "px";
-    board.style.height = (maxTop + 14) + "px";
+    board.style.width = (BOARD_BOUNDS.maxLeft - BOARD_BOUNDS.minLeft + PAD_LEFT) + "px";
+    board.style.height = (BOARD_BOUNDS.maxTop - BOARD_BOUNDS.minTop + PAD_TOP) + "px";
     fitBoard();
   }
 
@@ -480,11 +528,23 @@
     const wrap = document.querySelector(".board-wrap");
     const avail = wrap.clientWidth - 8;
     const natural = parseFloat(board.style.width) || 1;
-    const scale = Math.min(1, avail / natural);
+    // Base scale fills the available width on any screen size (rather than
+    // only ever shrinking to fit), then userZoom lets the player adjust
+    // further from there.
+    const scale = Math.max(0.4, Math.min(2.2, (avail / natural) * userZoom));
     board.style.transform = "scale(" + scale + ")";
-    board.parentElement.style.height = (parseFloat(board.style.height) * scale) + "px";
+    wrap.style.height = (parseFloat(board.style.height) * scale) + "px";
+    wrap.scrollLeft = (wrap.scrollWidth - wrap.clientWidth) / 2;
   }
   window.addEventListener("resize", fitBoard);
+
+  function setZoom(z) {
+    userZoom = Math.max(0.5, Math.min(2, z));
+    document.getElementById("zoomLabel").textContent = Math.round(userZoom * 100) + "%";
+    fitBoard();
+  }
+  document.getElementById("btnZoomOut").addEventListener("click", () => setZoom(userZoom - 0.15));
+  document.getElementById("btnZoomIn").addEventListener("click", () => setZoom(userZoom + 0.15));
 
   function updateStats() {
     statTiles.textContent = String(tiles.length - removedCount);
