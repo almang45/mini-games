@@ -15,7 +15,7 @@
   <header class="guide-header">
     <a class="back-link" href="index.html">&larr; Back to Game</a>
     <h1>Card Table — Rules Guide</h1>
-    <p class="tagline">Six classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
+    <p class="tagline">Eight classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
   </header>
 
   <div class="guide-layout">
@@ -25,9 +25,11 @@
       <a href="#anatomy">Reading the Table</a>
       <a href="#basics">Universal Basics</a>
       <a href="#hearts">Hearts</a>
+      <a href="#spades">Spades</a>
       <a href="#crazy-eights">Crazy Eights</a>
       <a href="#president">President</a>
       <a href="#big-two">Big Two</a>
+      <a href="#gin-rummy">Gin Rummy</a>
       <a href="#chinese-poker">Chinese Poker</a>
       <a href="#blackjack">Blackjack</a>
       <a href="#simplifications">Simplifications</a>
@@ -39,9 +41,9 @@
       <section id="quick-start">
         <h2>Quick Start</h2>
         <ol class="steps">
-          <li>On the start screen, pick a <strong>game</strong> - Hearts, Crazy Eights, President, Big Two, Chinese Poker, or Blackjack.</li>
-          <li>For each of the 4 seats, choose <strong>Human</strong>, <strong>AI</strong>, or (where allowed) <strong>Off</strong>. One human seat plays "vs AI"; every seat set to Human plays local hot-seat, passing the device around the table.</li>
-          <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Draw, Pass, Play Selected, Hit, Stand, Submit, etc.) when one is lit up. Chinese Poker is the one exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
+          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Crazy Eights, President, Big Two, Gin Rummy, Chinese Poker, or Blackjack.</li>
+          <li>For each of the 4 seats, choose <strong>Human</strong>, <strong>AI</strong>, or (where allowed) <strong>Off</strong>. One human seat plays "vs AI"; every seat set to Human plays local hot-seat, passing the device around the table. Picking a game that seats fewer players (Gin Rummy) switches the extra seats Off for you, AI seats first.</li>
+          <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Bid, Draw, Pass, Play Selected, Knock, Hit, Stand, Submit, etc.) when one is lit up. In Gin Rummy, click a card to select it and then press Discard or Knock. Chinese Poker is the other exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
           <li>In hot-seat mode, a "Pass the device" screen appears between turns so other players can't see your hand until you're ready.</li>
         </ol>
       </section>
@@ -64,7 +66,7 @@
           </div>
           <ul class="anatomy-callouts">
             <li><strong>Name &amp; tag</strong> - the seat number plus whether it's an AI, a fellow human, or "You".</li>
-            <li><strong>Score/status</strong> - Hearts shows running points, Crazy Eights shows cards left, President shows your finish place once you're out.</li>
+            <li><strong>Score/status</strong> - Hearts shows running points, Spades shows each seat's team, bid and tricks won, Crazy Eights shows cards left, President shows your finish place once you're out.</li>
             <li><strong>Glowing border</strong> - the seat outlined in green is the one currently acting.</li>
             <li><strong>Hand</strong> - your own cards are face up and clickable; every other seat is shown face down, count only.</li>
           </ul>
@@ -73,14 +75,14 @@
 
       <section id="basics">
         <h2>Universal Basics</h2>
-        <p>All six games share one 52-card deck (no jokers) and the same table chrome:</p>
+        <p>All eight games share one 52-card deck (no jokers) and the same table chrome:</p>
         <ul>
           <li><strong>Turn order</strong> runs clockwise from whoever leads (except Blackjack, where every seat plays against the dealer rather than each other, and Chinese Poker, where everyone arranges privately at the same time).</li>
           <li><strong>Human vs AI</strong>: the AI seats think for about half a second before acting, so you can follow along.</li>
           <li><strong>Hot-seat privacy</strong>: with more than one human seat, the app never shows a hand that isn't the active player's - it gates every handoff behind a "Pass the device" screen.</li>
           <li><strong>The log panel</strong> below the table lists the most recent plays, in case you look away for a second.</li>
         </ul>
-        <div class="callout callout-info">Seat counts differ by game: Hearts, Big Two, and Chinese Poker are always exactly 4 players; Crazy Eights plays with 2-4; President plays with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
+        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy is always exactly 2; Crazy Eights plays with 2-4; President plays with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
       </section>
 
       <section id="hearts">
@@ -98,6 +100,32 @@
         </ul>
         <h3>Scoring &amp; shooting the moon</h3>
         <p>When all 13 tricks are played, each player scores the points in the tricks they won. If one player collects <strong>all 26 points</strong> in a single hand (every heart plus the Queen of Spades), they score <strong>0</strong> instead and everyone else takes 26. Hands repeat until someone reaches 100 points - the <strong>lowest</strong> total wins.</p>
+      </section>
+
+      <section id="spades">
+        <h2>Spades</h2>
+        <p><strong>Goal:</strong> win at least as many tricks as your team bid. Partners sit across the table from each other, and the first team to 500 points wins.</p>
+        <h3>Bidding</h3>
+        <ul>
+          <li>All 52 cards are dealt, 13 each. Starting to the dealer's left, each player bids how many tricks they expect to win: 1 to 13, or <strong>Nil</strong> (zero).</li>
+          <li>The two partners' bids, leaving out a Nil, add up to the team's <strong>contract</strong>. Tricks either partner wins count toward it.</li>
+          <li>Your bid starts at the AI's suggestion for your hand; use &minus; and + to change it, then confirm.</li>
+        </ul>
+        <h3>Playing a trick</h3>
+        <ul>
+          <li>The first bidder leads the first trick. You must follow the suit led if you can; if you can't, you may play anything.</li>
+          <li><strong>Spades are always trump:</strong> the highest spade played wins the trick. With no spade in it, the highest card of the suit led wins.</li>
+          <li>You can't lead a spade until spades have been <strong>broken</strong> (played to an earlier trick) - unless your hand is all spades.</li>
+          <li>Whoever wins a trick leads the next one.</li>
+        </ul>
+        <h3>Scoring</h3>
+        <ul>
+          <li><strong>Contract made:</strong> 10 points per trick bid, plus 1 point for every extra trick. Each extra trick is also a <strong>bag</strong>.</li>
+          <li><strong>Set:</strong> a team that falls short loses 10 points per trick bid.</li>
+          <li><strong>Nil:</strong> +100 if the Nil bidder wins no tricks, -100 if they win any. A failed Nil's tricks still count toward the partner's contract and bags.</li>
+          <li><strong>Bags add up:</strong> every time a team's bags reach 10, it loses 100 points.</li>
+        </ul>
+        <p>Rounds continue until a team reaches 500 points with more than the other team, and wins, or a team drops to -200, and loses.</p>
       </section>
 
       <section id="crazy-eights">
@@ -138,6 +166,33 @@
         <p>Ranked by finishing order, same as President.</p>
       </section>
 
+      <section id="gin-rummy">
+        <h2>Gin Rummy</h2>
+        <p><strong>Goal:</strong> arrange your hand into melds, knock, and catch your opponent holding more deadwood than you. First player to 100 points wins. Exactly 2 players.</p>
+        <h3>Melds and deadwood</h3>
+        <ul>
+          <li>A <strong>meld</strong> is either 3-4 cards of the same rank, or 3 or more cards in a row in one suit. Aces are low: A-2-3 is a run, Q-K-A is not.</li>
+          <li>Cards that aren't in a meld are <strong>deadwood</strong>. Aces count 1, number cards their face value, and J/Q/K 10 each.</li>
+          <li>The table always arranges your cards for the lowest possible deadwood. The letter on each card shows which meld it belongs to, and your deadwood total appears in the status line.</li>
+        </ul>
+        <h3>Your turn</h3>
+        <ul>
+          <li>Each player gets 10 cards, and one card is turned face up to start the discard pile.</li>
+          <li><strong>Draw</strong> first: take the top card of the stock, or the top discard.</li>
+          <li>Then <strong>discard</strong> one card. You can't throw back the discard you just picked up.</li>
+          <li>If your deadwood after that discard is 10 or less, you may <strong>Knock</strong> instead of discarding normally, which ends the hand. Knocking with no deadwood at all is <strong>Gin</strong>.</li>
+          <li>A normal discard that leaves 2 or fewer cards in the stock ends the hand as a draw, and nobody scores.</li>
+        </ul>
+        <h3>Scoring a knock</h3>
+        <ul>
+          <li>Both hands are shown. Unless the knocker went Gin, the defender's deadwood is <strong>laid off</strong> onto the knocker's melds wherever it fits (done for you), which lowers the defender's count.</li>
+          <li><strong>Knock:</strong> the knocker scores the difference between the two deadwood counts.</li>
+          <li><strong>Undercut:</strong> if the defender's count is equal or lower, the defender scores 25 plus the difference instead.</li>
+          <li><strong>Gin:</strong> the knocker scores 25 plus the defender's full deadwood, with no lay-offs.</li>
+        </ul>
+        <p>Points carry over from hand to hand, and the deal alternates, until someone reaches 100.</p>
+      </section>
+
       <section id="chinese-poker">
         <h2>Chinese Poker</h2>
         <p><strong>Goal:</strong> arrange your cards into 3 poker hands that beat as many of the other 3 players' hands as possible, row for row.</p>
@@ -171,9 +226,11 @@
           <thead><tr><th>Game</th><th>Simplified</th></tr></thead>
           <tbody>
             <tr><td>Hearts</td><td>Scoring resets each session (no saved match history); the pass cycle is left/right/across/hold, repeating every 4 hands.</td></tr>
+            <tr><td>Spades</td><td>No Blind Nil, no minimum team bid, and no bonus for winning all 13 tricks. A failed Nil's tricks still count toward the partner's contract and bags. If a team reaches 500 but the scores are tied, play continues.</td></tr>
             <tr><td>Crazy Eights</td><td>No point-scoring across multiple hands - the game ends the moment someone empties their hand. No special-action cards besides the wild 8 (no skip/reverse/draw-two).</td></tr>
             <tr><td>President</td><td>No jokers, no card-exchange between the President and the Bum between rounds, and no "8 clears the pile" or "revolution" house rules - just pure rank climbing.</td></tr>
             <tr><td>Big Two</td><td>Only singles, pairs, triples, and 5-card poker hands are legal plays - no other combo sizes. 5-card hands rank by standard poker strength (straight &lt; flush &lt; full house &lt; four-of-a-kind &lt; straight flush), a common but not universal house convention.</td></tr>
+            <tr><td>Gin Rummy</td><td>No game bonus, line or box bonuses, or shutout doubling - hand points simply add up to 100. No first-turn upcard offer: the first player just draws from either pile. No Big Gin. Lay-offs are placed automatically and greedily, so a rare better lay-off can be missed.</td></tr>
             <tr><td>Chinese Poker</td><td>Single round per game (no multi-round match, no running score across deals). No royalty/bonus points for strong hands (three-of-a-kind in front, four-of-a-kind, straight flushes, etc.) - every row win is worth exactly 1 point. A 3-card Front hand only recognizes high card, pair, or trips.</td></tr>
             <tr><td>Blackjack</td><td>Flat 25-chip bet every round, no betting UI. Hit, Stand, and Double Down only - no splitting pairs, no surrender, no insurance. Dealer always stands on all 17s (including a soft 17). Fixed 15-round session rather than playing until you're out of chips.</td></tr>
           </tbody>
@@ -183,9 +240,19 @@
       <section id="glossary">
         <h2>Glossary</h2>
         <dl class="glossary">
-          <dt>Trick</dt><dd>One card from each player, played in turn and won by the best card (Hearts).</dd>
-          <dt>Broken (hearts)</dt><dd>Once a heart has been played to any trick, hearts may be led from then on.</dd>
+          <dt>Trick</dt><dd>One card from each player, played in turn and won by the best card (Hearts, Spades).</dd>
+          <dt>Broken (hearts, spades)</dt><dd>Once a heart (in Hearts) or a spade (in Spades) has been played to any trick, that suit may be led from then on.</dd>
           <dt>Shooting the moon</dt><dd>Winning every point-scoring card in a Hearts hand - scores 0 instead of 26.</dd>
+          <dt>Trump</dt><dd>A suit that beats every other suit - spades, in Spades.</dd>
+          <dt>Contract</dt><dd>A Spades team's combined bid (not counting Nil) - the number of tricks it must win.</dd>
+          <dt>Nil</dt><dd>A Spades bid of zero tricks: +100 if you win none, -100 if you win any.</dd>
+          <dt>Bag</dt><dd>A trick won beyond a Spades team's contract - worth 1 point, but every 10 bags cost 100.</dd>
+          <dt>Meld</dt><dd>In Gin Rummy, 3-4 cards of the same rank, or a same-suit run of 3 or more.</dd>
+          <dt>Deadwood</dt><dd>Gin Rummy cards that aren't part of a meld, counted by their point value.</dd>
+          <dt>Knock</dt><dd>Ending a Gin Rummy hand with 10 or less deadwood.</dd>
+          <dt>Gin</dt><dd>Knocking with no deadwood at all - a 25-point bonus, and the defender can't lay off.</dd>
+          <dt>Undercut</dt><dd>A Gin Rummy knock where the defender's deadwood is equal or lower - the defender scores instead, plus 25.</dd>
+          <dt>Lay off</dt><dd>After a knock, adding the defender's deadwood to the knocker's melds so it no longer counts.</dd>
           <dt>Wild card</dt><dd>An 8 in Crazy Eights - playable on anything, and lets you set the next suit.</dd>
           <dt>Pile</dt><dd>The set of cards currently in play that must be beaten or passed on, in President or Big Two.</dd>
           <dt>Combo</dt><dd>A legal play shape in Big Two - single, pair, triple, or 5-card poker hand.</dd>

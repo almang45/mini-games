@@ -6,13 +6,15 @@
 
   const GAMES = {
     hearts: window.HEARTS_UI,
+    spades: window.SPADES_UI,
     "crazy-eights": window.CE_UI,
     president: window.PRESIDENT_UI,
     "big-two": window.BIG_TWO_UI,
+    "gin-rummy": window.GIN_RUMMY_UI,
     "chinese-poker": window.CHINESE_POKER_UI,
     blackjack: window.BLACKJACK_UI,
   };
-  const GAME_ORDER = ["hearts", "crazy-eights", "president", "big-two", "chinese-poker", "blackjack"];
+  const GAME_ORDER = ["hearts", "spades", "crazy-eights", "president", "big-two", "gin-rummy", "chinese-poker", "blackjack"];
 
   let selectedGameKey = null;
   let seatConfig = ["human", "ai", "ai", "ai"];
@@ -39,7 +41,7 @@
       const card = DOM.el("button", "game-card" + (key === selectedGameKey ? " is-selected" : ""), [
         DOM.el("h3", null, g.label),
         DOM.el("p", null, g.tagline),
-        DOM.el("div", "game-meta", g.seatFixed ? "Exactly " + g.seatMax + " players" : g.seatMin + "-" + g.seatMax + " players"),
+        DOM.el("div", "game-meta", g.seatMin === g.seatMax ? "Exactly " + g.seatMax + " players" : g.seatMin + "-" + g.seatMax + " players"),
       ]);
       card.type = "button";
       card.addEventListener("click", () => selectGame(key));
@@ -50,7 +52,13 @@
   function selectGame(key) {
     selectedGameKey = key;
     const g = GAMES[key];
-    if (g.seatFixed) seatConfig = seatConfig.map((v) => (v === "off" ? "ai" : v));
+    // Open every game on a startable seat count: fill empty seats with AI, and
+    // trim AI seats (then humans) from the end for games like Gin Rummy's 2.
+    const active = () => seatConfig.filter((v) => v !== "off").length;
+    for (let i = 0; i < seatConfig.length && active() < g.seatMin; i++) if (seatConfig[i] === "off") seatConfig[i] = "ai";
+    for (const kind of ["ai", "human"]) {
+      for (let i = seatConfig.length - 1; i >= 0 && active() > g.seatMax; i--) if (seatConfig[i] === kind) seatConfig[i] = "off";
+    }
     buildGameGrid();
     renderSeatSetup();
     $("seatSetup").hidden = false;
@@ -147,7 +155,7 @@
     }
 
     DOM.clear(felt);
-    felt.appendChild(g.centerNode(state));
+    felt.appendChild(g.centerNode(state, anchor));
 
     renderActionBar(actSeat);
     renderLog(state);
