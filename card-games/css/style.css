@@ -219,6 +219,11 @@
 .showdown-seat { background: rgba(0, 0, 0, 0.18); border-radius: 8px; padding: 6px 8px; min-width: 150px; }
 .showdown-seat-name { text-align: center; font-weight: 600; font-size: 0.8rem; margin-bottom: 2px; }
 
+/* height:100% resolved to 0 inside the auto-height felt, which stacked every
+   slot on the middle line and put the top seat's card below the bottom's.
+   Stretching gives the slots a real box; the min-height keeps a gap between
+   the top and bottom cards for the caption. */
+.trick-area { position: relative; width: 100%; align-self: stretch; min-height: 190px; }
 .trick-slot { position: absolute; width: 46px; height: 64px; }
 .trick-slot.pos-bottom { bottom: 8px; left: 50%; transform: translateX(-50%); }
 .trick-slot.pos-top { top: 8px; left: 50%; transform: translateX(-50%); }
