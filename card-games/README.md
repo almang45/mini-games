@@ -3,19 +3,23 @@
 A small collection of classic card games — static HTML/CSS/JS, no build step,
 no server. Open `index.html` directly in a browser.
 
-Six games, each seatable from 1-4 players depending on the game:
+Eight games, each seatable from 1-4 players depending on the game:
 
 - **Hearts** — 4 players, trick-taking, avoid points, dodge the moon
+- **Spades** — 4 players in two partnerships, bid tricks, spades trump, nil and bags, to 500
 - **Crazy Eights** — 2-4 players, shed your hand, wild 8s
 - **President** — 3-4 players, shed your hand, climbing sets
 - **Big Two** — 4 players, shed your hand, singles/pairs/triples/5-card poker hands
+- **Gin Rummy** — 2 players, draw and discard into melds, knock or go gin, to 100
 - **Chinese Poker** — 4 players, one deal, arrange 3 poker hands and score head-to-head
 - **Blackjack** — 1-4 players vs. the dealer, hit/stand/double, 15-round session
 
 Every seat is independently set to **Human**, **AI**, or **Off** (where the
 game allows fewer than 4 players) from the start screen — so "you vs 3 AI",
 "4 humans passing the device", and any mix in between are all the same
-control, not separate modes. Player-facing rules (table layout, controls,
+control, not separate modes. Switching to a game with a lower seat maximum
+(Gin Rummy's 2) turns the surplus seats Off, AI seats before human ones.
+Player-facing rules (table layout, controls,
 per-game rules, glossary) live in `guide.html` — linked from the start
 screen. This README is the developer-facing companion: what's implemented,
 what's simplified, and how it's tested.
@@ -29,15 +33,19 @@ css/guide.css                 rules-guide-only layout/typography
 js/core/cards.js             card model: deck build, shuffle, rank helpers
 js/core/dom.js               generic DOM helpers (card rendering, seat layout)
 js/games/hearts.js           Hearts rules engine + AI
+js/games/spades.js           Spades rules engine + AI
 js/games/crazy-eights.js     Crazy Eights rules engine + AI
 js/games/president.js        President rules engine + AI
 js/games/big-two.js          Big Two rules engine + AI
+js/games/gin-rummy.js        Gin Rummy rules engine + AI (meld search, lay-offs)
 js/games/chinese-poker.js    Chinese Poker rules engine + AI
 js/games/blackjack.js        Blackjack rules engine + AI
 js/ui/hearts-ui.js           binds Hearts state to the shared table shell
+js/ui/spades-ui.js           binds Spades state to the shared table shell
 js/ui/crazy-eights-ui.js     binds Crazy Eights state to the shared table shell
 js/ui/president-ui.js        binds President state to the shared table shell
 js/ui/big-two-ui.js          binds Big Two state to the shared table shell
+js/ui/gin-rummy-ui.js        binds Gin Rummy state to the shared table shell
 js/ui/chinese-poker-ui.js    binds Chinese Poker state to the shared table shell
 js/ui/blackjack-ui.js        binds Blackjack state to the shared table shell
 js/app.js                    lobby + table controller (screens, seat setup,
@@ -64,6 +72,27 @@ etc., which the Node tests populate manually before requiring them — see
 - Shooting the moon zeroes the shooter and charges the other three 26 each;
   there's no alternate house rule to instead *subtract* 26 from the shooter.
 - Scores don't persist between browser sessions — refreshing starts over.
+
+**Spades:**
+- Fixed partnerships (seats across from each other); bids are 1-13 or Nil.
+  No Blind Nil, no minimum team bid, no bonus for taking all 13 tricks.
+- A failed Nil costs 100, and its tricks still count toward the partner's
+  contract and bags; the penalty is the whole cost of failing.
+- Every 10 accumulated bags costs 100 (bags roll over past 10).
+- The game ends when a team reaches 500 with scores unequal (ties keep
+  playing), or when a team falls to -200.
+- The human's bid stepper starts at the AI's suggested bid for that hand.
+
+**Gin Rummy:**
+- Aces are low (A-2-3 is a run, Q-K-A isn't); deadwood counts A=1, 2-10 face
+  value, J/Q/K=10. Melds are always arranged for minimum deadwood by an exact
+  search over candidate sets/runs, so players never arrange melds by hand.
+- No first-turn upcard offer, no Big Gin, and no game/line/box bonuses or
+  shutout doubling — hand points accumulate to 100.
+- Lay-offs are applied automatically and greedily after the defender's own
+  best arrangement, which can miss the rare case where breaking a defender
+  meld would lay off more.
+- A non-knock discard that leaves 2 or fewer stock cards voids the hand.
 
 **Crazy Eights:**
 - The only special card is the wild 8 — no skip/reverse/draw-two/draw-four
@@ -132,10 +161,16 @@ etc., which the Node tests populate manually before requiring them — see
 - Fixed 15-round session, then the game ends and seats are ranked by final
   chip count — not an open-ended "play until you're broke" session.
 
-**AI opponents (all six games):** heuristic, not a full game-tree search —
+**AI opponents (all eight games):** heuristic, not a full game-tree search —
 they play legally and reasonably (Hearts: duck under the current trick
 winner when possible, dump dangerous cards — the Queen of Spades and high
-spades/hearts — when void; Crazy Eights: hold 8s back until forced, prefer
+spades/hearts — when void; Spades: bid a rule-of-thumb trick count from
+high cards, spade length and short suits, lead sure winners while tricks
+are still needed, duck with the highest losing card when bidding Nil or once
+the contract is made, and don't overtake a partner who is already winning;
+Gin Rummy: take the discard only when it lands in a meld, discard for the
+lowest resulting deadwood and shed high unconnected cards first, knock
+early but hold out for a low count mid-hand to avoid undercuts; Crazy Eights: hold 8s back until forced, prefer
 suits it holds more of; President/Big Two: lead the lowest legal group, beat
 the pile as cheaply as possible; Chinese Poker: build the strongest possible
 Back hand first, then the strongest Middle that still keeps Front ≤ Middle
@@ -150,13 +185,16 @@ angling to shoot the moon themselves.
 No headless browser (Playwright/Puppeteer/jsdom) was available in the
 environment this was built in, so testing happens on two levels:
 
-1. **Engine tests** (`cards.test.js`, `hearts.test.js`, `crazy-eights.test.js`,
-   `president.test.js`, `big-two.test.js`, `chinese-poker.test.js`,
-   `blackjack.test.js`) exercise each rules engine directly in Node: rule
-   checks against hand-built scenarios (forced leads, moon shots, illegal
-   plays, pile-clearing edge cases around a player finishing mid-round, hand
+1. **Engine tests** (`cards.test.js`, `hearts.test.js`, `spades.test.js`,
+   `crazy-eights.test.js`, `president.test.js`, `big-two.test.js`,
+   `gin-rummy.test.js`, `chinese-poker.test.js`, `blackjack.test.js`)
+   exercise each rules engine directly in Node: rule checks against
+   hand-built scenarios (forced leads, moon shots, illegal plays,
+   pile-clearing edge cases around a player finishing mid-round, hand
    evaluation and foul detection, blackjack settlement math via rigged
-   fixture states), deck conservation, and dozens of full randomized AI-vs-AI
+   fixture states, Spades contract/Nil/bag scoring, Gin Rummy meld search,
+   lay-offs and knock/undercut/gin settlement), deck conservation, and dozens
+   of full randomized AI-vs-AI
    games per player count to catch stuck states, non-terminating games, or a
    degenerate AI.
 2. **`js/test/ui-smoke.test.js`** loads the *real* `js/app.js` (plus every

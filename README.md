@@ -10,10 +10,13 @@ bundler and no server.
 
 | | |
 |---|---|
-| **[Mahjong Table](mahjong-table/)** | Traditional, competitive 4-player mahjong — Japanese Riichi or Chinese Classical rules, 1 human vs 3 AI or full local hot-seat. |
-| **[Card Table](card-games/)** | Six classic card games in one shared table shell — Hearts, Crazy Eights, President, Big Two, Chinese Poker, Blackjack. |
+| **[Mahjong Table](mahjong-table/)** | Traditional, competitive 4-player mahjong — Japanese Riichi or Chinese Classical rules, 1 human vs 3 AI or full local hot-seat. Also has a "what would you discard?" trainer. |
+| **[Card Table](card-games/)** | Eight classic card games in one shared table shell — Hearts, Spades, Crazy Eights, President, Big Two, Gin Rummy, Chinese Poker, Blackjack. |
 | **[Mahjong Solitaire](mahjong-solitaire/)** | Classic single-player tile-matching puzzle. |
 | **[Klondike Solitaire](klondike-solitaire/)** | Classic single-player card game — build runs, fill the four foundations. |
+| **[Shisen-Sho](shisen-sho/)** | Mahjong tile-matching on a flat board. Pairs are removed when a path with at most two turns joins them. |
+| **[FreeCell](freecell/)** | Classic FreeCell solitaire with Microsoft-numbered, shareable deals. |
+| **[Reversi](reversi/)** | Reversi/Othello against a three-level AI, or two players on one device. |
 
 Each game folder is self-contained (its own README and CSS/JS) and can be
 opened directly via its own `index.html` without the others. Mahjong
@@ -31,7 +34,7 @@ UI is independent by design. `shared/favicon.svg` (a generic dice icon)
 backs only the top-level hub page; each game has its own favicon (PNG or
 SVG) representing that specific game, also used as its icon on the hub.
 
-Mahjong Table and Mahjong Solitaire both render real tile artwork from
+Mahjong Table, Mahjong Solitaire and Shisen-Sho all render real tile artwork from
 `shared/assets/tiles/` rather than relying on the Unicode Mahjong Tile
 characters' inconsistent font support across platforms. Those SVGs are
 CC BY-SA 4.0 (not this repo's own MIT code license) — see
@@ -55,6 +58,7 @@ go unnoticed.
 ```
 for f in mahjong-table/js/test/*.test.js; do node "$f" || exit 1; done
 for f in card-games/js/test/*.test.js; do node "$f" || exit 1; done
+for f in shisen-sho/js/test/*.test.js freecell/js/test/*.test.js reversi/js/test/*.test.js; do node "$f" || exit 1; done
 ```
 
 ## Deployment

@@ -82,17 +82,8 @@
   }
 
   function centerNode(state) {
-    const wrap = DOM.el("div", "trick-area");
-    wrap.style.position = "relative";
-    wrap.style.width = "100%";
-    wrap.style.height = "100%";
-    const n = state.seats.length;
-    state.round.currentTrick.forEach((play) => {
-      const offset = (play.seat - state.round.leaderSeat + n) % n; // stable-ish placement while trick is live
-      const pos = DOM.seatPosition(n, offset);
-      const slot = DOM.el("div", "trick-slot pos-" + pos, DOM.cardEl(play.card, {}));
-      wrap.appendChild(slot);
-    });
+    // Anchored on the leader, not the viewer: stable-ish placement while the trick is live.
+    const wrap = DOM.trickArea(state.round.currentTrick, state.round.leaderSeat, state.seats.length);
     if (state.round.currentTrick.length === 0) {
       wrap.appendChild(DOM.el("div", "center-label", "Trick " + state.round.trickNumber));
     }

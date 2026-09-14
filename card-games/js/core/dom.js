@@ -70,8 +70,22 @@
     return SEAT_LAYOUT[seatCount][offsetFromViewer];
   }
 
+  // Trick-taking felt: each play sits on the table side of its seat, measured
+  // clockwise from `anchorSeat` (which lands at the bottom).
+  function trickArea(plays, anchorSeat, seatCount) {
+    const wrap = el("div", "trick-area");
+    wrap.style.position = "relative";
+    wrap.style.width = "100%";
+    wrap.style.height = "100%";
+    plays.forEach((play) => {
+      const pos = seatPosition(seatCount, (play.seat - anchorSeat + seatCount) % seatCount);
+      wrap.appendChild(el("div", "trick-slot pos-" + pos, cardEl(play.card, {})));
+    });
+    return wrap;
+  }
+
   function clear(node) { node.innerHTML = ""; }
 
-  const api = { el, cardEl, renderFan, seatPosition, clear };
+  const api = { el, cardEl, renderFan, seatPosition, trickArea, clear };
   root.DOM = api;
 })(typeof window !== "undefined" ? window : globalThis);

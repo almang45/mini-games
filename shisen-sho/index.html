@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shisen-Sho</title>
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+  :root {
+    --tile-face: #fdf8ee;
+    --tile-face-2: #f1e8d3;
+    --tile-border: #8a7452;
+  }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px 18px;
+    width: 100%;
+    max-width: 900px;
+  }
+  header h1 { flex: 1 1 auto; min-width: 200px; }
+
+  .stats, .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--felt-line);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    min-width: 78px;
+    text-align: center;
+  }
+  .stat b { display: block; font-size: 1.05rem; color: var(--accent); }
+
+  .zoom-controls { display: flex; align-items: center; gap: 6px; }
+  .zoom-controls button { width: 34px; padding: 8px 0; font-size: 1.1rem; line-height: 1; }
+  #zoomLabel { min-width: 42px; text-align: center; font-size: 0.8rem; color: var(--ink-dim); }
+
+  /* #sizer takes the board's scaled size, so auto margins centre it when it
+     fits and the wrap scrolls normally when zoomed past the screen width. */
+  .board-wrap { width: 100%; overflow-x: auto; overflow-y: hidden; }
+  #sizer { margin: 0 auto; }
+  #board { position: relative; transform-origin: 0 0; }
+
+  /* Tiles are buttons for keyboard play; undo theme.css's button look. */
+  .tile {
+    position: absolute;
+    width: calc(var(--tw) - 2px);
+    height: calc(var(--th) - 2px);
+    padding: 0;
+    border-radius: 6px;
+    background: linear-gradient(160deg, var(--tile-face) 0%, var(--tile-face-2) 100%);
+    border: 1px solid var(--tile-border);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 -5px 0 -3px rgba(0, 0, 0, 0.18) inset, 0 2px 4px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.12s ease, opacity 0.22s ease;
+  }
+  .tile:hover { transform: translateY(-2px); }
+  .tile-face-img { width: 84%; height: 84%; object-fit: contain; pointer-events: none; }
+  .tile.selected { outline: 3px solid var(--accent); outline-offset: 1px; transform: translateY(-3px); z-index: 2; }
+  .tile.hint { outline: 3px solid var(--ok); outline-offset: 1px; animation: pulse 0.55s ease-in-out 3; z-index: 2; }
+  .tile.shake { animation: shake 0.32s ease; }
+  .tile.removing { opacity: 0; transform: scale(0.5); pointer-events: none; }
+
+  .path-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; overflow: visible; }
+  .path-layer polyline { fill: none; stroke: var(--accent); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.6)); }
+
+  @keyframes pulse { 50% { outline-color: var(--accent); } }
+  @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  .overlay[hidden] { display: none; }
+  .modal {
+    background: #12321f;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 26px 30px;
+    text-align: center;
+    max-width: 340px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .modal h2 { margin: 0 0 8px; color: var(--accent); }
+  .modal p { margin: 4px 0 18px; color: var(--ink-dim); font-size: 0.9rem; }
+
+  footer { color: var(--ink-dim); font-size: 0.75rem; text-align: center; max-width: 560px; line-height: 1.5; }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 1.05rem; }
+    .stat { min-width: 64px; padding: 5px 8px; font-size: 0.72rem; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="back-link" href="../index.html">← All Games</a>
+    <h1>Shisen-Sho</h1>
+    <div class="stats">
+      <div class="stat">Tiles<b id="statTiles">144</b></div>
+      <div class="stat">Time<b id="statTime">00:00</b></div>
+    </div>
+  </header>
+
+  <div class="controls">
+    <button id="btnNew" type="button">New Game</button>
+    <button id="btnUndo" type="button">Undo</button>
+    <button id="btnHint" type="button">Hint</button>
+    <button id="btnShuffle" type="button">Shuffle</button>
+    <div class="zoom-controls">
+      <button id="btnZoomOut" type="button" aria-label="Zoom out">&minus;</button>
+      <span id="zoomLabel">100%</span>
+      <button id="btnZoomIn" type="button" aria-label="Zoom in">+</button>
+    </div>
+  </div>
+
+  <div class="board-wrap">
+    <div id="sizer"><div id="board"></div></div>
+  </div>
+
+  <footer>Pair up identical tiles. Two tiles can be removed when a line with at most two turns joins them without crossing another tile — the line may run around the outside of the board. Any Flower matches any Flower; any Season matches any Season.</footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h2 id="modalTitle">You win!</h2>
+    <p id="modalBody"></p>
+    <div class="controls">
+      <button class="btn-primary" id="modalNew" type="button">New Game</button>
+      <button id="modalUndo" type="button">Undo</button>
+      <button id="modalShuffle" type="button">Shuffle</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/board.js"></script>
+<script>
+(function () {
+  "use strict";
+  const { ROWS, COLS } = window.SHISEN;
+  const S = window.SHISEN;
+  const TILE_ASSET_BASE = "../shared/assets/tiles/";
+  const TW = 48, TH = 62;
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  const board = document.getElementById("board");
+  const wrap = document.querySelector(".board-wrap");
+  const overlay = document.getElementById("overlay");
+  const $ = (id) => document.getElementById(id);
+
+  let grid = null;
+  let undoStack = [];
+  let selected = null; // {r, c}
+  let locked = false;
+  let seconds = 0, timerHandle = null;
+  let userZoom = 1;
+
+  // Cell (r, c) of the padded grid is centred at (c*TW, r*TH), so the empty
+  // ring's paths run along the board's own edges.
+  const centre = (p) => (p.c * TW) + "," + (p.r * TH);
+
+  function newGame() {
+    grid = S.createGrid();
+    undoStack = [];
+    selected = null;
+    seconds = 0;
+    $("statTime").textContent = "00:00";
+    startTimer();
+    if (!S.findMove(grid)) S.shuffleRemaining(grid);
+    render();
+  }
+
+  function render() {
+    board.textContent = "";
+    board.style.setProperty("--tw", TW + "px");
+    board.style.setProperty("--th", TH + "px");
+    board.style.width = (COLS + 1) * TW + "px";
+    board.style.height = (ROWS + 1) * TH + "px";
+    for (let r = 1; r <= ROWS; r++) {
+      for (let c = 1; c <= COLS; c++) {
+        const tile = grid[r][c];
+        if (!tile) continue;
+        const el = document.createElement("button");
+        el.type = "button";
+        el.className = "tile" + (selected && selected.r === r && selected.c === c ? " selected" : "");
+        el.style.left = ((c - 1) * TW + TW / 2 + 1) + "px";
+        el.style.top = ((r - 1) * TH + TH / 2 + 1) + "px";
+        el.dataset.r = r;
+        el.dataset.c = c;
+        const img = document.createElement("img");
+        img.className = "tile-face-img";
+        img.src = TILE_ASSET_BASE + tile.img + ".svg";
+        img.alt = tile.img.replace("-", " ");
+        img.draggable = false;
+        el.appendChild(img);
+        el.addEventListener("click", () => onTileClick(r, c));
+        board.appendChild(el);
+      }
+    }
+    $("statTiles").textContent = String(S.tilesLeft(grid));
+    $("btnUndo").disabled = undoStack.length === 0;
+    fitBoard();
+  }
+
+  const tileEl = (p) => board.querySelector('.tile[data-r="' + p.r + '"][data-c="' + p.c + '"]');
+
+  function fitBoard() {
+    const natural = parseFloat(board.style.width) || 1;
+    const scale = Math.max(0.3, Math.min(1.6, ((wrap.clientWidth - 8) / natural) * userZoom));
+    const sizer = $("sizer");
+    board.style.transform = "scale(" + scale + ")";
+    sizer.style.width = natural * scale + "px";
+    sizer.style.height = parseFloat(board.style.height) * scale + "px";
+    wrap.scrollLeft = (wrap.scrollWidth - wrap.clientWidth) / 2;
+  }
+  window.addEventListener("resize", fitBoard);
+
+  function setZoom(z) {
+    userZoom = Math.max(0.5, Math.min(2, z));
+    $("zoomLabel").textContent = Math.round(userZoom * 100) + "%";
+    fitBoard();
+  }
+
+  function restartAnimation(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+  }
+
+  function onTileClick(r, c) {
+    if (locked) return;
+    const here = { r, c };
+    if (!selected) {
+      selected = here;
+      tileEl(here).classList.add("selected");
+      return;
+    }
+    if (selected.r === r && selected.c === c) {
+      tileEl(here).classList.remove("selected");
+      selected = null;
+      return;
+    }
+    const path = S.canMatch(grid, selected, here);
+    if (path) {
+      removeWithPath(selected, here, path);
+      return;
+    }
+    tileEl(selected).classList.remove("selected");
+    restartAnimation(tileEl(here), "shake");
+    selected = here;
+    tileEl(here).classList.add("selected");
+  }
+
+  function removeWithPath(a, b, path) {
+    locked = true;
+    selected = null;
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "path-layer");
+    const line = document.createElementNS(SVG_NS, "polyline");
+    line.setAttribute("points", path.map(centre).join(" "));
+    svg.appendChild(line);
+    board.appendChild(svg);
+    [a, b].forEach((p) => { const el = tileEl(p); el.classList.remove("selected"); el.classList.add("removing"); });
+
+    setTimeout(() => {
+      undoStack.push(S.removePair(grid, a, b));
+      locked = false;
+      render();
+      if (S.tilesLeft(grid) === 0) endGame(true);
+      else if (!S.findMove(grid)) endGame(false);
+    }, 260);
+  }
+
+  function formatTime() {
+    return String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
+  }
+
+  function startTimer() {
+    stopTimer();
+    timerHandle = setInterval(() => { seconds++; $("statTime").textContent = formatTime(); }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(timerHandle);
+    timerHandle = null;
+  }
+
+  function endGame(won) {
+    stopTimer();
+    $("modalTitle").textContent = won ? "You win!" : "No moves left";
+    $("modalBody").textContent = won
+      ? "Cleared all 144 tiles in " + formatTime() + "."
+      : S.tilesLeft(grid) + " tiles remain with no connectable pair. Undo, shuffle, or start over.";
+    $("modalUndo").hidden = won;
+    $("modalShuffle").hidden = won;
+    overlay.hidden = false;
+  }
+
+  function resume() {
+    overlay.hidden = true;
+    if (!timerHandle) startTimer();
+  }
+
+  function undo() {
+    if (locked || undoStack.length === 0) return;
+    S.restorePair(grid, undoStack.pop());
+    selected = null;
+    resume();
+    render();
+  }
+
+  function shuffle() {
+    if (locked || S.tilesLeft(grid) === 0) return;
+    S.shuffleRemaining(grid);
+    undoStack = []; // positions of faces changed, so earlier removals can't be replayed
+    selected = null;
+    resume();
+    render();
+  }
+
+  function hint() {
+    if (locked) return;
+    const move = S.findMove(grid);
+    if (!move) { endGame(false); return; }
+    [move.a, move.b].forEach((p) => restartAnimation(tileEl(p), "hint"));
+  }
+
+  $("btnNew").addEventListener("click", () => { overlay.hidden = true; newGame(); });
+  $("modalNew").addEventListener("click", () => { overlay.hidden = true; newGame(); });
+  $("btnUndo").addEventListener("click", undo);
+  $("modalUndo").addEventListener("click", undo);
+  $("btnShuffle").addEventListener("click", shuffle);
+  $("modalShuffle").addEventListener("click", shuffle);
+  $("btnHint").addEventListener("click", hint);
+  $("btnZoomOut").addEventListener("click", () => setZoom(userZoom - 0.15));
+  $("btnZoomIn").addEventListener("click", () => setZoom(userZoom + 0.15));
+
+  newGame();
+})();
+</script>
+</body>
+</html>

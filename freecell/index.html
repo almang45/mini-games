@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FreeCell</title>
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+  :root {
+    --card-face: #fdf8ee;
+    --card-border: #8a7452;
+    --card-red: #b3352c;
+    --card-black: #1c1c1c;
+  }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px 18px;
+    width: 100%;
+    max-width: 900px;
+  }
+  header h1 { flex: 1 1 auto; min-width: 160px; }
+
+  .stats, .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--felt-line);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    min-width: 72px;
+    text-align: center;
+  }
+  .stat b { display: block; font-size: 1.05rem; color: var(--accent); }
+
+  .deal-form { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  .deal-form input {
+    font: inherit;
+    width: 7.5em;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--panel-strong);
+    color: var(--ink);
+  }
+
+  .status { margin: 0; min-height: 1.3em; font-size: 0.85rem; color: var(--ink-dim); text-align: center; }
+
+  /* 8 columns must fit the viewport minus body padding (24px) and 7 gaps. */
+  .table {
+    --gap: 6px;
+    --cw: min(84px, calc((100vw - 24px - 7 * var(--gap)) / 8));
+    --ch: calc(var(--cw) * 1.4);
+    display: grid;
+    grid-template-columns: repeat(8, var(--cw));
+    gap: 20px var(--gap);
+  }
+
+  .slot {
+    position: relative;
+    height: var(--ch);
+    border: 1px dashed rgba(255, 255, 255, 0.28);
+    border-radius: calc(var(--cw) * 0.09);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.2);
+    font-size: calc(var(--cw) * 0.5);
+    cursor: pointer;
+  }
+  .slot.foundation { background: rgba(0, 0, 0, 0.12); }
+  .slot > .card { position: absolute; top: -1px; left: -1px; }
+
+  .cascade { display: flex; flex-direction: column; min-height: calc(var(--ch) * 2); padding-bottom: 20px; cursor: pointer; }
+  .cascade > .slot { flex: none; }
+  .cascade > .card + .card { margin-top: calc(var(--ch) * -0.74); }
+
+  /* Cards are buttons for keyboard play; undo theme.css's button look. */
+  .card {
+    flex: none;
+    position: relative;
+    width: var(--cw);
+    height: var(--ch);
+    padding: 0;
+    border-radius: calc(var(--cw) * 0.09);
+    background: var(--card-face);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+    color: var(--card-black);
+    font-weight: 700;
+    text-align: left;
+    transition: none;
+  }
+  .card.red { color: var(--card-red); }
+  .card .corner {
+    position: absolute;
+    top: calc(var(--cw) * 0.06);
+    left: calc(var(--cw) * 0.08);
+    font-size: calc(var(--cw) * 0.25);
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .card .pip {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--ch) * 0.14);
+    text-align: center;
+    font-size: calc(var(--cw) * 0.56);
+    line-height: 1;
+  }
+  .card.selected { background: #fff0bf; outline: 3px solid var(--accent); outline-offset: -2px; }
+  .card.shake { animation: shake 0.3s ease; }
+  @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  .overlay[hidden] { display: none; }
+  .modal {
+    background: #12321f;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 26px 30px;
+    text-align: center;
+    max-width: 340px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .modal h2 { margin: 0 0 8px; color: var(--accent); }
+  .modal p { margin: 4px 0 18px; color: var(--ink-dim); font-size: 0.9rem; }
+
+  footer { color: var(--ink-dim); font-size: 0.75rem; text-align: center; max-width: 600px; line-height: 1.5; }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 1.05rem; }
+    .stat { min-width: 60px; padding: 5px 8px; font-size: 0.72rem; }
+    .table { row-gap: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="back-link" href="../index.html">← All Games</a>
+    <h1>FreeCell</h1>
+    <div class="stats">
+      <div class="stat">Deal<b id="statDeal">#1</b></div>
+      <div class="stat">Moves<b id="statMoves">0</b></div>
+      <div class="stat">Time<b id="statTime">00:00</b></div>
+    </div>
+  </header>
+
+  <div class="controls">
+    <button id="btnNew" type="button">New Game</button>
+    <button id="btnRestart" type="button">Restart</button>
+    <button id="btnUndo" type="button">Undo</button>
+    <form class="deal-form" id="dealForm">
+      <label for="dealInput">Deal #</label>
+      <input id="dealInput" type="number" min="1" max="1000000" inputmode="numeric" required>
+      <button type="submit">Play</button>
+    </form>
+  </div>
+
+  <p class="status" id="status" aria-live="polite"></p>
+
+  <div class="table">
+    <div class="slot cell" data-index="0" aria-label="Free cell 1"></div>
+    <div class="slot cell" data-index="1" aria-label="Free cell 2"></div>
+    <div class="slot cell" data-index="2" aria-label="Free cell 3"></div>
+    <div class="slot cell" data-index="3" aria-label="Free cell 4"></div>
+    <div class="slot foundation" data-suit="C" aria-label="Clubs foundation"></div>
+    <div class="slot foundation" data-suit="D" aria-label="Diamonds foundation"></div>
+    <div class="slot foundation" data-suit="H" aria-label="Hearts foundation"></div>
+    <div class="slot foundation" data-suit="S" aria-label="Spades foundation"></div>
+    <div class="cascade" data-index="0"></div>
+    <div class="cascade" data-index="1"></div>
+    <div class="cascade" data-index="2"></div>
+    <div class="cascade" data-index="3"></div>
+    <div class="cascade" data-index="4"></div>
+    <div class="cascade" data-index="5"></div>
+    <div class="cascade" data-index="6"></div>
+    <div class="cascade" data-index="7"></div>
+  </div>
+
+  <footer>Build all four suits up from Ace to King. Click a card (or a run of alternating colours) and then where it should go: a column whose last card is one higher and the other colour, an empty column, a free cell, or its foundation. Double-click to send a card to its best spot. Cards that nothing else still needs move to the foundations on their own. Deal numbers match Microsoft FreeCell, so you can share a deal by its link.</footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h2>Solved!</h2>
+    <p id="winBody"></p>
+    <div class="controls">
+      <button class="btn-primary" id="modalNew" type="button">New Game</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/freecell.js"></script>
+<script>
+(function () {
+  "use strict";
+  const F = window.FREECELL;
+  const SUIT_GLYPH = { C: "♣", D: "♦", H: "♥", S: "♠" };
+  const SUIT_NAME = { C: "clubs", D: "diamonds", H: "hearts", S: "spades" };
+  const RANK_NAME = ["", "Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"];
+  const CLASSIC_DEALS = 32000;
+  const $ = (id) => document.getElementById(id);
+  const cellEls = [...document.querySelectorAll(".slot.cell")];
+  const foundationEls = [...document.querySelectorAll(".slot.foundation")];
+  const cascadeEls = [...document.querySelectorAll(".cascade")];
+
+  let state = null;
+  let selection = null; // the move source currently picked up
+  let seconds = 0, timerHandle = null;
+
+  function cardFace(tag, card) {
+    const el = document.createElement(tag);
+    el.className = "card" + (F.isRed(card) ? " red" : "");
+    el.setAttribute("aria-label", RANK_NAME[card.rank] + " of " + SUIT_NAME[card.suit]);
+    const corner = document.createElement("span");
+    corner.className = "corner";
+    corner.textContent = (card.rank === 10 ? "10" : F.RANKS[card.rank - 1]) + SUIT_GLYPH[card.suit];
+    const pip = document.createElement("span");
+    pip.className = "pip";
+    pip.textContent = SUIT_GLYPH[card.suit];
+    el.append(corner, pip);
+    return el;
+  }
+
+  function cardButton(card, from) {
+    const btn = cardFace("button", card);
+    btn.type = "button";
+    btn.dataset.source = JSON.stringify(from);
+    const inSelection = selection && selection.type === from.type && selection.index === from.index &&
+      (from.type === "cell" || from.count <= selection.count);
+    if (inSelection) btn.classList.add("selected");
+    btn.addEventListener("click", (e) => { e.stopPropagation(); onCardClick(from, btn); });
+    btn.addEventListener("dblclick", (e) => { e.stopPropagation(); onQuickMove(from); });
+    return btn;
+  }
+
+  function render() {
+    $("statDeal").textContent = "#" + state.number;
+    $("statMoves").textContent = String(state.moves);
+    $("btnUndo").disabled = state.history.length === 0;
+
+    cellEls.forEach((el, index) => {
+      el.textContent = "";
+      const card = state.cells[index];
+      if (card) el.appendChild(cardButton(card, { type: "cell", index }));
+    });
+    foundationEls.forEach((el) => {
+      const suit = el.dataset.suit;
+      const rank = state.foundations[suit];
+      el.textContent = SUIT_GLYPH[suit];
+      if (rank > 0) el.appendChild(cardFace("div", { rank, suit }));
+    });
+    cascadeEls.forEach((el, index) => {
+      el.textContent = "";
+      const cards = state.cascades[index];
+      if (cards.length === 0) {
+        const slot = document.createElement("div");
+        slot.className = "slot";
+        el.appendChild(slot);
+      }
+      cards.forEach((card, k) => el.appendChild(cardButton(card, { type: "cascade", index, count: cards.length - k })));
+    });
+  }
+
+  function setStatus(text) { $("status").textContent = text; }
+
+  function shake(el) {
+    if (!el) return;
+    el.classList.remove("shake");
+    void el.offsetWidth;
+    el.classList.add("shake");
+  }
+
+  function pickedCards(from) {
+    return from.type === "cell" ? [state.cells[from.index]] : state.cascades[from.index].slice(-from.count);
+  }
+
+  // Returns the re-rendered button, since render() replaces the one clicked.
+  function select(from, el) {
+    if (!F.isRun(pickedCards(from))) {
+      selection = null;
+      render();
+      setStatus("Only a run in descending order with alternating colours can move together.");
+      return null;
+    }
+    selection = from;
+    setStatus("");
+    render();
+    const again = el && document.querySelector('.card[data-source="' + CSS.escape(el.dataset.source) + '"]');
+    if (again) again.focus();
+    return again;
+  }
+
+  function explainRefusal(from, to) {
+    if (from.type !== "cascade" || from.count < 2 || to.type !== "cascade") return "";
+    const target = state.cascades[to.index];
+    const limit = F.maxMovable(state, target.length === 0);
+    return from.count > limit ? "With the free cells and empty columns you have, you can move " + limit + " card" + (limit === 1 ? "" : "s") + " at once." : "";
+  }
+
+  // Returns whether the picked-up cards moved.
+  function tryMove(to) {
+    const from = selection;
+    if (!F.canMove(state, from, to)) {
+      setStatus(explainRefusal(from, to));
+      return false;
+    }
+    F.move(state, from, to);
+    selection = null;
+    setStatus("");
+    afterMove();
+    return true;
+  }
+
+  function onCardClick(from, el) {
+    if (!selection) { select(from, el); return; }
+    const sameSpot = selection.type === from.type && selection.index === from.index;
+    if (sameSpot && (from.type === "cell" || selection.count === from.count)) {
+      selection = null;
+      setStatus("");
+      render();
+      return;
+    }
+    let reason = "";
+    if (!sameSpot) {
+      const to = from.type === "cell" ? { type: "cell", index: from.index } : { type: "cascade", index: from.index };
+      if (tryMove(to)) return;
+      reason = $("status").textContent;
+    }
+    // A refused move onto a card picks that card up instead, but keeps the supermove explanation.
+    const picked = select(from, el);
+    if (reason) {
+      setStatus(reason);
+      shake(picked);
+    }
+  }
+
+  function onTargetClick(to) {
+    if (!selection) return;
+    if (!tryMove(to)) {
+      const reason = $("status").textContent || "Can't move there.";
+      selection = null;
+      render();
+      setStatus(reason);
+    }
+  }
+
+  function onQuickMove(from) {
+    selection = null;
+    if (F.quickMove(state, from)) {
+      setStatus("");
+      afterMove();
+    } else {
+      render();
+      setStatus("That card has nowhere to go.");
+    }
+  }
+
+  function afterMove() {
+    render();
+    if (F.isWon(state)) {
+      stopTimer();
+      $("winBody").textContent = "Deal #" + state.number + " in " + state.moves + " moves, " + formatTime() + ".";
+      $("overlay").hidden = false;
+    }
+  }
+
+  function formatTime() {
+    return String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
+  }
+
+  function startTimer() {
+    stopTimer();
+    seconds = 0;
+    $("statTime").textContent = formatTime();
+    timerHandle = setInterval(() => { seconds++; $("statTime").textContent = formatTime(); }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(timerHandle);
+    timerHandle = null;
+  }
+
+  function startDeal(number) {
+    state = F.createGame(number);
+    selection = null;
+    history.replaceState(null, "", "#" + number);
+    $("dealInput").value = number;
+    $("overlay").hidden = true;
+    setStatus("");
+    startTimer();
+    render();
+  }
+
+  function dealFromHash() {
+    const n = Number(location.hash.slice(1));
+    return Number.isInteger(n) && n >= 1 && n <= F.MAX_DEAL ? n : null;
+  }
+
+  const randomDeal = () => 1 + Math.floor(Math.random() * CLASSIC_DEALS);
+
+  cellEls.forEach((el, index) => el.addEventListener("click", () => onTargetClick({ type: "cell", index })));
+  foundationEls.forEach((el) => el.addEventListener("click", () => onTargetClick({ type: "foundation" })));
+  cascadeEls.forEach((el, index) => el.addEventListener("click", () => onTargetClick({ type: "cascade", index })));
+
+  $("btnNew").addEventListener("click", () => startDeal(randomDeal()));
+  $("modalNew").addEventListener("click", () => startDeal(randomDeal()));
+  $("btnRestart").addEventListener("click", () => startDeal(state.number));
+  $("btnUndo").addEventListener("click", () => {
+    selection = null;
+    if (F.undo(state)) { setStatus(""); render(); }
+  });
+  $("dealForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const n = Number($("dealInput").value);
+    if (Number.isInteger(n) && n >= 1 && n <= F.MAX_DEAL) startDeal(n);
+    else setStatus("Deal numbers run from 1 to " + F.MAX_DEAL + ".");
+  });
+  window.addEventListener("hashchange", () => {
+    const n = dealFromHash();
+    if (n && n !== state.number) startDeal(n);
+  });
+
+  startDeal(dealFromHash() || randomDeal());
+})();
+</script>
+</body>
+</html>
