@@ -8,15 +8,33 @@ bundler and no server.
 
 ## Games
 
+Grouped the same way as the hub page: add a new game to the group it belongs
+to, both here and in `index.html`.
+
+### Mahjong
+
 | | |
 |---|---|
-| **[Mahjong Table](mahjong-table/)** | Traditional, competitive 4-player mahjong — Japanese Riichi or Chinese Classical rules, 1 human vs 3 AI or full local hot-seat. Also has a "what would you discard?" trainer. |
-| **[Card Table](card-games/)** | Eight classic card games in one shared table shell — Hearts, Spades, Crazy Eights, President, Big Two, Gin Rummy, Chinese Poker, Blackjack. |
+| **[Mahjong Table](mahjong-table/)** | Traditional, competitive 4-player mahjong — Japanese Riichi or Chinese Classical rules, 1 human vs 3 AI or full local hot-seat. Also has a "what would you discard?" trainer and a Riichi scoring quiz. |
 | **[Mahjong Solitaire](mahjong-solitaire/)** | Classic single-player tile-matching puzzle. |
-| **[Klondike Solitaire](klondike-solitaire/)** | Classic single-player card game — build runs, fill the four foundations. |
 | **[Shisen-Sho](shisen-sho/)** | Mahjong tile-matching on a flat board. Pairs are removed when a path with at most two turns joins them. |
-| **[FreeCell](freecell/)** | Classic FreeCell solitaire with Microsoft-numbered, shareable deals. |
+
+### Cards
+
+| | |
+|---|---|
+| **[Card Table](card-games/)** | Twelve classic card games in one shared table shell — Hearts, Spades, Oh Hell, Euchre, Crazy Eights, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, Blackjack. |
+| **[Klondike Solitaire](klondike-solitaire/)** | Classic single-player card game — build runs, fill the four foundations. |
+| **[FreeCell](freecell/)** | Classic FreeCell solitaire with Microsoft-numbered, shareable deals and a solver-backed hint. |
+| **[Spider Solitaire](spider-solitaire/)** | Two-deck Spider with 1, 2 or 4 suits. |
+
+### Board games
+
+| | |
+|---|---|
 | **[Reversi](reversi/)** | Reversi/Othello against a three-level AI, or two players on one device. |
+| **[Connect Four](connect-four/)** | Connect Four against a three-level AI, or two players on one device. |
+| **[Mancala](mancala/)** | Kalah-rules Mancala against a three-level AI, or two players on one device. |
 
 Each game folder is self-contained (its own README and CSS/JS) and can be
 opened directly via its own `index.html` without the others. Mahjong

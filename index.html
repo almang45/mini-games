@@ -18,13 +18,24 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 28px;
+    gap: 32px;
   }
+  .hub-header { display: flex; flex-direction: column; align-items: center; gap: 14px; }
   .tagline { margin: 0; color: var(--ink-dim); text-align: center; max-width: 520px; }
+  .jump { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .group { width: 100%; display: flex; flex-direction: column; gap: 14px; scroll-margin-top: 16px; }
+  .group-title {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
   .grid {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 18px;
   }
   .card {
@@ -38,7 +49,7 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
   }
   .card-icon { width: 44px; height: 44px; border-radius: 10px; display: block; }
-  .card h2 { margin: 0; font-size: 1.15rem; color: var(--ink); }
+  .card h3 { margin: 0; font-size: 1.15rem; color: var(--ink); }
   .card p { margin: 0; color: var(--ink-dim); font-size: 0.88rem; line-height: 1.5; flex: 1; }
   .card-links { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
   .btn {
@@ -63,81 +74,127 @@
 </head>
 <body>
 <div class="shell">
-  <header>
+  <header class="hub-header">
     <h1>Mini Games</h1>
     <p class="tagline">A small collection of static, no-build browser games. Pick one below — everything runs client-side, nothing to install.</p>
+    <nav class="jump" aria-label="Game categories">
+      <a class="btn btn-secondary" href="#mahjong">Mahjong</a>
+      <a class="btn btn-secondary" href="#cards">Cards</a>
+      <a class="btn btn-secondary" href="#board-games">Board games</a>
+    </nav>
   </header>
 
-  <div class="grid">
-    <div class="card">
-      <img class="card-icon" src="mahjong-table/favicon.png" alt="">
-      <h2>Mahjong Table</h2>
-      <p>Traditional, competitive 4-player mahjong — Japanese Riichi or Chinese Classical rules, 1 human vs 3 AI or full local hot-seat.</p>
-      <div class="card-links">
-        <a class="btn btn-primary" href="mahjong-table/index.html">Play</a>
-        <a class="btn btn-secondary" href="mahjong-table/guide.html">Rules Guide</a>
-        <a class="btn btn-secondary" href="mahjong-table/trainer.html">Discard Trainer</a>
+  <section class="group" id="mahjong" aria-labelledby="mahjong-title">
+    <h2 class="group-title" id="mahjong-title">Mahjong</h2>
+    <div class="grid">
+      <div class="card">
+        <img class="card-icon" src="mahjong-table/favicon.png" alt="">
+        <h3>Mahjong Table</h3>
+        <p>Traditional, competitive 4-player mahjong — Japanese Riichi or Chinese Classical rules, 1 human vs 3 AI or full local hot-seat.</p>
+        <div class="card-links">
+          <a class="btn btn-primary" href="mahjong-table/index.html">Play</a>
+          <a class="btn btn-secondary" href="mahjong-table/guide.html">Rules Guide</a>
+          <a class="btn btn-secondary" href="mahjong-table/trainer.html">Discard Trainer</a>
+          <a class="btn btn-secondary" href="mahjong-table/scoring-quiz.html">Scoring Quiz</a>
+        </div>
       </div>
-    </div>
 
-    <div class="card">
-      <img class="card-icon" src="card-games/favicon.png" alt="">
-      <h2>Card Table</h2>
-      <p>Eight classic card games in one table shell — Hearts, Spades, Crazy Eights, President, Big Two, Gin Rummy, Chinese Poker, and Blackjack. Any mix of human/AI seats.</p>
-      <div class="card-links">
-        <a class="btn btn-primary" href="card-games/index.html">Play</a>
-        <a class="btn btn-secondary" href="card-games/guide.html">Rules Guide</a>
+      <div class="card">
+        <img class="card-icon" src="mahjong-solitaire/favicon.png" alt="">
+        <h3>Mahjong Solitaire</h3>
+        <p>The classic single-player tile-matching puzzle — clear the pyramid layout by pairing free, matching tiles.</p>
+        <div class="card-links">
+          <a class="btn btn-primary" href="mahjong-solitaire/index.html">Play</a>
+        </div>
       </div>
-    </div>
 
-    <div class="card">
-      <img class="card-icon" src="mahjong-solitaire/favicon.png" alt="">
-      <h2>Mahjong Solitaire</h2>
-      <p>The classic single-player tile-matching puzzle — clear the pyramid layout by pairing free, matching tiles.</p>
-      <div class="card-links">
-        <a class="btn btn-primary" href="mahjong-solitaire/index.html">Play</a>
+      <div class="card">
+        <img class="card-icon" src="shisen-sho/favicon.png" alt="">
+        <h3>Shisen-Sho</h3>
+        <p>Mahjong tiles on a flat board. Remove matching pairs that a line with no more than two turns can connect, including around the edge.</p>
+        <div class="card-links">
+          <a class="btn btn-primary" href="shisen-sho/index.html">Play</a>
+        </div>
       </div>
     </div>
+  </section>
 
-    <div class="card">
-      <img class="card-icon" src="klondike-solitaire/favicon.svg" alt="">
-      <h2>Klondike Solitaire</h2>
-      <p>The classic single-player card game — build descending, alternating-color runs and send every card home to its foundation.</p>
-      <div class="card-links">
-        <a class="btn btn-primary" href="klondike-solitaire/index.html">Play</a>
+  <section class="group" id="cards" aria-labelledby="cards-title">
+    <h2 class="group-title" id="cards-title">Cards</h2>
+    <div class="grid">
+      <div class="card">
+        <img class="card-icon" src="card-games/favicon.png" alt="">
+        <h3>Card Table</h3>
+        <p>Twelve classic card games in one table shell — Hearts, Spades, Oh Hell, Euchre, Crazy Eights, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em and Blackjack. Any mix of human/AI seats.</p>
+        <div class="card-links">
+          <a class="btn btn-primary" href="card-games/index.html">Play</a>
+          <a class="btn btn-secondary" href="card-games/guide.html">Rules Guide</a>
+        </div>
       </div>
-    </div>
 
-    <div class="card">
-      <img class="card-icon" src="shisen-sho/favicon.png" alt="">
-      <h2>Shisen-Sho</h2>
-      <p>Mahjong tiles on a flat board. Remove matching pairs that a line with no more than two turns can connect, including around the edge.</p>
-      <div class="card-links">
-        <a class="btn btn-primary" href="shisen-sho/index.html">Play</a>
+      <div class="card">
+        <img class="card-icon" src="klondike-solitaire/favicon.svg" alt="">
+        <h3>Klondike Solitaire</h3>
+        <p>The classic single-player card game — build descending, alternating-color runs and send every card home to its foundation.</p>
+        <div class="card-links">
+          <a class="btn btn-primary" href="klondike-solitaire/index.html">Play</a>
+        </div>
       </div>
-    </div>
 
-    <div class="card">
-      <img class="card-icon" src="freecell/favicon.png" alt="">
-      <h2>FreeCell</h2>
-      <p>Solitaire with every card dealt face up — Microsoft-numbered deals, unlimited undo, and a link you can share for any deal.</p>
-      <div class="card-links">
-        <a class="btn btn-primary" href="freecell/index.html">Play</a>
+      <div class="card">
+        <img class="card-icon" src="freecell/favicon.png" alt="">
+        <h3>FreeCell</h3>
+        <p>Solitaire with every card dealt face up — Microsoft-numbered deals, unlimited undo, and a link you can share for any deal.</p>
+        <div class="card-links">
+          <a class="btn btn-primary" href="freecell/index.html">Play</a>
+        </div>
       </div>
-    </div>
 
-    <div class="card">
-      <img class="card-icon" src="reversi/favicon.png" alt="">
-      <h2>Reversi</h2>
-      <p>Trap and flip discs on an 8×8 board. Play the AI on easy, medium or hard, or play a friend on the same device.</p>
-      <div class="card-links">
-        <a class="btn btn-primary" href="reversi/index.html">Play</a>
+      <div class="card">
+        <img class="card-icon" src="spider-solitaire/favicon.svg" alt="">
+        <h3>Spider Solitaire</h3>
+        <p>Two decks across ten columns. Build runs of one suit from King down to Ace to clear them away, playing with 1, 2 or 4 suits.</p>
+        <div class="card-links">
+          <a class="btn btn-primary" href="spider-solitaire/index.html">Play</a>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
+
+  <section class="group" id="board-games" aria-labelledby="board-games-title">
+    <h2 class="group-title" id="board-games-title">Board games</h2>
+    <div class="grid">
+      <div class="card">
+        <img class="card-icon" src="reversi/favicon.png" alt="">
+        <h3>Reversi</h3>
+        <p>Trap and flip discs on an 8×8 board. Play the AI on easy, medium or hard, or play a friend on the same device.</p>
+        <div class="card-links">
+          <a class="btn btn-primary" href="reversi/index.html">Play</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <img class="card-icon" src="connect-four/favicon.svg" alt="">
+        <h3>Connect Four</h3>
+        <p>Drop discs to line up four across, down or diagonally. Play the AI on easy, medium or hard, or play a friend on the same device.</p>
+        <div class="card-links">
+          <a class="btn btn-primary" href="connect-four/index.html">Play</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <img class="card-icon" src="mancala/favicon.svg" alt="">
+        <h3>Mancala</h3>
+        <p>Kalah with six pits a side. Sow seeds, land in your store for another turn and capture across the board, against the AI or a friend.</p>
+        <div class="card-links">
+          <a class="btn btn-primary" href="mancala/index.html">Play</a>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <footer>
-    <p>Source on <a href="https://github.com/almang45/mini-games">GitHub</a>.</p>
+    <p>Games you've opened once keep working offline. Source on <a href="https://github.com/almang45/mini-games">GitHub</a>.</p>
   </footer>
 </div>
 </body>
