@@ -74,15 +74,31 @@ The `|| exit 1` matters here: a plain `for` loop's exit code is just the
 go unnoticed.
 
 ```
-for f in mahjong-table/js/test/*.test.js; do node "$f" || exit 1; done
-for f in card-games/js/test/*.test.js; do node "$f" || exit 1; done
-for f in shisen-sho/js/test/*.test.js freecell/js/test/*.test.js reversi/js/test/*.test.js; do node "$f" || exit 1; done
+for f in */js/test/*.test.js; do node "$f" || exit 1; done
 ```
+
+The same loop runs in GitHub Actions (`.github/workflows/test.yml`) on every
+pull request and on pushes to `main`. A new game's tests are picked up
+automatically as long as they live in `<game>/js/test/`.
+
+## Offline play
+
+Every page loads `shared/register-sw.js`, which registers the root `sw.js`
+service worker. The worker is network first: online, you always get the
+latest deploy. Each file that loads is also copied into the browser's cache,
+so any page you have opened once still works with no connection. Tile faces
+are the exception to "only what loaded": the first tile fetched caches the
+whole `shared/assets/tiles/` set, which `shared/js/test/sw.test.js` keeps in
+step with the list in `sw.js`.
+`manifest.webmanifest` (icons in `shared/icon-*.png`, rendered from
+`shared/icon.svg`) lets browsers install the site as an app. Service workers
+only run over http(s), so opening files straight from disk works as before,
+just without the offline cache.
 
 ## Deployment
 
 This repo is deployed via GitHub Pages, serving directly from the root of
-`main` — no build/Actions workflow needed since everything is already static.
+`main`. There is no build step. The only Actions workflow runs the tests.
 
 ## License
 
