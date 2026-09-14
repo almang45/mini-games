@@ -8,15 +8,33 @@ bundler and no server.
 
 ## Games
 
+Grouped the same way as the hub page: add a new game to the group it belongs
+to, both here and in `index.html`.
+
+### Mahjong
+
 | | |
 |---|---|
-| **[Mahjong Table](mahjong-table/)** | Traditional, competitive 4-player mahjong — Japanese Riichi or Chinese Classical rules, 1 human vs 3 AI or full local hot-seat. Also has a "what would you discard?" trainer. |
-| **[Card Table](card-games/)** | Eight classic card games in one shared table shell — Hearts, Spades, Crazy Eights, President, Big Two, Gin Rummy, Chinese Poker, Blackjack. |
+| **[Mahjong Table](mahjong-table/)** | Traditional, competitive 4-player mahjong — Japanese Riichi or Chinese Classical rules, 1 human vs 3 AI or full local hot-seat. Also has a "what would you discard?" trainer and a Riichi scoring quiz. |
 | **[Mahjong Solitaire](mahjong-solitaire/)** | Classic single-player tile-matching puzzle. |
-| **[Klondike Solitaire](klondike-solitaire/)** | Classic single-player card game — build runs, fill the four foundations. |
 | **[Shisen-Sho](shisen-sho/)** | Mahjong tile-matching on a flat board. Pairs are removed when a path with at most two turns joins them. |
-| **[FreeCell](freecell/)** | Classic FreeCell solitaire with Microsoft-numbered, shareable deals. |
+
+### Cards
+
+| | |
+|---|---|
+| **[Card Table](card-games/)** | Twelve classic card games in one shared table shell — Hearts, Spades, Oh Hell, Euchre, Crazy Eights, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, Blackjack. |
+| **[Klondike Solitaire](klondike-solitaire/)** | Classic single-player card game — build runs, fill the four foundations. |
+| **[FreeCell](freecell/)** | Classic FreeCell solitaire with Microsoft-numbered, shareable deals and a solver-backed hint. |
+| **[Spider Solitaire](spider-solitaire/)** | Two-deck Spider with 1, 2 or 4 suits. |
+
+### Board games
+
+| | |
+|---|---|
 | **[Reversi](reversi/)** | Reversi/Othello against a three-level AI, or two players on one device. |
+| **[Connect Four](connect-four/)** | Connect Four against a three-level AI, or two players on one device. |
+| **[Mancala](mancala/)** | Kalah-rules Mancala against a three-level AI, or two players on one device. |
 
 Each game folder is self-contained (its own README and CSS/JS) and can be
 opened directly via its own `index.html` without the others. Mahjong
@@ -56,15 +74,31 @@ The `|| exit 1` matters here: a plain `for` loop's exit code is just the
 go unnoticed.
 
 ```
-for f in mahjong-table/js/test/*.test.js; do node "$f" || exit 1; done
-for f in card-games/js/test/*.test.js; do node "$f" || exit 1; done
-for f in shisen-sho/js/test/*.test.js freecell/js/test/*.test.js reversi/js/test/*.test.js; do node "$f" || exit 1; done
+for f in */js/test/*.test.js; do node "$f" || exit 1; done
 ```
+
+The same loop runs in GitHub Actions (`.github/workflows/test.yml`) on every
+pull request and on pushes to `main`. A new game's tests are picked up
+automatically as long as they live in `<game>/js/test/`.
+
+## Offline play
+
+Every page loads `shared/register-sw.js`, which registers the root `sw.js`
+service worker. The worker is network first: online, you always get the
+latest deploy. Each file that loads is also copied into the browser's cache,
+so any page you have opened once still works with no connection. Tile faces
+are the exception to "only what loaded": the first tile fetched caches the
+whole `shared/assets/tiles/` set, which `shared/js/test/sw.test.js` keeps in
+step with the list in `sw.js`.
+`manifest.webmanifest` (icons in `shared/icon-*.png`, rendered from
+`shared/icon.svg`) lets browsers install the site as an app. Service workers
+only run over http(s), so opening files straight from disk works as before,
+just without the offline cache.
 
 ## Deployment
 
 This repo is deployed via GitHub Pages, serving directly from the root of
-`main` — no build/Actions workflow needed since everything is already static.
+`main`. There is no build step. The only Actions workflow runs the tests.
 
 ## License
 

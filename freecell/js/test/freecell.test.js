@@ -154,4 +154,56 @@ for (let n = 1; n <= 30; n++) {
   ok("deal #" + n * 97 + ": undo rewinds to the deal", JSON.stringify(s) === start);
 }
 
+// ---- solver ----
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const keyOf = (s) => s.cascades.map((c) => c.map((x) => x.id).join(" ")).sort().join("|") + "/" + s.cells.filter(Boolean).map((c) => c.id).sort().join(" ");
+function after(s, { from, to }) {
+  const copy = game({});
+  copy.cascades = s.cascades.map((c) => c.slice());
+  copy.cells = s.cells.slice();
+  copy.foundations = { ...s.foundations };
+  F.move(copy, from, to);
+  return copy;
+}
+
+for (const n of [1, 2, 3, 617, 1941]) {
+  const s = F.createGame(n);
+  const found = F.solve(s);
+  ok("deal #" + n + " is solved", found.result === "solved" && found.moves.length > 0, found.result);
+  found.moves.forEach(({ from, to }) => F.move(s, from, to));
+  ok("deal #" + n + ": replaying the solution through move() wins", F.isWon(s));
+}
+ok("deal #11982, the famous impossible one, is proven unsolvable", F.solve(F.createGame(11982)).result === "unsolvable");
+ok("a tiny budget gives up rather than guessing", F.solve(F.createGame(1), 50).result === "gave-up");
+ok("a won game needs no moves", same(F.solve(game({ foundations: { C: 13, D: 13, H: 13, S: 13 } })), { result: "solved", moves: [] }));
+
+{
+  const stuck = game({ cascades: ["3D", "9H", "8H", "7H", "6H", "5H", "4H", "2D"], cells: ["TC", "JC", "QC", "KC"] });
+  ok("no candidate moves in a dead position", F.candidateMoves(stuck).length === 0);
+  ok("a dead position is unsolvable", F.solve(stuck).result === "unsolvable");
+  const almost = game({ cascades: ["KH"], foundations: { C: 13, D: 13, H: 12, S: 13 } });
+  ok("one card from home: a one-move solution", same(F.solve(almost).moves, [{ from: col(0), to: FOUNDATION }]));
+}
+
+// The generator must only offer legal moves, and must reach every position a legal move
+// reaches, bar the pointless ones (cell to cell, a whole column into an empty column).
+for (let n = 1; n <= 12; n++) {
+  const rng = mulberry32(1000 + n);
+  const s = F.createGame(n * 131);
+  let legal = true, complete = true;
+  for (let step = 0; step < 60 && !F.isWon(s); step++) {
+    const candidates = F.candidateMoves(s);
+    if (!candidates.every(({ from, to }) => F.canMove(s, from, to))) legal = false;
+    const reached = new Set(candidates.map((m) => keyOf(after(s, m))));
+    const useful = legalMoves(s).filter(({ from, to }) => !(from.type === "cell" && to.type === "cell") &&
+      !(to.type === "cascade" && s.cascades[to.index].length === 0 && from.type === "cascade" && from.count === s.cascades[from.index].length));
+    if (!useful.every((m) => reached.has(keyOf(after(s, m))))) complete = false;
+    if (useful.length === 0) break;
+    const pick = useful[Math.floor(rng() * useful.length)];
+    F.move(s, pick.from, pick.to);
+  }
+  ok("deal #" + n * 131 + ": candidate moves are all legal", legal);
+  ok("deal #" + n * 131 + ": candidate moves miss no useful position", complete);
+}
+
 console.log("freecell.test.js: " + passed + " assertions passed");

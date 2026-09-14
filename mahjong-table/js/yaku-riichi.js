@@ -13,36 +13,36 @@
 
   const GREEN_KINDS = [tiles.indexOf("s", 2), tiles.indexOf("s", 3), tiles.indexOf("s", 4), tiles.indexOf("s", 6), tiles.indexOf("s", 8), 32 /* hatsu */];
 
-  function buildGroups(concealedSets, openMelds, winTile, winBy) {
+  // ronTriplet: index of the concealed triplet a ron tile completed (it scores as open), or -1.
+  function buildGroups(concealedSets, openMelds, ronTriplet) {
     const groups = [];
     for (const m of openMelds) {
       if (m.type === "chi") groups.push({ type: "run", tile: m.tiles[0], concealed: false });
       else if (m.type === "pon") groups.push({ type: "triplet", tile: m.tiles[0], concealed: false });
       else if (m.type === "kan") groups.push({ type: "kan", tile: m.tiles[0], concealed: !!m.concealed });
     }
-    for (const s of concealedSets) {
-      if (s.type === "triplet") {
-        const wonByRonHere = s.tile === winTile && winBy === "ron";
-        groups.push({ type: "triplet", tile: s.tile, concealed: !wonByRonHere });
-      } else {
-        groups.push({ type: "run", tile: s.tile, concealed: true });
-      }
-    }
+    concealedSets.forEach((s, i) => {
+      groups.push({ type: s.type, tile: s.tile, concealed: s.type === "run" || i !== ronTriplet });
+    });
     return groups;
   }
 
-  function classifyWait(concealedSets, pairKind, winTile) {
-    if (pairKind === winTile) return "tanki";
-    for (const s of concealedSets) {
-      if (s.type === "triplet" && s.tile === winTile) return "shanpon";
-      if (s.type === "run") {
-        const r = tiles.rankOf(s.tile);
-        if (winTile === s.tile) return r === 7 ? "penchan" : "ryanmen";
-        if (winTile === s.tile + 1) return "kanchan";
-        if (winTile === s.tile + 2) return r === 1 ? "penchan" : "ryanmen";
+  // Every group the winning tile could have completed. A tile that fits both a run and a
+  // triplet changes the wait, the triplet's openness and even sanankou, so each reading is
+  // scored and the best one kept.
+  function waitReadings(concealedSets, pairKind, winTile) {
+    const readings = pairKind === winTile ? [{ wait: "tanki", ronTriplet: -1 }] : [];
+    concealedSets.forEach((s, i) => {
+      if (s.type === "triplet") {
+        if (s.tile === winTile) readings.push({ wait: "shanpon", ronTriplet: i });
+        return;
       }
-    }
-    return "ryanmen";
+      const r = tiles.rankOf(s.tile);
+      if (winTile === s.tile) readings.push({ wait: r === 7 ? "penchan" : "ryanmen", ronTriplet: -1 });
+      else if (winTile === s.tile + 1) readings.push({ wait: "kanchan", ronTriplet: -1 });
+      else if (winTile === s.tile + 2) readings.push({ wait: r === 1 ? "penchan" : "ryanmen", ronTriplet: -1 });
+    });
+    return readings;
   }
 
   function groupHasTerminalOrHonor(g) {
@@ -157,22 +157,27 @@
     return yaku;
   }
 
-  function computeFu(groups, pairKind, wait, winBy, isMenzen, seatWind, roundWind, isPinfu) {
-    if (isPinfu) return winBy === "tsumo" ? 20 : 30;
-    let fu = 20;
+  // Itemized (rather than a bare total) so the scoring quiz can show where each fu came from.
+  function fuItems(groups, pairKind, wait, winBy, isMenzen, seatWind, roundWind, isPinfu) {
+    if (isPinfu) return [{ label: "Pinfu " + winBy + " (fixed)", fu: winBy === "tsumo" ? 20 : 30 }];
+    const items = [{ label: "Base", fu: 20 }];
     for (const g of groups) {
       if (g.type === "run") continue;
-      const th = tiles.isTerminalOrHonor(g.tile);
-      if (g.type === "triplet") fu += g.concealed ? (th ? 8 : 4) : (th ? 4 : 2);
-      else fu += g.concealed ? (th ? 32 : 16) : (th ? 16 : 8);
+      const fu = (g.type === "kan" ? 8 : 2) * (tiles.isTerminalOrHonor(g.tile) ? 2 : 1) * (g.concealed ? 2 : 1);
+      items.push({ label: (g.concealed ? "Closed " : "Open ") + (g.type === "kan" ? "kan" : "triplet") + ", " + tiles.nameOf(g.tile), fu });
     }
-    if (tiles.isDragon(pairKind)) fu += 2;
-    if (pairKind === seatWind) fu += 2;
-    if (pairKind === roundWind) fu += 2;
-    fu += { ryanmen: 0, penchan: 2, kanchan: 2, tanki: 2, shanpon: 0 }[wait] || 0;
-    if (winBy === "tsumo") fu += 2;
-    if (winBy === "ron" && isMenzen) fu += 10;
-    return Math.ceil(fu / 10) * 10;
+    const pairFu = (tiles.isDragon(pairKind) ? 2 : 0) + (pairKind === seatWind ? 2 : 0) + (pairKind === roundWind ? 2 : 0);
+    if (pairFu) items.push({ label: "Value pair, " + tiles.nameOf(pairKind), fu: pairFu });
+    if (wait === "penchan" || wait === "kanchan" || wait === "tanki") items.push({ label: wait[0].toUpperCase() + wait.slice(1) + " wait", fu: 2 });
+    if (winBy === "tsumo") items.push({ label: "Tsumo", fu: 2 });
+    if (winBy === "ron" && isMenzen) items.push({ label: "Closed ron", fu: 10 });
+    // Standard rule: an open ron with nothing to add scores 30 fu, not 20.
+    if (winBy === "ron" && !isMenzen && items.length === 1) items.push({ label: "Open ron minimum", fu: 10 });
+    return items;
+  }
+
+  function roundFu(items) {
+    return Math.ceil(items.reduce((a, item) => a + item.fu, 0) / 10) * 10;
   }
 
   function countDora(fullCounts, indicators) {
@@ -194,7 +199,7 @@
   // input: { concealedCounts[34] (includes the winning tile), openMelds:[{type:'chi'|'pon'|'kan', tiles:[kindIdx,...], concealed?}],
   //          winTile, winBy:'ron'|'tsumo', seatWind, roundWind, flags:{riichi,doubleRiichi,ippatsu,haitei,houtei,rinshan,chankan},
   //          doraIndicators:[kindIdx], uraDoraIndicators:[kindIdx] }
-  // returns null if not a valid win (no yaku), else { yaku, han, fu, isYakuman }
+  // returns null if not a valid win (no yaku), else { yaku, han, fu, fuItems:[{label, fu}], isYakuman }
   function evaluateWin(input) {
     const openMelds = input.openMelds || [];
     const flags = input.flags || {};
@@ -221,30 +226,31 @@
       const hanFromYaku = yaku.reduce((a, y) => a + y.han, 0);
       const dora = countDora(fullCounts, doraIndicators) + (flags.riichi ? countDora(fullCounts, uraDoraIndicators) : 0);
       const finalYaku = dora > 0 ? yaku.concat([{ name: "Dora", han: dora }]) : yaku;
-      candidates.push({ yaku: finalYaku, han: hanFromYaku + dora, fu: 25, isYakuman: false, hanFromYaku });
+      candidates.push({ yaku: finalYaku, han: hanFromYaku + dora, fu: 25, fuItems: [{ label: "Chiitoitsu (fixed)", fu: 25 }], isYakuman: false, hanFromYaku });
     }
 
     if (openMelds.length === 0 && hand.isKokushi(input.concealedCounts)) {
-      candidates.push({ yaku: [{ name: "Kokushi Musou (Thirteen Orphans)", han: 13, yakuman: true }], han: 13, fu: 0, isYakuman: true, hanFromYaku: 13 });
+      candidates.push({ yaku: [{ name: "Kokushi Musou (Thirteen Orphans)", han: 13, yakuman: true }], han: 13, fu: 0, fuItems: [], isYakuman: true, hanFromYaku: 13 });
     }
 
     const decomps = hand.decomposeConcealed(input.concealedCounts, setsNeeded);
     for (const d of decomps) {
-      const groups = buildGroups(d.sets, openMelds, input.winTile, input.winBy);
-      const wait = classifyWait(d.sets, d.pair, input.winTile);
-      const yakuList = computeYaku(d.sets, d.pair, groups, isMenzen, input.winBy, input.seatWind, input.roundWind, flags, wait);
-      const isYakumanHand = yakuList.some((y) => y.yakuman);
-      let relevant = isYakumanHand ? yakuList.filter((y) => y.yakuman) : yakuList;
-      const hanFromYaku = relevant.reduce((a, y) => a + y.han, 0);
-      let dora = 0;
-      if (!isYakumanHand) {
-        dora = countDora(fullCounts, doraIndicators) + (flags.riichi ? countDora(fullCounts, uraDoraIndicators) : 0);
-        if (dora > 0) relevant = relevant.concat([{ name: "Dora", han: dora }]);
+      for (const { wait, ronTriplet } of waitReadings(d.sets, d.pair, input.winTile)) {
+        const groups = buildGroups(d.sets, openMelds, input.winBy === "ron" ? ronTriplet : -1);
+        const yakuList = computeYaku(d.sets, d.pair, groups, isMenzen, input.winBy, input.seatWind, input.roundWind, flags, wait);
+        const isYakumanHand = yakuList.some((y) => y.yakuman);
+        let relevant = isYakumanHand ? yakuList.filter((y) => y.yakuman) : yakuList;
+        const hanFromYaku = relevant.reduce((a, y) => a + y.han, 0);
+        let dora = 0;
+        if (!isYakumanHand) {
+          dora = countDora(fullCounts, doraIndicators) + (flags.riichi ? countDora(fullCounts, uraDoraIndicators) : 0);
+          if (dora > 0) relevant = relevant.concat([{ name: "Dora", han: dora }]);
+        }
+        const han = hanFromYaku + dora;
+        const isPinfu = relevant.some((y) => y.name === "Pinfu");
+        const items = isYakumanHand ? [] : fuItems(groups, d.pair, wait, input.winBy, isMenzen, input.seatWind, input.roundWind, isPinfu);
+        candidates.push({ yaku: relevant, han, fu: isYakumanHand ? 0 : roundFu(items), fuItems: items, isYakuman: isYakumanHand, hanFromYaku });
       }
-      const han = hanFromYaku + dora;
-      const isPinfu = relevant.some((y) => y.name === "Pinfu");
-      const fu = isYakumanHand ? 0 : computeFu(groups, d.pair, wait, input.winBy, isMenzen, input.seatWind, input.roundWind, isPinfu);
-      candidates.push({ yaku: relevant, han, fu, isYakuman: isYakumanHand, hanFromYaku });
     }
 
     const valid = candidates.filter((c) => c.isYakuman || c.hanFromYaku >= 1);
@@ -253,5 +259,5 @@
     return valid[0];
   }
 
-  return { evaluateWin, buildGroups, classifyWait, computeFu, countDora };
+  return { evaluateWin, buildGroups, waitReadings, fuItems, countDora };
 });

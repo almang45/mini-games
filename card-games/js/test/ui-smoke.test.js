@@ -25,6 +25,10 @@ const CHINESE_POKER = require("../games/chinese-poker.js"); global.CHINESE_POKER
 const BLACKJACK = require("../games/blackjack.js"); global.BLACKJACK = BLACKJACK;
 const SPADES = require("../games/spades.js"); global.SPADES = SPADES;
 const GIN_RUMMY = require("../games/gin-rummy.js"); global.GIN_RUMMY = GIN_RUMMY;
+const OH_HELL = require("../games/oh-hell.js"); global.OH_HELL = OH_HELL;
+const EUCHRE = require("../games/euchre.js"); global.EUCHRE = EUCHRE;
+const HOLDEM = require("../games/texas-holdem.js"); global.HOLDEM = HOLDEM;
+const CRIBBAGE = require("../games/cribbage.js"); global.CRIBBAGE = CRIBBAGE;
 require("../ui/hearts-ui.js");
 require("../ui/crazy-eights-ui.js");
 require("../ui/president-ui.js");
@@ -33,6 +37,10 @@ require("../ui/chinese-poker-ui.js");
 require("../ui/blackjack-ui.js");
 require("../ui/spades-ui.js");
 require("../ui/gin-rummy-ui.js");
+require("../ui/oh-hell-ui.js");
+require("../ui/euchre-ui.js");
+require("../ui/texas-holdem-ui.js");
+require("../ui/cribbage-ui.js");
 const app = require("../app.js");
 global.document._fireDOMContentLoaded();
 
@@ -137,10 +145,53 @@ function ginHumanMove(state, seat) {
   app.clickAction(!knock ? "Discard " + CARDS.cardLabel(card) : deadwood === 0 ? "Gin!" : "Knock (" + deadwood + " deadwood)");
 }
 
+// Stepping down can land on the dealer's forbidden bid; stepping back up
+// returns to the AI's own (always legal) estimate.
+function ohHellHumanMove(state, seat) {
+  if (state.round.phase !== "bidding") {
+    app.playCard(seat, OH_HELL.aiChoosePlay(state, seat));
+    return;
+  }
+  const buttons = () => app.getCurrentGame().actionButtons(state, seat);
+  if (!buttons().find((b) => b.label === "−").disabled) app.clickAction("−");
+  if (buttons().find((b) => b.primary).disabled) app.clickAction("+");
+  app.clickAction(buttons().find((b) => b.primary).label);
+}
+
+function euchreHumanMove(state, seat) {
+  const h = state.hand;
+  if (h.phase === "playing") return app.playCard(seat, EUCHRE.aiChoosePlay(state, seat));
+  if (h.phase === "discard") return app.playCard(seat, EUCHRE.aiChooseDiscard(h.hands[seat], h.trump));
+  if (h.phase === "order") {
+    const order = (seat === state.dealerSeat ? "Pick Up " : "Order Up ") + CARDS.cardLabel(h.upcard);
+    return app.clickAction(EUCHRE.aiWantsOrder(state, seat) ? order : "Pass");
+  }
+  const suit = EUCHRE.aiChooseName(state, seat);
+  return app.clickAction(suit ? "Name " + CARDS.suitName(suit) : "Pass");
+}
+
+// Raises go through the stepper once, then bet whatever it shows.
+function holdemHumanMove(state, seat) {
+  const action = HOLDEM.aiChooseAction(state, seat);
+  const buttons = () => app.getCurrentGame().actionButtons(state, seat);
+  if (action.type === "raise") {
+    if (!buttons().find((b) => b.label === "+").disabled) app.clickAction("+");
+    return app.clickAction(buttons().find((b) => /^(Bet|Raise to) /.test(b.label)).label);
+  }
+  return app.clickAction(action.type === "fold" ? "Fold" : buttons().find((b) => b.primary).label);
+}
+
+function cribbageHumanMove(state, seat) {
+  if (state.hand.phase === "pegging") return app.playCard(seat, CRIBBAGE.aiChoosePeg(state, seat));
+  CRIBBAGE.aiChooseDiscard(state, seat).forEach((c) => app.playCard(seat, c)); // selects both
+  return app.clickAction("Send to Crib (2/2)");
+}
+
 const HUMAN_MOVE = {
   hearts: heartsHumanMove, "crazy-eights": ceHumanMove, president: presHumanMove,
   "big-two": bigTwoHumanMove, "chinese-poker": cpHumanMove, blackjack: bjHumanMove,
-  spades: spadesHumanMove, "gin-rummy": ginHumanMove,
+  spades: spadesHumanMove, "gin-rummy": ginHumanMove, "oh-hell": ohHellHumanMove,
+  euchre: euchreHumanMove, "texas-holdem": holdemHumanMove, cribbage: cribbageHumanMove,
 };
 
 async function driveGame({ maxHumanSteps = 1500, maxTicks = 4000 } = {}) {
@@ -184,6 +235,12 @@ async function run() {
     ["blackjack", ["human", "ai", "ai", "ai"]],
     ["spades", ["human", "ai", "ai", "ai"]],
     ["gin-rummy", ["human", "ai", "off", "off"]],
+    ["oh-hell", ["human", "ai", "ai", "off"]],
+    ["oh-hell", ["human", "ai", "ai", "ai"]],
+    ["euchre", ["human", "ai", "ai", "ai"]],
+    ["texas-holdem", ["human", "ai", "off", "off"]],
+    ["texas-holdem", ["human", "ai", "ai", "ai"]],
+    ["cribbage", ["human", "ai", "off", "off"]],
   ];
   for (const [key, seats] of vsAiConfigs) {
     setupSeats(key, seats);
@@ -208,6 +265,10 @@ async function run() {
     ["blackjack", ["human", "human", "human", "human"], 1500],
     ["spades", ["human", "human", "human", "human"], 4000],
     ["gin-rummy", ["human", "human", "off", "off"], 3000],
+    ["oh-hell", ["human", "human", "human", "human"], 1500],
+    ["euchre", ["human", "human", "human", "human"], 3000],
+    ["texas-holdem", ["human", "human", "human", "off"], 1500],
+    ["cribbage", ["human", "human", "off", "off"], 1500],
   ];
   for (const [key, seats, maxHumanSteps] of hotseatConfigs) {
     setupSeats(key, seats);

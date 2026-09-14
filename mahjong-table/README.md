@@ -15,6 +15,14 @@ unseen tiles would improve the hand). Seven pairs and thirteen orphans count
 toward shanten. Only your own tiles count as seen, and hand value isn't
 considered.
 
+`scoring-quiz.html` is the second practice page. It deals a random winning
+Riichi hand with a situation (ron or tsumo, seat and round wind, riichi, one
+dora indicator) and asks what the hand pays, out of four answers. The wrong
+answers come from being one han or one fu step off. After you answer, it lists
+each yaku's han, an itemized fu count and the payment arithmetic. All of it
+comes from the table's own `yaku-riichi.js` and `score-riichi.js`, so the quiz
+and the table can't disagree.
+
 Player-facing rules explanations (table layout, controls, full yaku/scoring
 tables, glossary) live in `guide.html` — linked from the start screen. This
 README is the developer-facing companion: what's implemented, what's
@@ -29,11 +37,13 @@ code license.
 ```
 index.html              page shell / screens
 trainer.html            discard trainer page (UI inline)
-css/style.css           styling
+scoring-quiz.html       Riichi scoring quiz page (UI inline)
+css/style.css           styling (incl. the panel shared by both practice pages)
 js/tiles.js             tile model, wall building/shuffling, dora indicators
 js/hand.js              hand decomposition + shanten calculation
 js/trainer.js           discard ranking (shanten, ukeire) + trainer hand dealing
-js/yaku-riichi.js       riichi yaku/fu detection
+js/quiz.js              scoring quiz hand dealing, answer choices, payment steps
+js/yaku-riichi.js       riichi yaku detection + itemized fu
 js/score-riichi.js      riichi han/fu -> point formula
 js/score-classical.js   Chinese Classical doubling-point scoring
 js/game.js              turn/call state machine (shared by both rulesets)
@@ -105,7 +115,7 @@ Run all tests (from inside this `mahjong-table/` folder): `for f in js/test/*.te
 No headless browser (jsdom/playwright/Chromium) was available in the
 environment this was built in. Engine logic (`tiles.js`, `hand.js`,
 `yaku-riichi.js`, `score-riichi.js`, `score-classical.js`, `game.js`, `ai.js`,
-`trainer.js`) is tested directly in Node (132,000+ assertions, including two 30-game
+`trainer.js`, `quiz.js`) is tested directly in Node (136,000+ assertions, including two 30-game
 randomized full-hanchan simulations per ruleset with tile-conservation and
 score-invariant checks). The DOM/UI layer (`ui.js` + `index.html`) is
 exercised by `js/test/ui-integration.test.js`, which loads the real script

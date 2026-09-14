@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mancala</title>
+<link rel="icon" href="favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<script src="../shared/register-sw.js" defer></script>
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+  header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .controls label { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  select {
+    font: inherit;
+    font-size: 0.85rem;
+    background: #1c4a34;
+    color: var(--ink);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .status { margin: 0; min-height: 1.3em; text-align: center; font-size: 0.9rem; color: var(--ink-dim); }
+  .side-label { width: min(720px, 100%); display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--ink-dim); }
+  .side-label b { color: var(--ink); }
+  .side-label .is-turn b { color: var(--accent); }
+
+  /* Stores sit at the ends; North's row runs right to left so sowing goes counter-clockwise. */
+  .board {
+    width: min(720px, 100%);
+    display: grid;
+    grid-template-columns: 1.15fr repeat(6, 1fr) 1.15fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 1.6%;
+    padding: 2.4%;
+    background: linear-gradient(180deg, #9a6b3c, #7a5129);
+    border-radius: 999px / 40%;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 -5px 0 rgba(0, 0, 0, 0.2);
+  }
+  .pit, .store {
+    position: relative;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+    background: #4f3218;
+    box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.55);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pit { aspect-ratio: 1; border-radius: 50%; cursor: default; }
+  .pit:hover, .pit:active { filter: none; transform: none; }
+  .pit.legal { cursor: pointer; box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.55), 0 0 0 3px var(--accent); }
+  .pit.legal:hover, .pit.legal:focus-visible { background: #654121; outline: none; }
+  .store { grid-row: 1 / span 2; border-radius: 999px; }
+  .store.north { grid-column: 1; }
+  .store.south { grid-column: 8; }
+  .pit.lit, .store.lit { background: #7b5329; }
+  .pit.captured { animation: flash 0.6s ease; }
+  @keyframes flash { 40% { background: var(--danger); } }
+
+  .seeds { position: absolute; inset: 18%; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 2px; pointer-events: none; }
+  .seed { width: 22%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff8e0, #d9c28a 60%, #a38a4f); }
+  .store .seeds { inset: 12% 20%; }
+  .store .seed { width: 30%; }
+  .count {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    min-width: 1.6em;
+    padding: 1px 5px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.6);
+    font-size: 0.72rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+  .store .count { position: static; font-size: 1.3rem; background: rgba(0, 0, 0, 0.45); padding: 4px 8px; z-index: 1; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  .overlay[hidden] { display: none; }
+  .modal {
+    background: #12321f;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 26px 30px;
+    text-align: center;
+    max-width: 340px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .modal h2 { margin: 0 0 8px; color: var(--accent); }
+  .modal p { margin: 4px 0 18px; color: var(--ink-dim); font-size: 0.95rem; }
+  .modal .controls { gap: 8px; }
+
+  footer { color: var(--ink-dim); font-size: 0.75rem; text-align: center; max-width: 560px; line-height: 1.5; }
+
+  @media (max-width: 480px) {
+    .board { border-radius: 24px; }
+    .count { font-size: 0.62rem; padding: 0 3px; }
+    .store .count { font-size: 0.95rem; padding: 2px 5px; }
+    .seed { width: 26%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pit.captured { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="back-link" href="../index.html">← All Games</a>
+    <h1>Mancala</h1>
+  </header>
+
+  <div class="controls">
+    <label>Mode
+      <select id="mode">
+        <option value="south">You play South (first) vs AI</option>
+        <option value="north">You play North vs AI</option>
+        <option value="pvp">Two players</option>
+      </select>
+    </label>
+    <label>AI
+      <select id="level">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </label>
+    <button id="btnNew" type="button">New Game</button>
+    <button id="btnUndo" type="button">Undo</button>
+  </div>
+
+  <p class="status" id="status" aria-live="polite"></p>
+
+  <div class="side-label"><span id="labelNorth"></span></div>
+  <div class="board" id="board" aria-label="Board"></div>
+  <div class="side-label" style="justify-content: flex-end"><span id="labelSouth"></span></div>
+
+  <footer>Pick up every seed in one of your pits and sow them one by one counter-clockwise, into your own store but never your opponent's. End in your store and you move again. End in an empty pit on your side and you capture that seed plus everything in the pit opposite. When either side runs out of seeds, each player banks what's left on their own side and the fuller store wins.</footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h2>Game over</h2>
+    <p id="resultText"></p>
+    <div class="controls">
+      <button class="btn-primary" id="modalNew" type="button">New Game</button>
+      <button id="modalClose" type="button">See Board</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/mancala.js"></script>
+<script>
+(function () {
+  "use strict";
+  const M = window.MANCALA;
+  const { SOUTH, NORTH, STORE, PIT_INDICES } = M;
+  const NAME = { [SOUTH]: "South", [NORTH]: "North" };
+  const HUMANS = { south: [SOUTH], north: [NORTH], pvp: [SOUTH, NORTH] };
+  const AI_DELAY_MS = 450;
+  const SOW_STEP_MS = 140;
+  const MAX_DRAWN_SEEDS = 12; // beyond this the dots stop fitting; the count still shows
+  const $ = (id) => document.getElementById(id);
+
+  let state = null;
+  let shown = null; // board currently drawn, which lags state.board while sowing animates
+  let lit = new Set();
+  let timer = null; // AI thinking or a sowing animation; input waits for either
+
+  const mode = () => $("mode").value;
+  const isHuman = (player) => HUMANS[mode()].includes(player);
+
+  const holes = new Array(14);
+  function makeHole(idx, cls, column, row) {
+    const el = document.createElement(cls === "pit" ? "button" : "div");
+    if (cls === "pit") {
+      el.type = "button";
+      el.addEventListener("click", () => onPitClick(idx));
+    }
+    el.className = cls;
+    el.style.gridColumn = String(column);
+    if (row) el.style.gridRow = String(row);
+    el.innerHTML = '<span class="seeds"></span><span class="count"></span>';
+    $("board").appendChild(el);
+    holes[idx] = el;
+  }
+  makeHole(STORE[NORTH], "store north", 1);
+  PIT_INDICES[NORTH].forEach((idx) => makeHole(idx, "pit", 2 + (12 - idx), 1));
+  PIT_INDICES[SOUTH].forEach((idx) => makeHole(idx, "pit", 2 + idx, 2));
+  makeHole(STORE[SOUTH], "store south", 8);
+
+  function render() {
+    const canPlay = !state.gameOver && !timer && isHuman(state.turn);
+    const legal = new Set(canPlay ? M.legalMoves(state.board, state.turn) : []);
+    holes.forEach((el, idx) => {
+      const seeds = shown[idx];
+      const isStore = idx === STORE[SOUTH] || idx === STORE[NORTH];
+      const dots = el.firstChild;
+      const want = Math.min(seeds, isStore ? 0 : MAX_DRAWN_SEEDS);
+      while (dots.children.length > want) dots.lastChild.remove();
+      while (dots.children.length < want) dots.appendChild(Object.assign(document.createElement("span"), { className: "seed" }));
+      el.lastChild.textContent = String(seeds);
+      el.classList.toggle("lit", lit.has(idx));
+      if (isStore) {
+        el.setAttribute("aria-label", NAME[idx === STORE[SOUTH] ? SOUTH : NORTH] + " store, " + seeds + " seeds");
+        return;
+      }
+      el.classList.toggle("legal", legal.has(idx));
+      el.setAttribute("aria-disabled", String(!legal.has(idx)));
+      const owner = PIT_INDICES[SOUTH].includes(idx) ? SOUTH : NORTH;
+      el.setAttribute("aria-label", NAME[owner] + " pit " + (PIT_INDICES[owner].indexOf(idx) + 1) + ", " + seeds + " seeds");
+    });
+
+    for (const player of [SOUTH, NORTH]) {
+      const label = $(player === SOUTH ? "labelSouth" : "labelNorth");
+      const who = mode() === "pvp" ? NAME[player] : isHuman(player) ? "You (" + NAME[player] + ")" : "AI (" + NAME[player] + ")";
+      label.innerHTML = "";
+      label.appendChild(Object.assign(document.createElement("b"), { textContent: who }));
+      label.classList.toggle("is-turn", !state.gameOver && state.turn === player);
+    }
+    $("status").textContent = statusText();
+    $("btnUndo").disabled = state.history.length === 0;
+  }
+
+  function statusText() {
+    if (state.gameOver) return resultText();
+    const r = state.lastResult;
+    let note = "";
+    if (r && r.capture) note = NAME[state.lastMove.player] + " captured " + r.capture.seeds + ". ";
+    else if (r && r.extraTurn) note = "Last seed in the store — another turn. ";
+    const who = NAME[state.turn];
+    if (mode() === "pvp") return note + who + " to move.";
+    return note + (isHuman(state.turn) ? "Your move." : "AI (" + who + ") is thinking…");
+  }
+
+  function resultText() {
+    const south = state.board[STORE[SOUTH]], north = state.board[STORE[NORTH]];
+    const winner = M.winner(state.board);
+    const score = Math.max(south, north) + "–" + Math.min(south, north);
+    if (winner === null) return "Draw, 24–24.";
+    if (mode() === "pvp") return NAME[winner] + " wins " + score + ".";
+    return (isHuman(winner) ? "You win " : "The AI wins ") + score + ".";
+  }
+
+  function onPitClick(pit) {
+    if (state.gameOver || timer || !isHuman(state.turn)) return;
+    if (!M.legalMoves(state.board, state.turn).includes(pit)) return;
+    move(pit);
+  }
+
+  // Plays the move at once, then replays its sowing seed by seed on screen.
+  function move(pit) {
+    const before = state.board.slice();
+    M.play(state, pit);
+    const { path, capture, sweep } = state.lastResult;
+    shown = before;
+    shown[pit] = 0;
+    lit = new Set([pit]);
+    let step = 0;
+    const tick = () => {
+      if (step < path.length) {
+        shown[path[step]]++;
+        lit = new Set([path[step]]);
+        step++;
+        render();
+        timer = setTimeout(tick, SOW_STEP_MS);
+        return;
+      }
+      timer = null;
+      lit = new Set();
+      shown = state.board.slice();
+      if (capture) [capture.pit, capture.opposite].forEach((idx) => flash(holes[idx]));
+      if (sweep) PIT_INDICES.flat().forEach((idx) => { if (before[idx] || path.includes(idx)) flash(holes[idx]); });
+      advance();
+    };
+    timer = setTimeout(tick, 0);
+    render();
+  }
+
+  function flash(el) {
+    el.classList.remove("captured");
+    void el.offsetWidth;
+    el.classList.add("captured");
+  }
+
+  function advance() {
+    render();
+    if (state.gameOver) {
+      $("resultText").textContent = resultText();
+      $("overlay").hidden = false;
+      return;
+    }
+    if (isHuman(state.turn)) return;
+    timer = setTimeout(() => {
+      timer = null;
+      move(M.chooseMove(state.board, state.turn, $("level").value));
+    }, AI_DELAY_MS);
+    render();
+  }
+
+  function cancelTimer() {
+    clearTimeout(timer);
+    timer = null;
+    lit = new Set();
+  }
+
+  function newGame() {
+    cancelTimer();
+    $("overlay").hidden = true;
+    state = M.createGame();
+    shown = state.board.slice();
+    advance();
+  }
+
+  // Against the AI, rewind to the last position where it was your turn.
+  function undo() {
+    cancelTimer();
+    $("overlay").hidden = true;
+    let undone = M.undo(state);
+    while (undone && mode() !== "pvp" && !isHuman(state.turn)) undone = M.undo(state);
+    shown = state.board.slice();
+    advance();
+  }
+
+  $("btnNew").addEventListener("click", newGame);
+  $("modalNew").addEventListener("click", newGame);
+  $("modalClose").addEventListener("click", () => { $("overlay").hidden = true; });
+  $("btnUndo").addEventListener("click", undo);
+  $("mode").addEventListener("change", newGame);
+
+  newGame();
+})();
+</script>
+</body>
+</html>

@@ -99,6 +99,10 @@ function validPath(grid, path) {
   ok("shuffle finds a playable arrangement", S.shuffleRemaining(g, mulberry32(7)) && !!S.findMove(g));
   const keys = [g[1][1], g[1][2], g[2][1], g[2][2]].map((t) => t.key).sort().join();
   ok("shuffle keeps the same tiles in the same cells", keys === "a,a,b,b" && S.tilesLeft(g) === 4);
+  ok("the shuffled arrangement is winnable", S.winningLine(g, mulberry32(8)) !== null);
+  const dead = emptyGrid();
+  put(dead, 1, 1, "a"); put(dead, 1, 2, "b"); put(dead, 2, 1, "b"); put(dead, 2, 2, "a");
+  ok("a dead end has no winning line", S.winningLine(dead, mulberry32(9)) === null);
 
   const move = S.findMove(g);
   const removed = S.removePair(g, move.a, move.b);
@@ -126,6 +130,21 @@ for (let seed = 1; seed <= 20; seed++) {
   }
   ok("seed " + seed + ": every hint was a legal move", allValid);
   ok("seed " + seed + ": board cleared in 72 moves", S.tilesLeft(grid) === 0 && moves === 72, { moves, shuffles });
+}
+
+// ---- dealt boards are winnable: replay each deal's winning line with independent checks ----
+for (let seed = 101; seed <= 130; seed++) {
+  const { grid: deal, line } = S.dealWinnable(mulberry32(seed));
+  const grid = deal.map((row) => row.slice());
+  let legal = Array.isArray(line) && line.length === 72;
+  for (const { a, b } of line || []) {
+    const ta = grid[a.r][a.c], tb = grid[b.r][b.c];
+    const path = ta && tb && ta.key === tb.key && S.findPath(grid, a, b);
+    if (!path || !validPath(grid, path)) { legal = false; break; }
+    S.removePair(grid, a, b);
+  }
+  ok("seed " + seed + ": the deal's winning line is legal and clears the board", legal && S.tilesLeft(grid) === 0);
+  ok("seed " + seed + ": createGrid deals the same board", JSON.stringify(S.createGrid(mulberry32(seed))) === JSON.stringify(deal));
 }
 
 console.log("board.test.js: " + passed + " assertions passed");
