@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect Four</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+  header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .controls label { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  select {
+    font: inherit;
+    font-size: 0.85rem;
+    background: #1c4a34;
+    color: var(--ink);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .scoreboard { width: min(560px, 100%); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .score {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px 6px 8px;
+    border-radius: 999px;
+    background: var(--panel);
+    border: 2px solid transparent;
+    font-size: 0.95rem;
+  }
+  .score.is-turn { border-color: var(--accent); }
+  .score .disc { width: 22px; height: 22px; }
+  .status { flex: 1; margin: 0; text-align: center; font-size: 0.88rem; color: var(--ink-dim); }
+
+  .board {
+    width: min(560px, 100%);
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    --hole-gap: clamp(3px, 1.2vw, 8px);
+    gap: var(--hole-gap);
+    padding: clamp(6px, 2vw, 12px);
+    background: linear-gradient(180deg, #2f66c9, #2152a8);
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 -4px 0 rgba(0, 0, 0, 0.2);
+  }
+  /* Each column is one button, so a click anywhere in it drops a disc; undo theme.css's button look. */
+  .board .col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--hole-gap);
+    padding: 4px 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    min-width: 0;
+    cursor: default;
+  }
+  .board .col:hover, .board .col:active { filter: none; transform: none; }
+  .board .col.open { cursor: pointer; }
+  .board .col.open:hover, .board .col.open:focus-visible { background: rgba(255, 255, 255, 0.12); outline: none; }
+  .hole {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--bg-2);
+    box-shadow: inset 0 3px 4px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .disc { display: block; width: 100%; height: 100%; border-radius: 50%; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.22); }
+  .disc.red { background: #e0453c; }
+  .disc.yellow { background: #f5c940; }
+  .hole .disc.drop { animation: drop 0.35s cubic-bezier(0.5, 0, 1, 1); }
+  /* --fall is how many holes the disc falls through, each one hole plus the gap below it. */
+  @keyframes drop { from { transform: translateY(calc(var(--fall) * (-100% - var(--hole-gap)))); } }
+  .hole .disc.win { box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.22), 0 0 0 3px #fff; animation: pulse 1s ease-in-out infinite alternate; }
+  @keyframes pulse { to { transform: scale(0.86); } }
+  .hole .disc.last { box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.22), 0 0 0 2px rgba(255, 255, 255, 0.55); }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  .overlay[hidden] { display: none; }
+  .modal {
+    background: #12321f;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 26px 30px;
+    text-align: center;
+    max-width: 340px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .modal h2 { margin: 0 0 8px; color: var(--accent); }
+  .modal p { margin: 4px 0 18px; color: var(--ink-dim); font-size: 0.95rem; }
+  .modal .controls { gap: 8px; }
+
+  footer { color: var(--ink-dim); font-size: 0.75rem; text-align: center; max-width: 560px; line-height: 1.5; }
+
+  @media (max-width: 480px) {
+    .score { font-size: 0.85rem; padding: 4px 10px 4px 6px; }
+    .score .disc { width: 18px; height: 18px; }
+    .status { font-size: 0.78rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hole .disc.drop, .hole .disc.win { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="back-link" href="../index.html">← All Games</a>
+    <h1>Connect Four</h1>
+  </header>
+
+  <div class="controls">
+    <label>Mode
+      <select id="mode">
+        <option value="red">You play Red vs AI</option>
+        <option value="yellow">You play Yellow vs AI</option>
+        <option value="pvp">Two players</option>
+      </select>
+    </label>
+    <label>AI
+      <select id="level">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </label>
+    <button id="btnNew" type="button">New Game</button>
+    <button id="btnUndo" type="button">Undo</button>
+  </div>
+
+  <div class="scoreboard">
+    <div class="score" id="scoreRed"><span class="disc red"></span><b id="nameRed">Red</b></div>
+    <p class="status" id="status" aria-live="polite"></p>
+    <div class="score" id="scoreYellow"><b id="nameYellow">Yellow</b><span class="disc yellow"></span></div>
+  </div>
+
+  <div class="board" id="board" aria-label="Board"></div>
+
+  <footer>Take turns dropping a disc into a column; it falls to the lowest free hole. Get four of your colour in a row — across, down or diagonally — to win. A full board with no four is a draw. Red moves first.</footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h2>Game over</h2>
+    <p id="resultText"></p>
+    <div class="controls">
+      <button class="btn-primary" id="modalNew" type="button">New Game</button>
+      <button id="modalClose" type="button">See Board</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/connect-four.js"></script>
+<script>
+(function () {
+  "use strict";
+  const C4 = window.CONNECT_FOUR;
+  const { ROWS, COLS, EMPTY, RED, YELLOW } = C4;
+  const NAME = { [RED]: "Red", [YELLOW]: "Yellow" };
+  const HUMANS = { red: [RED], yellow: [YELLOW], pvp: [RED, YELLOW] };
+  const AI_DELAY_MS = 450;
+  const $ = (id) => document.getElementById(id);
+
+  let state = null;
+  let animate = false; // only a fresh move animates, not undo or a new game
+  let aiTimer = null;
+
+  const mode = () => $("mode").value;
+  const isHuman = (player) => HUMANS[mode()].includes(player);
+
+  const columns = Array.from({ length: COLS }, (_, col) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "col";
+    btn.addEventListener("click", () => onColumnClick(col));
+    const holes = Array.from({ length: ROWS }, () => {
+      const hole = document.createElement("span");
+      hole.className = "hole";
+      btn.appendChild(hole);
+      return hole;
+    });
+    $("board").appendChild(btn);
+    return { btn, holes };
+  });
+
+  function render() {
+    const canPlay = !state.gameOver && isHuman(state.turn) && !aiTimer;
+    const winning = new Set(state.winLine || []);
+    columns.forEach(({ btn, holes }, col) => {
+      const open = state.board[col] === EMPTY;
+      btn.classList.toggle("open", canPlay && open);
+      btn.setAttribute("aria-disabled", String(!(canPlay && open)));
+      let free = 0;
+      holes.forEach((hole, row) => {
+        const idx = row * COLS + col;
+        const value = state.board[idx];
+        if (value === EMPTY) {
+          free++;
+          hole.replaceChildren();
+          return;
+        }
+        let disc = hole.firstChild;
+        if (!disc) {
+          disc = document.createElement("span");
+          hole.appendChild(disc);
+        }
+        disc.className = "disc " + NAME[value].toLowerCase()
+          + (winning.has(idx) ? " win" : state.lastMove === idx ? " last" : "");
+        if (animate && state.lastMove === idx) {
+          disc.style.setProperty("--fall", String(row + 1));
+          void disc.offsetWidth;
+          disc.classList.add("drop");
+        }
+      });
+      btn.setAttribute("aria-label", "Column " + (col + 1) + (free ? ", " + free + " free" : ", full"));
+    });
+    animate = false;
+
+    $("nameRed").textContent = playerLabel(RED);
+    $("nameYellow").textContent = playerLabel(YELLOW);
+    $("scoreRed").classList.toggle("is-turn", !state.gameOver && state.turn === RED);
+    $("scoreYellow").classList.toggle("is-turn", !state.gameOver && state.turn === YELLOW);
+    $("status").textContent = statusText();
+    $("btnUndo").disabled = state.history.length === 0;
+  }
+
+  function playerLabel(player) {
+    if (mode() === "pvp") return NAME[player];
+    return isHuman(player) ? "You" : "AI";
+  }
+
+  function statusText() {
+    if (state.gameOver) return resultText();
+    const who = NAME[state.turn];
+    if (mode() === "pvp") return who + " to move.";
+    return isHuman(state.turn) ? "Your move (" + who + ")." : "AI (" + who + ") is thinking…";
+  }
+
+  function resultText() {
+    if (state.winner === EMPTY) return "Draw — the board is full.";
+    if (mode() === "pvp") return NAME[state.winner] + " connects four and wins.";
+    return isHuman(state.winner) ? "You connect four — you win!" : "The AI connects four and wins.";
+  }
+
+  function onColumnClick(col) {
+    if (state.gameOver || aiTimer || !isHuman(state.turn)) return;
+    if (C4.landingRow(state.board, col) < 0) return;
+    C4.play(state, col);
+    animate = true;
+    advance();
+  }
+
+  function advance() {
+    if (state.gameOver || isHuman(state.turn)) {
+      render();
+      if (state.gameOver) {
+        $("resultText").textContent = resultText();
+        $("overlay").hidden = false;
+      }
+      return;
+    }
+    // Set before rendering so the columns render locked while the AI thinks.
+    aiTimer = setTimeout(() => {
+      aiTimer = null;
+      C4.play(state, C4.chooseMove(state.board, state.turn, $("level").value));
+      animate = true;
+      advance();
+    }, AI_DELAY_MS);
+    render();
+  }
+
+  function cancelAI() {
+    clearTimeout(aiTimer);
+    aiTimer = null;
+  }
+
+  function newGame() {
+    cancelAI();
+    $("overlay").hidden = true;
+    state = C4.createGame();
+    advance();
+  }
+
+  // Against the AI, rewind to the last position where it was your turn.
+  function undo() {
+    cancelAI();
+    $("overlay").hidden = true;
+    let undone = C4.undo(state);
+    while (undone && mode() !== "pvp" && !isHuman(state.turn)) undone = C4.undo(state);
+    advance();
+  }
+
+  $("btnNew").addEventListener("click", newGame);
+  $("modalNew").addEventListener("click", newGame);
+  $("modalClose").addEventListener("click", () => { $("overlay").hidden = true; });
+  $("btnUndo").addEventListener("click", undo);
+  $("mode").addEventListener("change", newGame);
+
+  newGame();
+})();
+</script>
+</body>
+</html>
