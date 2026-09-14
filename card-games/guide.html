@@ -15,7 +15,7 @@
   <header class="guide-header">
     <a class="back-link" href="index.html">&larr; Back to Game</a>
     <h1>Card Table — Rules Guide</h1>
-    <p class="tagline">Ten classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
+    <p class="tagline">Eleven classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
   </header>
 
   <div class="guide-layout">
@@ -33,6 +33,7 @@
       <a href="#big-two">Big Two</a>
       <a href="#gin-rummy">Gin Rummy</a>
       <a href="#chinese-poker">Chinese Poker</a>
+      <a href="#texas-holdem">Texas Hold'em</a>
       <a href="#blackjack">Blackjack</a>
       <a href="#simplifications">Simplifications</a>
       <a href="#glossary">Glossary</a>
@@ -43,9 +44,9 @@
       <section id="quick-start">
         <h2>Quick Start</h2>
         <ol class="steps">
-          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Oh Hell, Euchre, Crazy Eights, President, Big Two, Gin Rummy, Chinese Poker, or Blackjack.</li>
+          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Oh Hell, Euchre, Crazy Eights, President, Big Two, Gin Rummy, Chinese Poker, Texas Hold'em, or Blackjack.</li>
           <li>For each of the 4 seats, choose <strong>Human</strong>, <strong>AI</strong>, or (where allowed) <strong>Off</strong>. One human seat plays "vs AI"; every seat set to Human plays local hot-seat, passing the device around the table. Picking a game that seats fewer players (Gin Rummy) switches the extra seats Off for you, AI seats first.</li>
-          <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Bid, Draw, Pass, Play Selected, Knock, Hit, Stand, Submit, etc.) when one is lit up. In Gin Rummy, click a card to select it and then press Discard or Knock. Chinese Poker is the other exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
+          <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Bid, Draw, Pass, Play Selected, Knock, Call, Raise, Hit, Stand, Submit, etc.) when one is lit up. In Gin Rummy, click a card to select it and then press Discard or Knock. Chinese Poker is the other exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
           <li>In hot-seat mode, a "Pass the device" screen appears between turns so other players can't see your hand until you're ready.</li>
         </ol>
       </section>
@@ -84,7 +85,7 @@
           <li><strong>Hot-seat privacy</strong>: with more than one human seat, the app never shows a hand that isn't the active player's - it gates every handoff behind a "Pass the device" screen.</li>
           <li><strong>The log panel</strong> below the table lists the most recent plays, in case you look away for a second.</li>
         </ul>
-        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Euchre, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy is always exactly 2; Crazy Eights plays with 2-4; President and Oh Hell play with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
+        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Euchre, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy is always exactly 2; Crazy Eights and Texas Hold'em play with 2-4; President and Oh Hell play with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
       </section>
 
       <section id="hearts">
@@ -253,6 +254,30 @@
         <p>Ranked by total points after the single round's 18 row comparisons.</p>
       </section>
 
+      <section id="texas-holdem">
+        <h2>Texas Hold'em</h2>
+        <p><strong>Goal:</strong> win chips. 2-4 players start with 500 chips each. The session lasts 20 hands, or ends early once one player holds every chip or every human player is out of chips.</p>
+        <h3>Blinds and the deal</h3>
+        <ul>
+          <li>The <strong>button</strong> (the D next to a seat's chips) marks the dealer and moves one seat left every hand. The next two players post the <strong>small blind</strong> (10) and the <strong>big blind</strong> (20) before any cards are seen. Heads-up, the button posts the small blind.</li>
+          <li>Everyone gets 2 face-down <strong>hole cards</strong>. Five shared cards are then dealt face up in the middle: the <strong>flop</strong> (3 cards), the <strong>turn</strong> (1) and the <strong>river</strong> (1).</li>
+        </ul>
+        <h3>Betting</h3>
+        <ul>
+          <li>There is a betting round before the flop and after each new street. Before the flop, the player left of the big blind acts first (heads-up, the button does). After it, the first player left of the button who is still in acts first.</li>
+          <li>On your turn: <strong>Fold</strong>, <strong>Check</strong> if there is nothing to call, <strong>Call</strong> the current bet, or <strong>Bet</strong> / <strong>Raise</strong>. Use &minus; and + to size a bet in half-pot steps, or press <strong>All In</strong>.</li>
+          <li>No limit: you can bet any amount up to your whole stack. A raise must be at least as big as the last bet or raise on that street, unless it puts you all in.</li>
+          <li>The round ends once everyone still in has put in the same amount or is all in. If everyone else folds, the last player takes the pot without showing.</li>
+        </ul>
+        <h3>Showdown</h3>
+        <ul>
+          <li>After the river, the remaining hands are shown. Each player makes the best 5-card poker hand out of their 2 hole cards and the 5 on the board, in any combination, even the board alone.</li>
+          <li>Hands rank, high to low: straight flush, four of a kind, full house, flush, straight, three of a kind, two pair, pair, high card. Suits never break ties. Equal hands split the pot, and an odd chip goes to the winner closest to the button's left.</li>
+          <li>An all-in player can only win what they matched from each opponent. Chips bet beyond that form a <strong>side pot</strong> for the players who put them in.</li>
+        </ul>
+        <p>When the session ends, seats are ranked by chips.</p>
+      </section>
+
       <section id="blackjack">
         <h2>Blackjack</h2>
         <p><strong>Goal:</strong> get closer to 21 than the dealer without going over. You play against the dealer, not the other seats.</p>
@@ -281,6 +306,7 @@
             <tr><td>Big Two</td><td>Only singles, pairs, triples, and 5-card poker hands are legal plays - no other combo sizes. 5-card hands rank by standard poker strength (straight &lt; flush &lt; full house &lt; four-of-a-kind &lt; straight flush), a common but not universal house convention.</td></tr>
             <tr><td>Gin Rummy</td><td>No game bonus, line or box bonuses, or shutout doubling - hand points simply add up to 100. No first-turn upcard offer: the first player just draws from either pile. No Big Gin. Lay-offs are placed automatically and greedily, so a rare better lay-off can be missed.</td></tr>
             <tr><td>Chinese Poker</td><td>Single round per game (no multi-round match, no running score across deals). No royalty/bonus points for strong hands (three-of-a-kind in front, four-of-a-kind, straight flushes, etc.) - every row win is worth exactly 1 point. A 3-card Front hand only recognizes high card, pair, or trips.</td></tr>
+            <tr><td>Texas Hold'em</td><td>Blinds stay at 10/20 with no antes, and the session is a fixed 20 hands. Any raise reopens the betting, even an all-in too short to be a full raise. Every hand left at the showdown is shown; there is no mucking a losing hand.</td></tr>
             <tr><td>Blackjack</td><td>Flat 25-chip bet every round, no betting UI. Hit, Stand, and Double Down only - no splitting pairs, no surrender, no insurance. Dealer always stands on all 17s (including a soft 17). Fixed 15-round session rather than playing until you're out of chips.</td></tr>
           </tbody>
         </table>
@@ -312,6 +338,10 @@
           <dt>Pile</dt><dd>The set of cards currently in play that must be beaten or passed on, in President or Big Two.</dd>
           <dt>Combo</dt><dd>A legal play shape in Big Two - single, pair, triple, or 5-card poker hand.</dd>
           <dt>Foul</dt><dd>A Chinese Poker hand whose Front/Middle/Back rows aren't in ascending strength - auto-loses all 3 rows.</dd>
+          <dt>Button</dt><dd>The Texas Hold'em dealer marker. It moves one seat left each hand and decides who posts the blinds and who acts first.</dd>
+          <dt>Blinds</dt><dd>Forced Texas Hold'em bets posted before the deal: 10 from the small blind, 20 from the big blind.</dd>
+          <dt>All in</dt><dd>Betting every chip you have left. You stay in to the showdown but can only win what you matched.</dd>
+          <dt>Side pot</dt><dd>Chips bet beyond what an all-in player could match, contested only by the players who put them in.</dd>
           <dt>Natural / Blackjack</dt><dd>A 2-card total of 21 (an Ace plus a 10-value card) - pays 1.5x unless the dealer also has one.</dd>
           <dt>Bust</dt><dd>A hand total over 21 in Blackjack - an automatic loss regardless of the dealer's hand.</dd>
           <dt>Hot-seat</dt><dd>Multiple human players sharing one device, taking turns with their hand hidden between turns.</dd>

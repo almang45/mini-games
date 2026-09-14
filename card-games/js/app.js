@@ -14,9 +14,10 @@
     "big-two": window.BIG_TWO_UI,
     "gin-rummy": window.GIN_RUMMY_UI,
     "chinese-poker": window.CHINESE_POKER_UI,
+    "texas-holdem": window.HOLDEM_UI,
     blackjack: window.BLACKJACK_UI,
   };
-  const GAME_ORDER = ["hearts", "spades", "oh-hell", "euchre", "crazy-eights", "president", "big-two", "gin-rummy", "chinese-poker", "blackjack"];
+  const GAME_ORDER = ["hearts", "spades", "oh-hell", "euchre", "crazy-eights", "president", "big-two", "gin-rummy", "chinese-poker", "texas-holdem", "blackjack"];
 
   let selectedGameKey = null;
   let seatConfig = ["human", "ai", "ai", "ai"];

@@ -3,7 +3,7 @@
 A small collection of classic card games — static HTML/CSS/JS, no build step,
 no server. Open `index.html` directly in a browser.
 
-Ten games, each seatable from 1-4 players depending on the game:
+Eleven games, each seatable from 1-4 players depending on the game:
 
 - **Hearts** — 4 players, trick-taking, avoid points, dodge the moon
 - **Spades** — 4 players in two partnerships, bid tricks, spades trump, nil and bags, to 500
@@ -14,6 +14,7 @@ Ten games, each seatable from 1-4 players depending on the game:
 - **Big Two** — 4 players, shed your hand, singles/pairs/triples/5-card poker hands
 - **Gin Rummy** — 2 players, draw and discard into melds, knock or go gin, to 100
 - **Chinese Poker** — 4 players, one deal, arrange 3 poker hands and score head-to-head
+- **Texas Hold'em** — 2-4 players, no-limit with 10/20 blinds and side pots, 20-hand session
 - **Blackjack** — 1-4 players vs. the dealer, hit/stand/double, 15-round session
 
 Every seat is independently set to **Human**, **AI**, or **Off** (where the
@@ -43,6 +44,7 @@ js/games/president.js        President rules engine + AI
 js/games/big-two.js          Big Two rules engine + AI
 js/games/gin-rummy.js        Gin Rummy rules engine + AI (meld search, lay-offs)
 js/games/chinese-poker.js    Chinese Poker rules engine + AI
+js/games/texas-holdem.js     Texas Hold'em rules engine + AI (7-card evaluator, side pots)
 js/games/blackjack.js        Blackjack rules engine + AI
 js/ui/hearts-ui.js           binds Hearts state to the shared table shell
 js/ui/spades-ui.js           binds Spades state to the shared table shell
@@ -53,6 +55,7 @@ js/ui/president-ui.js        binds President state to the shared table shell
 js/ui/big-two-ui.js          binds Big Two state to the shared table shell
 js/ui/gin-rummy-ui.js        binds Gin Rummy state to the shared table shell
 js/ui/chinese-poker-ui.js    binds Chinese Poker state to the shared table shell
+js/ui/texas-holdem-ui.js     binds Texas Hold'em state to the shared table shell
 js/ui/blackjack-ui.js        binds Blackjack state to the shared table shell
 js/app.js                    lobby + table controller (screens, seat setup,
                               AI pacing, hot-seat handoff, modals)
@@ -169,6 +172,18 @@ etc., which the Node tests populate manually before requiring them — see
   rejected — it simply auto-loses all 3 rows to every opponent, matching how
   the real game penalizes a foul.
 
+**Texas Hold'em:**
+- 500-chip stacks and fixed 10/20 blinds (no antes, no blind levels) over a
+  fixed 20-hand session that ends early once one player holds every chip,
+  or once every human seat is broke. Busted seats sit out the rest.
+- No-limit betting with a minimum raise of the last bet or raise on the
+  street. Any raise reopens the action, including an all-in too short to be
+  a full raise (real rules don't reopen it for players who already acted).
+- Side pots are cut from each live player's total contribution; a tied pot
+  splits with the odd chip to the first winner left of the button.
+- Every hand still live at the showdown is shown, with no option to muck a
+  loser. A hand won uncontested stays hidden.
+
 **Blackjack:**
 - The dealer is not a seat — every player plays independently against the
   dealer, not against each other.
@@ -184,7 +199,7 @@ etc., which the Node tests populate manually before requiring them — see
 - Fixed 15-round session, then the game ends and seats are ranked by final
   chip count — not an open-ended "play until you're broke" session.
 
-**AI opponents (all ten games):** heuristic, not a full game-tree search —
+**AI opponents (all eleven games):** heuristic, not a full game-tree search —
 they play legally and reasonably (Hearts: duck under the current trick
 winner when possible, dump dangerous cards — the Queen of Spades and high
 spades/hearts — when void; Spades: bid a rule-of-thumb trick count from
@@ -206,6 +221,10 @@ suits it holds more of; President/Big Two: lead the lowest legal group, beat
 the pile as cheaply as possible; Chinese Poker: build the strongest possible
 Back hand first, then the strongest Middle that still keeps Front ≤ Middle
 ≤ Back, falling back to the least-bad foul if no valid split exists;
+Texas Hold'em: estimate equity by dealing out the board and random opponent
+hands 150 times, knock it down for each raise already made on the street,
+raise when it clears a bar that drops as more players stay in, call when it
+covers the pot odds and fold otherwise (no bluffs, position or reads);
 Blackjack: mimic dealer strategy — hit anything under hard 17, double only a
 hard 10 or 11) but don't model deeper strategy like deliberately holding
 back a winning play, reading opponents' hands, card counting, or (Hearts)
@@ -218,11 +237,12 @@ environment this was built in, so testing happens on two levels:
 
 1. **Engine tests** (`cards.test.js`, `hearts.test.js`, `spades.test.js`,
    `oh-hell.test.js`, `euchre.test.js`, `crazy-eights.test.js`, `president.test.js`, `big-two.test.js`,
-   `gin-rummy.test.js`, `chinese-poker.test.js`, `blackjack.test.js`)
+   `gin-rummy.test.js`, `chinese-poker.test.js`, `texas-holdem.test.js`, `blackjack.test.js`)
    exercise each rules engine directly in Node: rule checks against
    hand-built scenarios (forced leads, moon shots, illegal plays,
    pile-clearing edge cases around a player finishing mid-round, hand
-   evaluation and foul detection, blackjack settlement math via rigged
+   evaluation and foul detection, Hold'em's 7-card evaluator against a
+   brute-force best-of-21 search, side pots and odd-chip splits, blackjack settlement math via rigged
    fixture states, Spades contract/Nil/bag scoring, Gin Rummy meld search,
    lay-offs and knock/undercut/gin settlement), deck conservation, and dozens
    of full randomized AI-vs-AI
