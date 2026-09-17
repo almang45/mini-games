@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Card Table — Rules Guide</title>
 <link rel="icon" href="favicon.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<script src="../shared/register-sw.js" defer></script>
 <link rel="stylesheet" href="../shared/theme.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/guide.css">
@@ -15,7 +17,7 @@
   <header class="guide-header">
     <a class="back-link" href="index.html">&larr; Back to Game</a>
     <h1>Card Table — Rules Guide</h1>
-    <p class="tagline">Eight classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
+    <p class="tagline">Twelve classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
   </header>
 
   <div class="guide-layout">
@@ -26,11 +28,15 @@
       <a href="#basics">Universal Basics</a>
       <a href="#hearts">Hearts</a>
       <a href="#spades">Spades</a>
+      <a href="#oh-hell">Oh Hell</a>
+      <a href="#euchre">Euchre</a>
       <a href="#crazy-eights">Crazy Eights</a>
       <a href="#president">President</a>
       <a href="#big-two">Big Two</a>
       <a href="#gin-rummy">Gin Rummy</a>
+      <a href="#cribbage">Cribbage</a>
       <a href="#chinese-poker">Chinese Poker</a>
+      <a href="#texas-holdem">Texas Hold'em</a>
       <a href="#blackjack">Blackjack</a>
       <a href="#simplifications">Simplifications</a>
       <a href="#glossary">Glossary</a>
@@ -41,9 +47,9 @@
       <section id="quick-start">
         <h2>Quick Start</h2>
         <ol class="steps">
-          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Crazy Eights, President, Big Two, Gin Rummy, Chinese Poker, or Blackjack.</li>
-          <li>For each of the 4 seats, choose <strong>Human</strong>, <strong>AI</strong>, or (where allowed) <strong>Off</strong>. One human seat plays "vs AI"; every seat set to Human plays local hot-seat, passing the device around the table. Picking a game that seats fewer players (Gin Rummy) switches the extra seats Off for you, AI seats first.</li>
-          <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Bid, Draw, Pass, Play Selected, Knock, Hit, Stand, Submit, etc.) when one is lit up. In Gin Rummy, click a card to select it and then press Discard or Knock. Chinese Poker is the other exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
+          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Oh Hell, Euchre, Crazy Eights, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, or Blackjack.</li>
+          <li>For each of the 4 seats, choose <strong>Human</strong>, <strong>AI</strong>, or (where allowed) <strong>Off</strong>. One human seat plays "vs AI"; every seat set to Human plays local hot-seat, passing the device around the table. Picking a game that seats fewer players (Gin Rummy, Cribbage) switches the extra seats Off for you, AI seats first.</li>
+          <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Bid, Draw, Pass, Play Selected, Knock, Call, Raise, Hit, Stand, Submit, etc.) when one is lit up. In Gin Rummy, click a card to select it and then press Discard or Knock. In Cribbage, click two cards and press Send to Crib. Chinese Poker is the other exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
           <li>In hot-seat mode, a "Pass the device" screen appears between turns so other players can't see your hand until you're ready.</li>
         </ol>
       </section>
@@ -75,14 +81,14 @@
 
       <section id="basics">
         <h2>Universal Basics</h2>
-        <p>All eight games share one 52-card deck (no jokers) and the same table chrome:</p>
+        <p>Every game uses a standard deck with no jokers (Euchre keeps only the 9s through Aces, 24 cards) and the same table chrome:</p>
         <ul>
           <li><strong>Turn order</strong> runs clockwise from whoever leads (except Blackjack, where every seat plays against the dealer rather than each other, and Chinese Poker, where everyone arranges privately at the same time).</li>
           <li><strong>Human vs AI</strong>: the AI seats think for about half a second before acting, so you can follow along.</li>
           <li><strong>Hot-seat privacy</strong>: with more than one human seat, the app never shows a hand that isn't the active player's - it gates every handoff behind a "Pass the device" screen.</li>
           <li><strong>The log panel</strong> below the table lists the most recent plays, in case you look away for a second.</li>
         </ul>
-        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy is always exactly 2; Crazy Eights plays with 2-4; President plays with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
+        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Euchre, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy and Cribbage are always exactly 2; Crazy Eights and Texas Hold'em play with 2-4; President and Oh Hell play with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
       </section>
 
       <section id="hearts">
@@ -126,6 +132,51 @@
           <li><strong>Bags add up:</strong> every time a team's bags reach 10, it loses 100 points.</li>
         </ul>
         <p>Rounds continue until a team reaches 500 points with more than the other team, and wins, or a team drops to -200, and loses.</p>
+      </section>
+
+      <section id="oh-hell">
+        <h2>Oh Hell</h2>
+        <p><strong>Goal:</strong> take exactly as many tricks as you bid, no more and no fewer. 3-4 players, each playing for themselves.</p>
+        <h3>The deal</h3>
+        <ul>
+          <li>The game runs 13 rounds. Hands start at 7 cards, shrink by one each round down to 1, then grow back to 7.</li>
+          <li>After the deal, the next card is turned face up. Its suit is <strong>trump</strong> for the round.</li>
+        </ul>
+        <h3>Bidding</h3>
+        <ul>
+          <li>Starting to the dealer's left, everyone bids how many tricks they will take, from 0 up to the hand size.</li>
+          <li>The dealer bids last and may not bid the number that makes all bids add up to the hand size, so someone always misses. The table won't let the dealer submit that bid.</li>
+          <li>Your bid starts at the AI's suggestion for your hand; use &minus; and + to change it.</li>
+        </ul>
+        <h3>Playing a trick</h3>
+        <ul>
+          <li>The first bidder leads the first trick. Follow the suit led if you can; otherwise play anything, trump included.</li>
+          <li>The highest trump wins the trick. With no trump in it, the highest card of the suit led wins. Trump may be led at any time.</li>
+        </ul>
+        <h3>Scoring</h3>
+        <p>Take exactly your bid and score <strong>10 plus your bid</strong> (a bid of 0 made is worth 10). Take any other number and score nothing. After the 13th round, the highest total wins.</p>
+      </section>
+
+      <section id="euchre">
+        <h2>Euchre</h2>
+        <p><strong>Goal:</strong> with your partner across the table, take at least 3 of the 5 tricks when your team picks trump. The first team to 10 points wins.</p>
+        <h3>Cards and bowers</h3>
+        <ul>
+          <li>Only the 9, 10, J, Q, K and A of each suit are used, 24 cards in all. Everyone gets 5, and the next card is turned face up.</li>
+          <li>Once trump is set, the jack of trump is the <strong>right bower</strong>, the highest card. The other jack of the same colour is the <strong>left bower</strong>, the second highest. The left bower counts as a trump for every rule, following suit included. Below them come the A, K, Q, 10 and 9 of trump.</li>
+          <li>Bowers carry a <strong>Right</strong> or <strong>Left</strong> badge in your hand, so you don't misread them.</li>
+        </ul>
+        <h3>Calling trump</h3>
+        <ul>
+          <li><strong>First round:</strong> starting to the dealer's left, each player may <strong>order up</strong> the turned card, making its suit trump, or pass. The dealer may <strong>pick it up</strong> instead. Either way, the dealer takes the card and discards one face down; click the card you want to discard.</li>
+          <li><strong>Second round:</strong> if all four pass, the card is turned down. Going around again, each player may name any other suit, or pass. The dealer can't pass this time ("stick the dealer"), so every hand is played.</li>
+          <li>The team that chose trump are the <strong>makers</strong>.</li>
+        </ul>
+        <h3>Playing and scoring</h3>
+        <ul>
+          <li>The player left of the dealer leads. Follow the suit led if you can, remembering that the left bower is a trump and not its printed suit. Otherwise, play anything. The highest trump wins, or else the highest card of the suit led.</li>
+          <li>Makers who take 3 or 4 tricks score <strong>1</strong>. Taking all 5 is a <strong>march</strong> and scores <strong>2</strong>. Makers who take fewer than 3 are <strong>euchred</strong>, and the defenders score <strong>2</strong>.</li>
+        </ul>
       </section>
 
       <section id="crazy-eights">
@@ -193,6 +244,30 @@
         <p>Points carry over from hand to hand, and the deal alternates, until someone reaches 100.</p>
       </section>
 
+      <section id="cribbage">
+        <h2>Cribbage</h2>
+        <p><strong>Goal:</strong> be the first to 121 points. Exactly 2 players, and the deal alternates every hand.</p>
+        <h3>The deal and the crib</h3>
+        <ul>
+          <li>Each player gets 6 cards and lays away 2 of them face down into the <strong>crib</strong>, an extra hand that scores for the dealer. Click two cards, then press <strong>Send to Crib</strong>.</li>
+          <li>A card from the rest of the deck is turned up as the <strong>starter</strong>. If it's a jack, the dealer scores 2 "for his heels".</li>
+        </ul>
+        <h3>Pegging</h3>
+        <ul>
+          <li>Starting with the non-dealer, players take turns laying one card face up and adding it to a running count. Aces are 1, face cards 10, other cards their number. The count can never go past 31.</li>
+          <li>Score as you play: <strong>2</strong> for making the count exactly 15 or 31; <strong>2</strong> for pairing the card just played, <strong>6</strong> for three of a kind, <strong>12</strong> for four; and 1 per card for a <strong>run</strong> of 3 or more ranks in a row among the latest cards, in any order.</li>
+          <li>If you can't play without passing 31, that's a <strong>go</strong>, and the other player keeps playing while they can. Whoever laid the last card scores 1 (nothing extra if it made 31), and the count starts again from 0. The table plays go out for you.</li>
+          <li>The last card of the hand also scores 1.</li>
+        </ul>
+        <h3>The show</h3>
+        <ul>
+          <li>Each hand is counted with the starter as a fifth card: the non-dealer's hand first, then the dealer's hand, then the crib.</li>
+          <li><strong>2</strong> for every combination adding up to 15, <strong>2</strong> for every pair, 1 per card for each run (a duplicated rank makes a second run), <strong>4</strong> for four hand cards of one suit (5 if the starter matches; the crib only scores a 5-card flush), and 1 for <strong>nobs</strong>, the jack of the starter's suit.</li>
+          <li>The best possible hand is worth 29: three 5s and a jack, with the fourth 5 turned up as the starter in the jack's suit.</li>
+        </ul>
+        <p>The game ends the moment someone reaches 121, even halfway through pegging or the show.</p>
+      </section>
+
       <section id="chinese-poker">
         <h2>Chinese Poker</h2>
         <p><strong>Goal:</strong> arrange your cards into 3 poker hands that beat as many of the other 3 players' hands as possible, row for row.</p>
@@ -204,6 +279,30 @@
           <li>When all 4 players have submitted, every pair of players compares Front vs Front, Middle vs Middle, and Back vs Back - 1 point for each row you win, -1 for each you lose, across all 6 pairings.</li>
         </ul>
         <p>Ranked by total points after the single round's 18 row comparisons.</p>
+      </section>
+
+      <section id="texas-holdem">
+        <h2>Texas Hold'em</h2>
+        <p><strong>Goal:</strong> win chips. 2-4 players start with 500 chips each. The session lasts 20 hands, or ends early once one player holds every chip or every human player is out of chips.</p>
+        <h3>Blinds and the deal</h3>
+        <ul>
+          <li>The <strong>button</strong> (the D next to a seat's chips) marks the dealer and moves one seat left every hand. The next two players post the <strong>small blind</strong> (10) and the <strong>big blind</strong> (20) before any cards are seen. Heads-up, the button posts the small blind.</li>
+          <li>Everyone gets 2 face-down <strong>hole cards</strong>. Five shared cards are then dealt face up in the middle: the <strong>flop</strong> (3 cards), the <strong>turn</strong> (1) and the <strong>river</strong> (1).</li>
+        </ul>
+        <h3>Betting</h3>
+        <ul>
+          <li>There is a betting round before the flop and after each new street. Before the flop, the player left of the big blind acts first (heads-up, the button does). After it, the first player left of the button who is still in acts first.</li>
+          <li>On your turn: <strong>Fold</strong>, <strong>Check</strong> if there is nothing to call, <strong>Call</strong> the current bet, or <strong>Bet</strong> / <strong>Raise</strong>. Use &minus; and + to size a bet in half-pot steps, or press <strong>All In</strong>.</li>
+          <li>No limit: you can bet any amount up to your whole stack. A raise must be at least as big as the last bet or raise on that street, unless it puts you all in.</li>
+          <li>The round ends once everyone still in has put in the same amount or is all in. If everyone else folds, the last player takes the pot without showing.</li>
+        </ul>
+        <h3>Showdown</h3>
+        <ul>
+          <li>After the river, the remaining hands are shown. Each player makes the best 5-card poker hand out of their 2 hole cards and the 5 on the board, in any combination, even the board alone.</li>
+          <li>Hands rank, high to low: straight flush, four of a kind, full house, flush, straight, three of a kind, two pair, pair, high card. Suits never break ties. Equal hands split the pot, and an odd chip goes to the winner closest to the button's left.</li>
+          <li>An all-in player can only win what they matched from each opponent. Chips bet beyond that form a <strong>side pot</strong> for the players who put them in.</li>
+        </ul>
+        <p>When the session ends, seats are ranked by chips.</p>
       </section>
 
       <section id="blackjack">
@@ -227,11 +326,15 @@
           <tbody>
             <tr><td>Hearts</td><td>Scoring resets each session (no saved match history); the pass cycle is left/right/across/hold, repeating every 4 hands.</td></tr>
             <tr><td>Spades</td><td>No Blind Nil, no minimum team bid, and no bonus for winning all 13 tricks. A failed Nil's tricks still count toward the partner's contract and bags. If a team reaches 500 but the scores are tied, play continues.</td></tr>
+            <tr><td>Oh Hell</td><td>Hands run 7 down to 1 and back to 7 for every table size, with no no-trump rounds. Only exact bids score (10 + bid); there are no per-trick points for missed bids.</td></tr>
+            <tr><td>Euchre</td><td>No going alone, so no 4-point loner hands. The dealer is always stuck in the second round, and there are no misdeal or "farmer's hand" redeals.</td></tr>
             <tr><td>Crazy Eights</td><td>No point-scoring across multiple hands - the game ends the moment someone empties their hand. No special-action cards besides the wild 8 (no skip/reverse/draw-two).</td></tr>
             <tr><td>President</td><td>No jokers, no card-exchange between the President and the Bum between rounds, and no "8 clears the pile" or "revolution" house rules - just pure rank climbing.</td></tr>
             <tr><td>Big Two</td><td>Only singles, pairs, triples, and 5-card poker hands are legal plays - no other combo sizes. 5-card hands rank by standard poker strength (straight &lt; flush &lt; full house &lt; four-of-a-kind &lt; straight flush), a common but not universal house convention.</td></tr>
             <tr><td>Gin Rummy</td><td>No game bonus, line or box bonuses, or shutout doubling - hand points simply add up to 100. No first-turn upcard offer: the first player just draws from either pile. No Big Gin. Lay-offs are placed automatically and greedily, so a rare better lay-off can be missed.</td></tr>
+            <tr><td>Cribbage</td><td>Scores are kept as numbers, not pegs on a board, and there is no skunk bonus. Go is played out automatically, every point is counted for you (no muggins), and Seat 1 always deals first instead of cutting for the deal.</td></tr>
             <tr><td>Chinese Poker</td><td>Single round per game (no multi-round match, no running score across deals). No royalty/bonus points for strong hands (three-of-a-kind in front, four-of-a-kind, straight flushes, etc.) - every row win is worth exactly 1 point. A 3-card Front hand only recognizes high card, pair, or trips.</td></tr>
+            <tr><td>Texas Hold'em</td><td>Blinds stay at 10/20 with no antes, and the session is a fixed 20 hands. Any raise reopens the betting, even an all-in too short to be a full raise. Every hand left at the showdown is shown; there is no mucking a losing hand.</td></tr>
             <tr><td>Blackjack</td><td>Flat 25-chip bet every round, no betting UI. Hit, Stand, and Double Down only - no splitting pairs, no surrender, no insurance. Dealer always stands on all 17s (including a soft 17). Fixed 15-round session rather than playing until you're out of chips.</td></tr>
           </tbody>
         </table>
@@ -243,7 +346,13 @@
           <dt>Trick</dt><dd>One card from each player, played in turn and won by the best card (Hearts, Spades).</dd>
           <dt>Broken (hearts, spades)</dt><dd>Once a heart (in Hearts) or a spade (in Spades) has been played to any trick, that suit may be led from then on.</dd>
           <dt>Shooting the moon</dt><dd>Winning every point-scoring card in a Hearts hand - scores 0 instead of 26.</dd>
-          <dt>Trump</dt><dd>A suit that beats every other suit - spades, in Spades.</dd>
+          <dt>Trump</dt><dd>A suit that beats every other suit - spades, in Spades; the turned card's suit, in Oh Hell.</dd>
+          <dt>Hook</dt><dd>The Oh Hell dealer's restriction: the last bid can't make the total equal the number of tricks.</dd>
+          <dt>Bower</dt><dd>In Euchre, the jack of trump (right bower, the highest card) or the other jack of the same colour (left bower, second highest, played as a trump).</dd>
+          <dt>Order up</dt><dd>A first-round Euchre call telling the dealer to take the turned card, which makes its suit trump.</dd>
+          <dt>Makers</dt><dd>The Euchre team that chose trump. They need 3 of the 5 tricks.</dd>
+          <dt>Euchred</dt><dd>Makers who take fewer than 3 tricks. The defenders score 2.</dd>
+          <dt>March</dt><dd>Makers taking all 5 tricks in Euchre, worth 2 points.</dd>
           <dt>Contract</dt><dd>A Spades team's combined bid (not counting Nil) - the number of tricks it must win.</dd>
           <dt>Nil</dt><dd>A Spades bid of zero tricks: +100 if you win none, -100 if you win any.</dd>
           <dt>Bag</dt><dd>A trick won beyond a Spades team's contract - worth 1 point, but every 10 bags cost 100.</dd>
@@ -253,10 +362,19 @@
           <dt>Gin</dt><dd>Knocking with no deadwood at all - a 25-point bonus, and the defender can't lay off.</dd>
           <dt>Undercut</dt><dd>A Gin Rummy knock where the defender's deadwood is equal or lower - the defender scores instead, plus 25.</dd>
           <dt>Lay off</dt><dd>After a knock, adding the defender's deadwood to the knocker's melds so it no longer counts.</dd>
+          <dt>Crib</dt><dd>The 4 cards both Cribbage players lay away. It scores for the dealer after both hands.</dd>
+          <dt>Starter</dt><dd>The card turned up after the Cribbage discard. It counts as a fifth card in both hands and the crib.</dd>
+          <dt>Pegging</dt><dd>The Cribbage play phase: cards go down one at a time, scoring for 15s, 31s, pairs and runs.</dd>
+          <dt>Go</dt><dd>Being unable to play without passing 31 in Cribbage. The last player to lay a card scores 1.</dd>
+          <dt>Nobs</dt><dd>The jack of the starter's suit in a Cribbage hand or crib, worth 1. A jack turned up as the starter is "his heels", worth 2 to the dealer.</dd>
           <dt>Wild card</dt><dd>An 8 in Crazy Eights - playable on anything, and lets you set the next suit.</dd>
           <dt>Pile</dt><dd>The set of cards currently in play that must be beaten or passed on, in President or Big Two.</dd>
           <dt>Combo</dt><dd>A legal play shape in Big Two - single, pair, triple, or 5-card poker hand.</dd>
           <dt>Foul</dt><dd>A Chinese Poker hand whose Front/Middle/Back rows aren't in ascending strength - auto-loses all 3 rows.</dd>
+          <dt>Button</dt><dd>The Texas Hold'em dealer marker. It moves one seat left each hand and decides who posts the blinds and who acts first.</dd>
+          <dt>Blinds</dt><dd>Forced Texas Hold'em bets posted before the deal: 10 from the small blind, 20 from the big blind.</dd>
+          <dt>All in</dt><dd>Betting every chip you have left. You stay in to the showdown but can only win what you matched.</dd>
+          <dt>Side pot</dt><dd>Chips bet beyond what an all-in player could match, contested only by the players who put them in.</dd>
           <dt>Natural / Blackjack</dt><dd>A 2-card total of 21 (an Ace plus a 10-value card) - pays 1.5x unless the dealer also has one.</dd>
           <dt>Bust</dt><dd>A hand total over 21 in Blackjack - an automatic loss regardless of the dealer's hand.</dd>
           <dt>Hot-seat</dt><dd>Multiple human players sharing one device, taking turns with their hand hidden between turns.</dd>

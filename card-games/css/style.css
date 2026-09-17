@@ -218,7 +218,14 @@
 .showdown-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; padding: 6px 2px; max-height: 100%; overflow-y: auto; }
 .showdown-seat { background: rgba(0, 0, 0, 0.18); border-radius: 8px; padding: 6px 8px; min-width: 150px; }
 .showdown-seat-name { text-align: center; font-weight: 600; font-size: 0.8rem; margin-bottom: 2px; }
+/* Hold'em reveals two hole cards, so seats can sit two to a row on a phone. */
+.showdown-compact .showdown-seat { min-width: 0; }
 
+/* height:100% resolved to 0 inside the auto-height felt, which stacked every
+   slot on the middle line and put the top seat's card below the bottom's.
+   Stretching gives the slots a real box; the min-height keeps a gap between
+   the top and bottom cards for the caption. */
+.trick-area { position: relative; width: 100%; align-self: stretch; min-height: 190px; }
 .trick-slot { position: absolute; width: 46px; height: 64px; }
 .trick-slot.pos-bottom { bottom: 8px; left: 50%; transform: translateX(-50%); }
 .trick-slot.pos-top { top: 8px; left: 50%; transform: translateX(-50%); }
@@ -286,7 +293,13 @@
 
 @media (max-width: 640px) {
   .table-wrap { grid-template-columns: 70px 1fr 70px; }
+  /* Side seats only get 70px: let the header wrap instead of pushing the page sideways. */
+  .seat.pos-left .seat-header, .seat.pos-right .seat-header { flex-wrap: wrap; justify-content: center; padding: 4px 6px; border-radius: 12px; text-align: center; }
+  .seat.pos-left .seat-score, .seat.pos-right .seat-score { margin-left: 0; }
   .card { width: 36px; height: 50px; }
+  /* The felt is 178px wide inside; five 36px board cards would wrap. */
+  .board-row { flex-wrap: nowrap; gap: 2px; }
+  .board-row .card { width: 32px; height: 45px; }
   .card-corner { font-size: 0.58rem; }
   .card-pip { font-size: 1rem; }
   .seat-row .seat-row-label { flex-basis: 60px; font-size: 0.78rem; }

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- App icon source; icon-192.png and icon-512.png are renders of this file.
+       Full bleed with the die inside the central 80%, so platforms can mask it. -->
+  <defs>
+    <radialGradient id="felt" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a5c40"/>
+      <stop offset="1" stop-color="#0a3122"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#felt)"/>
+  <rect x="136" y="136" width="240" height="240" rx="44" fill="#f6efd9" stroke="#c9b98f" stroke-width="8"/>
+  <g fill="#0d3d29">
+    <circle cx="196" cy="196" r="24"/>
+    <circle cx="316" cy="196" r="24"/>
+    <circle cx="196" cy="316" r="24"/>
+    <circle cx="316" cy="316" r="24"/>
+  </g>
+  <circle cx="256" cy="256" r="26" fill="#d4453f"/>
+</svg>
