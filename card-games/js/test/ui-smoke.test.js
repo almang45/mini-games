@@ -23,12 +23,16 @@ const PRESIDENT = require("../games/president.js"); global.PRESIDENT = PRESIDENT
 const BIG_TWO = require("../games/big-two.js"); global.BIG_TWO = BIG_TWO;
 const CHINESE_POKER = require("../games/chinese-poker.js"); global.CHINESE_POKER = CHINESE_POKER;
 const BLACKJACK = require("../games/blackjack.js"); global.BLACKJACK = BLACKJACK;
+const SPADES = require("../games/spades.js"); global.SPADES = SPADES;
+const GIN_RUMMY = require("../games/gin-rummy.js"); global.GIN_RUMMY = GIN_RUMMY;
 require("../ui/hearts-ui.js");
 require("../ui/crazy-eights-ui.js");
 require("../ui/president-ui.js");
 require("../ui/big-two-ui.js");
 require("../ui/chinese-poker-ui.js");
 require("../ui/blackjack-ui.js");
+require("../ui/spades-ui.js");
+require("../ui/gin-rummy-ui.js");
 const app = require("../app.js");
 global.document._fireDOMContentLoaded();
 
@@ -109,9 +113,34 @@ function bjHumanMove(state, seat) {
   app.clickAction(action === "hit" ? "Hit" : action === "double" ? "Double Down" : "Stand");
 }
 
+// Bidding exercises the -/+ stepper once before submitting, so its label
+// round-trip through actionButtons -> syncTable is covered too.
+function spadesHumanMove(state, seat) {
+  if (state.round.phase !== "bidding") {
+    app.playCard(seat, SPADES.aiChoosePlay(state, seat));
+    return;
+  }
+  const buttons = () => app.getCurrentGame().actionButtons(state, seat);
+  if (!buttons().find((b) => b.label === "−").disabled) app.clickAction("−");
+  app.clickAction(buttons().find((b) => b.primary).label);
+}
+
+function ginHumanMove(state, seat) {
+  if (state.hand.phase === "draw") {
+    const take = GIN_RUMMY.aiWantsDiscard(state, seat);
+    app.clickAction(take ? "Take " + CARDS.cardLabel(GIN_RUMMY.topDiscard(state)) : "Draw from Stock");
+    return;
+  }
+  const { card, deadwood } = GIN_RUMMY.aiChooseDiscard(state, seat);
+  app.playCard(seat, card); // selects it
+  const knock = GIN_RUMMY.aiShouldKnock(state, deadwood);
+  app.clickAction(!knock ? "Discard " + CARDS.cardLabel(card) : deadwood === 0 ? "Gin!" : "Knock (" + deadwood + " deadwood)");
+}
+
 const HUMAN_MOVE = {
   hearts: heartsHumanMove, "crazy-eights": ceHumanMove, president: presHumanMove,
   "big-two": bigTwoHumanMove, "chinese-poker": cpHumanMove, blackjack: bjHumanMove,
+  spades: spadesHumanMove, "gin-rummy": ginHumanMove,
 };
 
 async function driveGame({ maxHumanSteps = 1500, maxTicks = 4000 } = {}) {
@@ -122,7 +151,8 @@ async function driveGame({ maxHumanSteps = 1500, maxTicks = 4000 } = {}) {
     const state = app.getEngineState();
     const game = app.getCurrentGame();
     if (game.isInterim(state)) {
-      app.clickAction("Deal Next Round");
+      const viewer = app.getViewerSeat();
+      app.clickAction(game.actionButtons(state, viewer != null ? viewer : 0)[0].label); // "Deal Next Round" / "Deal Next Hand"
     } else {
       const seat = game.actingSeat(state);
       if (seat == null) throw new Error("stuck: no acting seat, not interim, not gameOver");
@@ -152,6 +182,8 @@ async function run() {
     ["chinese-poker", ["human", "ai", "ai", "ai"]],
     ["blackjack", ["human", "ai", "off", "off"]],
     ["blackjack", ["human", "ai", "ai", "ai"]],
+    ["spades", ["human", "ai", "ai", "ai"]],
+    ["gin-rummy", ["human", "ai", "off", "off"]],
   ];
   for (const [key, seats] of vsAiConfigs) {
     setupSeats(key, seats);
@@ -174,6 +206,8 @@ async function run() {
     ["big-two", ["human", "human", "human", "human"], 1500],
     ["chinese-poker", ["human", "human", "human", "human"], 1500],
     ["blackjack", ["human", "human", "human", "human"], 1500],
+    ["spades", ["human", "human", "human", "human"], 4000],
+    ["gin-rummy", ["human", "human", "off", "off"], 3000],
   ];
   for (const [key, seats, maxHumanSteps] of hotseatConfigs) {
     setupSeats(key, seats);
@@ -189,6 +223,16 @@ async function run() {
   app.startGame();
   const spectated = await driveGame();
   ok("all-AI hearts spectate: reached game over via manual round advances", spectated.gameOver === true);
+
+  setupSeats("gin-rummy", ["ai", "ai", "off", "off"]);
+  app.startGame();
+  ok("all-AI gin spectate: reached game over via manual hand advances", (await driveGame()).gameOver === true);
+
+  // ---- lobby: picking a 2-seat game trims AI seats before human ones ----------
+  setupSeats("hearts", ["ai", "human", "ai", "human"]);
+  app.selectGame("gin-rummy");
+  app.startGame();
+  ok("gin lobby keeps both humans when trimming 4 seats to 2", app.getEngineState().seats.map((s) => s.type).join() === "human,human");
 
   console.log("ui-smoke.test.js: " + passed + " assertions passed");
 }

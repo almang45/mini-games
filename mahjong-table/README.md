@@ -8,6 +8,13 @@ Two rulesets, two play modes, both selectable from the start screen:
 - **Ruleset**: Japanese Riichi, or Chinese Classical
 - **Mode**: You vs 3 AI, or local hot-seat (pass the device between 4 human players)
 
+`trainer.html` is a separate practice page, also linked from the start screen.
+It deals a closed 14-tile hand and asks which tile you would discard. It then
+ranks every possible discard: first by shanten, then by ukeire (how many
+unseen tiles would improve the hand). Seven pairs and thirteen orphans count
+toward shanten. Only your own tiles count as seen, and hand value isn't
+considered.
+
 Player-facing rules explanations (table layout, controls, full yaku/scoring
 tables, glossary) live in `guide.html` — linked from the start screen. This
 README is the developer-facing companion: what's implemented, what's
@@ -21,9 +28,11 @@ code license.
 
 ```
 index.html              page shell / screens
+trainer.html            discard trainer page (UI inline)
 css/style.css           styling
 js/tiles.js             tile model, wall building/shuffling, dora indicators
 js/hand.js              hand decomposition + shanten calculation
+js/trainer.js           discard ranking (shanten, ukeire) + trainer hand dealing
 js/yaku-riichi.js       riichi yaku/fu detection
 js/score-riichi.js      riichi han/fu -> point formula
 js/score-classical.js   Chinese Classical doubling-point scoring
@@ -95,8 +104,8 @@ Run all tests (from inside this `mahjong-table/` folder): `for f in js/test/*.te
 
 No headless browser (jsdom/playwright/Chromium) was available in the
 environment this was built in. Engine logic (`tiles.js`, `hand.js`,
-`yaku-riichi.js`, `score-riichi.js`, `score-classical.js`, `game.js`, `ai.js`)
-is tested directly in Node (132,000+ assertions, including two 30-game
+`yaku-riichi.js`, `score-riichi.js`, `score-classical.js`, `game.js`, `ai.js`,
+`trainer.js`) is tested directly in Node (132,000+ assertions, including two 30-game
 randomized full-hanchan simulations per ruleset with tile-conservation and
 score-invariant checks). The DOM/UI layer (`ui.js` + `index.html`) is
 exercised by `js/test/ui-integration.test.js`, which loads the real script

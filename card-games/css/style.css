@@ -225,6 +225,17 @@
 .trick-slot.pos-left { left: 8px; top: 50%; transform: translateY(-50%); }
 .trick-slot.pos-right { right: 8px; top: 50%; transform: translateY(-50%); }
 
+/* Spades keeps the finished trick on the felt, faded, until the next lead.
+   The caption sits in the empty middle, padded clear of the side slots. */
+.trick-area.is-last-trick .trick-slot { opacity: 0.55; }
+.trick-caption {
+  position: absolute; top: 50%; left: 0; right: 0; transform: translateY(-50%);
+  padding: 0 58px; text-align: center; font-size: 0.72rem; color: var(--ink-dim);
+}
+
+/* Empty discard pile (Gin Rummy, right after the only discard is taken). */
+.card.card-slot { background: transparent; border: 1px dashed rgba(255, 255, 255, 0.3); box-shadow: none; }
+
 /* ------------------------------------------------------------------ chrome */
 
 .table-header {
