@@ -150,6 +150,7 @@
           isDisabled: (c) => actSeat !== i || g.isCardDisabled(state, i, c),
           onCard: (c) => { g.onCardClick(state, i, c, { pickSuit }); syncTable(); },
           tag: g.cardTag ? (c) => g.cardTag(state, i, c) : undefined,
+          renderFace: g.renderFace,
         });
       } else {
         for (let k = 0; k < hand.length; k++) handEl.appendChild(DOM.cardEl(null, { faceDown: true, small: true }));

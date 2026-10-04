@@ -15,25 +15,30 @@
     return node;
   }
 
-  // Renders one playing card. `card` is null for a face-down/back-only card.
+  // Face of a standard 52-card-deck card ({suit, rank}).
+  function standardFace(card, face) {
+    face.classList.add(CARDS.isRed(card.suit) ? "card-red" : "card-black");
+    face.appendChild(el("div", "card-corner card-corner-tl", [
+      el("div", "card-rank", CARDS.rankLabel(card.rank)),
+      el("div", "card-suit", CARDS.suitGlyph(card.suit)),
+    ]));
+    face.appendChild(el("div", "card-pip", CARDS.suitGlyph(card.suit)));
+    face.appendChild(el("div", "card-corner card-corner-br", [
+      el("div", "card-rank", CARDS.rankLabel(card.rank)),
+      el("div", "card-suit", CARDS.suitGlyph(card.suit)),
+    ]));
+  }
+
+  // Renders one card. `card` is null for a face-down/back-only card.
+  // `opts.renderFace(card, faceEl)` draws a game's own deck (one that isn't
+  // suits and ranks) onto the shared card frame, so selection, disabled,
+  // small and tag styling stay identical across every game.
   function cardEl(card, opts) {
     opts = opts || {};
     const face = el("div", "card" + (opts.faceDown || !card ? " card-back" : "") +
       (opts.disabled ? " card-disabled" : "") + (opts.selected ? " card-selected" : "") +
       (opts.small ? " card-small" : ""));
-    if (!opts.faceDown && card) {
-      const red = CARDS.isRed(card.suit);
-      face.classList.add(red ? "card-red" : "card-black");
-      face.appendChild(el("div", "card-corner card-corner-tl", [
-        el("div", "card-rank", CARDS.rankLabel(card.rank)),
-        el("div", "card-suit", CARDS.suitGlyph(card.suit)),
-      ]));
-      face.appendChild(el("div", "card-pip", CARDS.suitGlyph(card.suit)));
-      face.appendChild(el("div", "card-corner card-corner-br", [
-        el("div", "card-rank", CARDS.rankLabel(card.rank)),
-        el("div", "card-suit", CARDS.suitGlyph(card.suit)),
-      ]));
-    }
+    if (!opts.faceDown && card) (opts.renderFace || standardFace)(card, face);
     if (opts.tag) face.appendChild(el("div", "card-tag", opts.tag));
     if (opts.onClick) face.addEventListener("click", opts.onClick);
     if (opts.title) face.title = opts.title;
@@ -52,6 +57,7 @@
         disabled,
         selected,
         small: opts.small,
+        renderFace: opts.renderFace,
         tag,
         onClick: opts.onCard && !disabled ? () => opts.onCard(card) : null,
       }));

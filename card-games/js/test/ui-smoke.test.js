@@ -221,7 +221,31 @@ function setupSeats(gameKey, seatTypes) {
   for (let i = 0; i < 4; i++) app.setSeat(i, seatTypes[i] || "off");
 }
 
+// A game with its own deck passes renderFace; everything else keeps the
+// standard suit-and-rank face. Both must share the card frame's classes.
+function cardRendererChecks() {
+  const std = global.DOM.cardEl({ suit: "H", rank: 14 }, { small: true });
+  ok("standard face: red suit class", std.classList.contains("card-red"));
+  ok("standard face: corners and pip", std.children.length === 3);
+  ok("standard face: frame keeps small", std.classList.contains("card-small"));
+
+  const seen = [];
+  const renderFace = (card, face) => { seen.push(card.id); face.classList.add("custom-face"); };
+  const custom = global.DOM.cardEl({ id: "x7" }, { renderFace, selected: true });
+  ok("custom face: renderer called with the card", seen.join() === "x7");
+  ok("custom face: standard face not drawn", custom.children.length === 0 && !custom.classList.contains("card-black"));
+  ok("custom face: frame keeps selected", custom.classList.contains("card-selected") && custom.classList.contains("custom-face"));
+  global.DOM.cardEl({ id: "x8" }, { renderFace, faceDown: true });
+  ok("custom face: face-down skips the renderer", seen.length === 1);
+
+  const fan = global.document.createElement("div");
+  global.DOM.renderFan(fan, [{ id: "a" }, { id: "b" }], { renderFace });
+  ok("renderFan passes renderFace to every card", seen.slice(1).join() === "a,b" && fan.children.length === 2);
+}
+
 async function run() {
+  cardRendererChecks();
+
   // ---- vs-AI configs: one human at seat 0, AI filling the rest ----------
   const vsAiConfigs = [
     ["hearts", ["human", "ai", "ai", "ai"]],

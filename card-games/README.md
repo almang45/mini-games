@@ -74,6 +74,11 @@ way. `js/ui/*.js` are browser-only (they read `window.CARDS`/`window.HEARTS`/
 etc., which the Node tests populate manually before requiring them — see
 `js/test/ui-smoke.test.js`).
 
+A game whose deck isn't suits and ranks sets `renderFace(card, faceEl)` on
+its UI adapter. `app.js` hands it to `DOM.renderFan`/`DOM.cardEl`, which call
+it instead of the standard face, so the card frame (size, selection,
+disabled, tag) stays the same across every game.
+
 ## Known simplifications / rule choices
 
 **Hearts:**
