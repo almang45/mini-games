@@ -39,7 +39,7 @@
     return {
       game: "blackjack",
       seats: seatTypes.map((type, i) => ({ type, name: (opts && opts.names && opts.names[i]) || "Seat " + (i + 1), chips: 500 })),
-      rng: (opts && opts.rng) || CARDS.makeRng(1),
+      rng: opts && opts.rng, // unset: CARDS.shuffle falls back to Math.random
       round: 0,
       maxRounds: MAX_ROUNDS,
       deck: [],
