@@ -29,6 +29,7 @@ const OH_HELL = require("../games/oh-hell.js"); global.OH_HELL = OH_HELL;
 const EUCHRE = require("../games/euchre.js"); global.EUCHRE = EUCHRE;
 const HOLDEM = require("../games/texas-holdem.js"); global.HOLDEM = HOLDEM;
 const CRIBBAGE = require("../games/cribbage.js"); global.CRIBBAGE = CRIBBAGE;
+const BUST_SEVEN = require("../games/bust-seven.js"); global.BUST_SEVEN = BUST_SEVEN;
 require("../ui/hearts-ui.js");
 require("../ui/crazy-eights-ui.js");
 require("../ui/president-ui.js");
@@ -41,6 +42,7 @@ require("../ui/oh-hell-ui.js");
 require("../ui/euchre-ui.js");
 require("../ui/texas-holdem-ui.js");
 require("../ui/cribbage-ui.js");
+require("../ui/bust-seven-ui.js");
 const app = require("../app.js");
 global.document._fireDOMContentLoaded();
 
@@ -187,11 +189,33 @@ function cribbageHumanMove(state, seat) {
   return app.clickAction("Send to Crib (2/2)");
 }
 
+// Open hands: no interstitial ever, and every seat's cards are drawn with
+// the game's own faces.
+function bustSevenHumanMove(state, seat) {
+  ok("bust seven never asks to pass the device", !app.isInterstitialShowing());
+  const faces = findAll(global.document.getElementById("tableWrap"), (n) => n.classList && n.classList.contains("b7-card"));
+  ok("bust seven cards use its own faces", faces.length > 0);
+  if (state.phase === "target") {
+    // One button per legal target, in the same order.
+    const buttons = app.getCurrentGame().actionButtons(state, seat);
+    return app.clickAction(buttons[state.pending.targets.indexOf(BUST_SEVEN.aiChooseTarget(state, seat))].label);
+  }
+  return app.clickAction(BUST_SEVEN.aiShouldHit(state, seat) ? "Hit" : "Stay");
+}
+
+function findAll(node, pred, out) {
+  out = out || [];
+  if (pred(node)) out.push(node);
+  (node.children || []).forEach((c) => findAll(c, pred, out));
+  return out;
+}
+
 const HUMAN_MOVE = {
   hearts: heartsHumanMove, "crazy-eights": ceHumanMove, president: presHumanMove,
   "big-two": bigTwoHumanMove, "chinese-poker": cpHumanMove, blackjack: bjHumanMove,
   spades: spadesHumanMove, "gin-rummy": ginHumanMove, "oh-hell": ohHellHumanMove,
   euchre: euchreHumanMove, "texas-holdem": holdemHumanMove, cribbage: cribbageHumanMove,
+  "bust-seven": bustSevenHumanMove,
 };
 
 async function driveGame({ maxHumanSteps = 1500, maxTicks = 4000 } = {}) {
@@ -265,6 +289,8 @@ async function run() {
     ["texas-holdem", ["human", "ai", "off", "off"]],
     ["texas-holdem", ["human", "ai", "ai", "ai"]],
     ["cribbage", ["human", "ai", "off", "off"]],
+    ["bust-seven", ["human", "ai", "off", "off"]],
+    ["bust-seven", ["human", "ai", "ai", "ai"]],
   ];
   for (const [key, seats] of vsAiConfigs) {
     setupSeats(key, seats);
@@ -293,6 +319,7 @@ async function run() {
     ["euchre", ["human", "human", "human", "human"], 3000],
     ["texas-holdem", ["human", "human", "human", "off"], 1500],
     ["cribbage", ["human", "human", "off", "off"], 1500],
+    ["bust-seven", ["human", "human", "human", "off"], 1500],
   ];
   for (const [key, seats, maxHumanSteps] of hotseatConfigs) {
     setupSeats(key, seats);

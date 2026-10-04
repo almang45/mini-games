@@ -17,8 +17,9 @@
     "chinese-poker": window.CHINESE_POKER_UI,
     "texas-holdem": window.HOLDEM_UI,
     blackjack: window.BLACKJACK_UI,
+    "bust-seven": window.BUST_SEVEN_UI,
   };
-  const GAME_ORDER = ["hearts", "spades", "oh-hell", "euchre", "crazy-eights", "president", "big-two", "gin-rummy", "cribbage", "chinese-poker", "texas-holdem", "blackjack"];
+  const GAME_ORDER = ["hearts", "spades", "oh-hell", "euchre", "crazy-eights", "president", "big-two", "gin-rummy", "cribbage", "chinese-poker", "texas-holdem", "blackjack", "bust-seven"];
 
   let selectedGameKey = null;
   let seatConfig = ["human", "ai", "ai", "ai"];
@@ -121,6 +122,13 @@
     return humanSeats.length <= 1 || viewerSeat === seat;
   }
 
+  // In an open-hands game (every card face up, nothing played from hand)
+  // there is nothing to hide, so any human seat may act on this device
+  // without the "pass the device" handoff.
+  function canActHere(seat) {
+    return currentGame.openHands || humanSeats.length <= 1 || viewerSeat === seat;
+  }
+
   function renderTable() {
     const g = currentGame;
     const state = engineState;
@@ -144,7 +152,13 @@
       ]));
       const handEl = DOM.el("div", "seat-hand");
       const hand = g.handOf(state, i);
-      if (revealSeat(i)) {
+      if (g.openHands) {
+        DOM.renderFan(handEl, hand, {
+          small: offset !== 0,
+          tag: g.cardTag ? (c) => g.cardTag(state, i, c) : undefined,
+          renderFace: g.renderFace,
+        });
+      } else if (revealSeat(i)) {
         DOM.renderFan(handEl, hand, {
           isSelected: (c) => g.isCardSelected(state, i, c),
           isDisabled: (c) => actSeat !== i || g.isCardDisabled(state, i, c),
@@ -172,7 +186,7 @@
     const bar = $("actionBar");
     DOM.clear(bar);
     const showButtons = !state.gameOver && (g.isInterim(state) ||
-      (actSeat != null && state.seats[actSeat].type === "human" && (humanSeats.length <= 1 || viewerSeat === actSeat)));
+      (actSeat != null && state.seats[actSeat].type === "human" && canActHere(actSeat)));
     if (!showButtons) return;
     const seat = actSeat != null ? actSeat : (viewerSeat != null ? viewerSeat : 0);
     g.actionButtons(state, seat).forEach((b) => {
@@ -222,7 +236,7 @@
       aiTimer = setTimeout(() => { g.stepAI(state, seat); syncTable(); }, 600);
       return;
     }
-    if (humanSeats.length > 1 && viewerSeat !== seat) {
+    if (!canActHere(seat)) {
       showInterstitial(state.seats[seat].name, () => { viewerSeat = seat; syncTable(); });
     } else {
       hideInterstitial();

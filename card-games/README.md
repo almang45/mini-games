@@ -3,7 +3,7 @@
 A small collection of classic card games — static HTML/CSS/JS, no build step,
 no server. Open `index.html` directly in a browser.
 
-Twelve games, each seatable from 1-4 players depending on the game:
+Thirteen games, each seatable from 1-4 players depending on the game:
 
 - **Hearts** — 4 players, trick-taking, avoid points, dodge the moon
 - **Spades** — 4 players in two partnerships, bid tricks, spades trump, nil and bags, to 500
@@ -17,6 +17,7 @@ Twelve games, each seatable from 1-4 players depending on the game:
 - **Chinese Poker** — 4 players, one deal, arrange 3 poker hands and score head-to-head
 - **Texas Hold'em** — 2-4 players, no-limit with 10/20 blinds and side pots, 20-hand session
 - **Blackjack** — 1-4 players vs. the dealer, hit/stand/double, 15-round session
+- **Bust Seven** — 2-4 players, push-your-luck on the Flip 7 rules with its own 94-card deck, to 200
 
 Every seat is independently set to **Human**, **AI**, or **Off** (where the
 game allows fewer than 4 players) from the start screen — so "you vs 3 AI",
@@ -48,6 +49,7 @@ js/games/cribbage.js         Cribbage rules engine + AI (pegging, hand counting)
 js/games/chinese-poker.js    Chinese Poker rules engine + AI
 js/games/texas-holdem.js     Texas Hold'em rules engine + AI (7-card evaluator, side pots)
 js/games/blackjack.js        Blackjack rules engine + AI
+js/games/bust-seven.js       Bust Seven rules engine + AI (own deck, action-card queue)
 js/ui/hearts-ui.js           binds Hearts state to the shared table shell
 js/ui/spades-ui.js           binds Spades state to the shared table shell
 js/ui/oh-hell-ui.js          binds Oh Hell state to the shared table shell
@@ -60,6 +62,7 @@ js/ui/cribbage-ui.js         binds Cribbage state to the shared table shell
 js/ui/chinese-poker-ui.js    binds Chinese Poker state to the shared table shell
 js/ui/texas-holdem-ui.js     binds Texas Hold'em state to the shared table shell
 js/ui/blackjack-ui.js        binds Blackjack state to the shared table shell
+js/ui/bust-seven-ui.js       binds Bust Seven state to the shared table shell (own card faces)
 js/app.js                    lobby + table controller (screens, seat setup,
                               AI pacing, hot-seat handoff, modals)
 js/test/*.test.js            plain Node test scripts (run with `node js/test/x.test.js`)
@@ -217,7 +220,24 @@ disabled, tag) stays the same across every game.
 - Fixed 15-round session, then the game ends and seats are ranked by final
   chip count — not an open-ended "play until you're broke" session.
 
-**AI opponents (all twelve games):** heuristic, not a full game-tree search —
+**Bust Seven:**
+- Plays the published Flip 7 rules (The Op) under a generic name; the
+  mechanics are the game, the name and card art are not reused.
+- 2-4 seats. The printed game is for 3 or more; 2 plays fine and the seat
+  shell already caps at 4.
+- Seat 1 deals round 1 and the deal moves left each round. A player frozen
+  during the deal, before their card arrives, banks 0.
+- An action card with exactly one legal receiver is applied without asking;
+  an extra Second Chance nobody can take is discarded.
+- A Freeze or Flip Three turned up during a Flip Three waits until the three
+  flips are done, then the flipping player resolves it. If they bust, or
+  anyone reaches seven numbers first, it goes to the discards unplayed.
+- The deck is not reshuffled between rounds; the discards are shuffled back
+  in only when it runs out. A tie for the lead at 200+ plays another round.
+- `openHands: true` on the UI adapter: every seat renders face up and hot-seat
+  play skips the "pass the device" screen, since nothing is hidden.
+
+**AI opponents (all thirteen games):** heuristic, not a full game-tree search —
 they play legally and reasonably (Hearts: duck under the current trick
 winner when possible, dump dangerous cards — the Queen of Spades and high
 spades/hearts — when void; Spades: bid a rule-of-thumb trick count from
@@ -248,7 +268,13 @@ hands 150 times, knock it down for each raise already made on the street,
 raise when it clears a bar that drops as more players stay in, call when it
 covers the pot odds and fold otherwise (no bluffs, position or reads);
 Blackjack: mimic dealer strategy — hit anything under hard 17, double only a
-hard 10 or 11) but don't model deeper strategy like deliberately holding
+hard 10 or 11; Bust Seven: count what's left in the deck (contents, never
+order) for the exact chance the next card busts, and hit while the expected
+hand after one more card beats the hand now, always taking a card that can't
+bust, banking a winning total and drawing on when someone has already banked
+more; aim Freeze at the seat with the most to gain from its next card and
+Flip Three at the biggest, riskiest hand, or take Flip Three itself when it's
+safe. It wins about two games in three against a fixed stop-at-20 player) but don't model deeper strategy like deliberately holding
 back a winning play, reading opponents' hands, card counting, or (Hearts)
 angling to shoot the moon themselves.
 
@@ -259,7 +285,8 @@ environment this was built in, so testing happens on two levels:
 
 1. **Engine tests** (`cards.test.js`, `hearts.test.js`, `spades.test.js`,
    `oh-hell.test.js`, `euchre.test.js`, `crazy-eights.test.js`, `president.test.js`, `big-two.test.js`,
-   `gin-rummy.test.js`, `cribbage.test.js`, `chinese-poker.test.js`, `texas-holdem.test.js`, `blackjack.test.js`)
+   `gin-rummy.test.js`, `cribbage.test.js`, `chinese-poker.test.js`, `texas-holdem.test.js`, `blackjack.test.js`,
+   `bust-seven.test.js`)
    exercise each rules engine directly in Node: rule checks against
    hand-built scenarios (forced leads, moon shots, illegal plays,
    pile-clearing edge cases around a player finishing mid-round, hand
@@ -267,7 +294,8 @@ environment this was built in, so testing happens on two levels:
    brute-force best-of-21 search, side pots and odd-chip splits, blackjack settlement math via rigged
    fixture states, Spades contract/Nil/bag scoring, Gin Rummy meld search,
    lay-offs and knock/undercut/gin settlement, Cribbage counting from the
-   29 hand to crib flushes, and go/31/last-card pegging), deck conservation, and dozens
+   29 hand to crib flushes, and go/31/last-card pegging, Bust Seven's action-card
+   ordering from stacked decks), deck conservation, and dozens
    of full randomized AI-vs-AI
    games per player count to catch stuck states, non-terminating games, or a
    degenerate AI.

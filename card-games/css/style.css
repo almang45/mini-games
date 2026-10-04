@@ -243,6 +243,37 @@
 /* Empty discard pile (Gin Rummy, right after the only discard is taken). */
 .card.card-slot { background: transparent; border: 1px dashed rgba(255, 255, 255, 0.3); box-shadow: none; }
 
+/* ------------------------------------------------------- Bust Seven faces */
+
+/* Its own deck: numbers 0-12, +N/x2 modifiers and three action cards, drawn
+   by bust-seven-ui.js's renderFace onto the shared .card frame. */
+.b7-card { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.b7-value { font-weight: 800; font-size: 1.35rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.b7-caption { font-size: 0.5rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; margin-top: 2px; }
+.card-small .b7-value { font-size: 0.95rem; }
+.card-small .b7-caption { display: none; }
+
+/* Number colours step around the wheel so a repeat is easy to spot. */
+.b7-number { --b7-ink: #1c1c1c; }
+.b7-n1 { --b7-ink: #8a5a00; }  .b7-n2 { --b7-ink: #a23b72; } .b7-n3 { --b7-ink: #2e6b30; }
+.b7-n4 { --b7-ink: #1f5f8b; }  .b7-n5 { --b7-ink: #b3352c; } .b7-n6 { --b7-ink: #5b3c99; }
+.b7-n7 { --b7-ink: #0d7068; }  .b7-n8 { --b7-ink: #9a4a12; } .b7-n9 { --b7-ink: #3d4f9c; }
+.b7-n10 { --b7-ink: #7a2e5c; } .b7-n11 { --b7-ink: #496b18; } .b7-n12 { --b7-ink: #6b3a1f; }
+.b7-number .b7-value { color: var(--b7-ink); }
+
+.b7-add, .b7-x2 { background: linear-gradient(160deg, #ffe6a3, #f2c25b); }
+.b7-add .b7-value, .b7-x2 .b7-value { color: #5a3c00; font-size: 1.05rem; }
+.card-small.b7-add .b7-value, .card-small.b7-x2 .b7-value { font-size: 0.78rem; }
+.b7-freeze { background: linear-gradient(160deg, #e3f3ff, #a9d4f5); color: #134a73; }
+.b7-flip3 { background: linear-gradient(160deg, #ffe0cc, #f5a76c); color: #6b2c00; }
+.b7-second { background: linear-gradient(160deg, #ffe0e0, #f2a0a0); color: #7a1b1b; }
+
+.b7-center { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 14px; }
+.b7-piles { display: flex; gap: 22px; align-items: flex-start; justify-content: center; }
+.b7-pile { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.b7-pile-label { font-size: 0.68rem; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.b7-prompt { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--accent); text-align: left; }
+
 /* ------------------------------------------------------------------ chrome */
 
 .table-header {
@@ -302,5 +333,6 @@
   .board-row .card { width: 32px; height: 45px; }
   .card-corner { font-size: 0.58rem; }
   .card-pip { font-size: 1rem; }
+  .b7-value { font-size: 1.1rem; }
   .seat-row .seat-row-label { flex-basis: 60px; font-size: 0.78rem; }
 }
