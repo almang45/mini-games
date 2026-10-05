@@ -3,7 +3,7 @@
 A small collection of classic card games — static HTML/CSS/JS, no build step,
 no server. Open `index.html` directly in a browser.
 
-Fourteen games, each seatable from 1-4 players depending on the game:
+Fifteen games, each seatable from 1-4 players depending on the game:
 
 - **Hearts** — 4 players, trick-taking, avoid points, dodge the moon
 - **Spades** — 4 players in two partnerships, bid tricks, spades trump, nil and bags, to 500
@@ -19,6 +19,7 @@ Fourteen games, each seatable from 1-4 players depending on the game:
 - **Texas Hold'em** — 2-4 players, no-limit with 10/20 blinds and side pots, 20-hand session
 - **Blackjack** — 1-4 players vs. the dealer, hit/stand/double, 15-round session
 - **Bust Seven** — 2-4 players, push-your-luck on the Flip 7 rules with its own 94-card deck, to 200
+- **Property Deal** — 2-4 players, the Monopoly Deal rules: bank money, collect sets, charge rent, steal and Block; three full sets wins
 
 Every seat is independently set to **Human**, **AI**, or **Off** (where the
 game allows fewer than 4 players) from the start screen — so "you vs 3 AI",
@@ -52,6 +53,7 @@ js/games/chinese-poker.js    Chinese Poker rules engine + AI
 js/games/texas-holdem.js     Texas Hold'em rules engine + AI (7-card evaluator, side pots)
 js/games/blackjack.js        Blackjack rules engine + AI
 js/games/bust-seven.js       Bust Seven rules engine + AI (own deck, action-card queue)
+js/games/property-deal.js    Property Deal rules engine + AI (tables, payments, Block chains)
 js/ui/hearts-ui.js           binds Hearts state to the shared table shell
 js/ui/spades-ui.js           binds Spades state to the shared table shell
 js/ui/oh-hell-ui.js          binds Oh Hell state to the shared table shell
@@ -66,6 +68,7 @@ js/ui/chinese-poker-ui.js    binds Chinese Poker state to the shared table shell
 js/ui/texas-holdem-ui.js     binds Texas Hold'em state to the shared table shell
 js/ui/blackjack-ui.js        binds Blackjack state to the shared table shell
 js/ui/bust-seven-ui.js       binds Bust Seven state to the shared table shell (own card faces)
+js/ui/property-deal-ui.js    binds Property Deal state to the shared table shell (own faces, seat tables)
 js/app.js                    lobby + table controller (screens, seat setup,
                               AI pacing, hot-seat handoff, modals)
 js/test/*.test.js            plain Node test scripts (run with `node js/test/x.test.js`)
@@ -79,6 +82,11 @@ browser (used by `index.html`'s plain `<script>` tags) — no bundler either
 way. `js/ui/*.js` are browser-only (they read `window.CARDS`/`window.HEARTS`/
 etc., which the Node tests populate manually before requiring them — see
 `js/test/ui-smoke.test.js`).
+
+A game with cards in front of each seat (Property Deal's bank and property
+sets) sets `seatExtra(state, seat, { refresh, canAct })`; `app.js` renders
+the node it returns under the seat's name, and the adapter's own click
+handlers call `refresh` to re-render.
 
 A game whose deck isn't suits and ranks sets `renderFace(card, faceEl)` on
 its UI adapter. `app.js` hands it to `DOM.renderFan`/`DOM.cardEl`, which call
@@ -259,7 +267,26 @@ disabled, tag) stays the same across every game.
 - `openHands: true` on the UI adapter: every seat renders face up and hot-seat
   play skips the "pass the device" screen, since nothing is hidden.
 
-**AI opponents (all fourteen games):** heuristic, not a full game-tree search —
+**Property Deal:**
+- Plays the published Monopoly Deal rules (Hasbro) under a generic name,
+  with generic card names: Set Grab (Deal Breaker), Block (Just Say No),
+  Steal (Sly Deal), Swap (Forced Deal), Bonus Draw (Pass Go), Station
+  (Railroad). Properties are colours only, with no street names.
+- 2-4 seats (the printed game plays up to 5).
+- One stack per colour: a fifth Station or a fourth Red joins the same
+  stack instead of starting a second set, and rent stops at a full set.
+- A set that stops being full (paid away, stolen from, a wild moved out)
+  sends its House and Hotel to the owner's bank. A wild can't be moved out
+  of a set with buildings. Buildings can be used to pay debts.
+- Payments can't use the any-colour wild, which has no cash value. A
+  player who can't cover a debt, or covers it exactly, pays everything
+  without being asked.
+- A Block played in response never uses up a play, even on your own turn.
+  Played from your hand on your turn, a Block can only be banked.
+- Seat 1 goes first; there's no deal-order shuffle. A 400-turn limit (never
+  reached in testing) ends a stalemate on most full sets, then value.
+
+**AI opponents (all fifteen games):** heuristic, not a full game-tree search —
 they play legally and reasonably (Hearts: duck under the current trick
 winner when possible, dump dangerous cards — the Queen of Spades and high
 spades/hearts — when void; Spades: bid a rule-of-thumb trick count from
@@ -302,7 +329,14 @@ hand after one more card beats the hand now; it banks a winning total first
 card that can't repeat a number, and draws on when someone has already
 banked more; aim Freeze at the seat with the most to gain from its next card and
 Flip Three at the biggest, riskiest hand, or take Flip Three itself when it's
-safe. It wins about two games in three against a fixed stop-at-20 player)
+safe. It wins about two games in three against a fixed stop-at-20 player;
+Property Deal: draw first with Bonus Draw, grab a full set when it can,
+lay the property that does most for an unfinished set, steal or swap
+toward its fullest sets, build, then charge the biggest rent (doubled when
+worth two plays) at the richest opponent, then collect debts and bank cash;
+it Blocks any Set Grab or Steal and big payments, pays with the closest
+bank combination before giving up properties it needs least, and beats a
+random legal player in about 98% of two-seat games)
 but don't model deeper strategy like deliberately holding back a winning
 play, reading opponents' hands, or (Hearts) angling to shoot the moon
 themselves. Only Bust Seven and Color Clash count cards, and only from
@@ -316,7 +350,7 @@ environment this was built in, so testing happens on two levels:
 1. **Engine tests** (`cards.test.js`, `hearts.test.js`, `spades.test.js`,
    `oh-hell.test.js`, `euchre.test.js`, `crazy-eights.test.js`, `president.test.js`, `big-two.test.js`,
    `gin-rummy.test.js`, `cribbage.test.js`, `chinese-poker.test.js`, `texas-holdem.test.js`, `blackjack.test.js`,
-   `bust-seven.test.js`, `color-clash.test.js`)
+   `bust-seven.test.js`, `color-clash.test.js`, `property-deal.test.js`)
    exercise each rules engine directly in Node: rule checks against
    hand-built scenarios (forced leads, moon shots, illegal plays,
    pile-clearing edge cases around a player finishing mid-round, hand
@@ -326,7 +360,9 @@ environment this was built in, so testing happens on two levels:
    lay-offs and knock/undercut/gin settlement, Cribbage counting from the
    29 hand to crib flushes, and go/31/last-card pegging, Bust Seven's action-card
    ordering from stacked decks, every Color Clash starter card and Wild Draw
-   Four challenge outcome), deck conservation, and dozens
+   Four challenge outcome, Property Deal payments, Block chains, buildings
+   and every take action, plus 180 games of uniformly random legal play
+   that check card conservation and building rules after every move), deck conservation, and dozens
    of full randomized AI-vs-AI
    games per player count to catch stuck states, non-terminating games, or a
    degenerate AI.

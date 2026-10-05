@@ -19,8 +19,9 @@
     blackjack: window.BLACKJACK_UI,
     "bust-seven": window.BUST_SEVEN_UI,
     "color-clash": window.COLOR_CLASH_UI,
+    "property-deal": window.PROPERTY_DEAL_UI,
   };
-  const GAME_ORDER = ["hearts", "spades", "oh-hell", "euchre", "crazy-eights", "color-clash", "president", "big-two", "gin-rummy", "cribbage", "chinese-poker", "texas-holdem", "blackjack", "bust-seven"];
+  const GAME_ORDER = ["hearts", "spades", "oh-hell", "euchre", "crazy-eights", "color-clash", "president", "big-two", "gin-rummy", "cribbage", "chinese-poker", "texas-holdem", "blackjack", "bust-seven", "property-deal"];
 
   let selectedGameKey = null;
   let seatConfig = ["human", "ai", "ai", "ai"];
@@ -151,6 +152,9 @@
         DOM.el("span", "seat-tag", seatKindTag(i)),
         DOM.el("span", "seat-score", g.seatTag(state, i)),
       ]));
+      // Public cards in front of a seat (Property Deal's bank and sets). The
+      // adapter's own click handlers re-render through refresh.
+      if (g.seatExtra) seatEl.appendChild(g.seatExtra(state, i, { refresh: syncTable, canAct: canActHere(i) }));
       const handEl = DOM.el("div", "seat-hand" + (g.openHands ? " is-open" : ""));
       const hand = g.handOf(state, i);
       if (g.openHands) {

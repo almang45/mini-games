@@ -23,7 +23,7 @@ to, both here and in `index.html`.
 
 | | |
 |---|---|
-| **[Card Table](card-games/)** | Fourteen card games in one shared table shell — Hearts, Spades, Oh Hell, Euchre, Crazy Eights, Color Clash, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, Blackjack, Bust Seven. |
+| **[Card Table](card-games/)** | Fifteen card games in one shared table shell — Hearts, Spades, Oh Hell, Euchre, Crazy Eights, Color Clash, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, Blackjack, Bust Seven, Property Deal. |
 | **[Klondike Solitaire](klondike-solitaire/)** | Classic single-player card game — build runs, fill the four foundations. |
 | **[FreeCell](freecell/)** | Classic FreeCell solitaire with Microsoft-numbered, shareable deals and a solver-backed hint. |
 | **[Spider Solitaire](spider-solitaire/)** | Two-deck Spider with 1, 2 or 4 suits. |
