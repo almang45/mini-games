@@ -147,6 +147,36 @@ function dealt(seatCount, stack) {
   ok("a waiting action card is discarded on a bust", bust.discard.length === 1 && bust.discard[0].value === "flip3");
 })();
 
+(function waitingCardsAfterLeavingTests() {
+  // Seat 1's Flip Three on itself turns up two Freezes. Freezing itself with
+  // the first takes it out of the round, so the second must not wait on it.
+  const state = dealt(3, [B.action("flip3"), B.action("freeze"), B.num(4), B.action("freeze"), B.num(6), B.num(7)]);
+  B.chooseTarget(state, 1, 1);
+  ok("first waiting Freeze asks its flipper", state.phase === "target" && state.pending.seat === 1);
+  B.chooseTarget(state, 1, 1);
+  ok("flipper froze itself", state.hands[1].status === "frozen");
+  ok("the second Freeze is discarded, not resolved by a frozen seat", state.phase === "turn" && state.discard.some((c) => c.value === "freeze"));
+  ok("the log names the card", state.log.some((e) => /out of the round - their Freeze is discarded/.test(e.text)));
+  ok("the deal finished", values(state.hands[2]) === "6" && values(state.hands[0]) === "7");
+})();
+
+(function noTargetLeftTests() {
+  // Seat 0 has stayed; seat 1's own Flip Three turns up two Freezes. The
+  // first freezes seat 1, leaving nobody for the second.
+  const state = dealt(2, N(1, 2).concat([B.action("flip3"), B.action("freeze"), B.action("freeze"), B.num(9)]));
+  B.stay(state, 1);
+  B.hit(state, 0);
+  ok("only the flipper is left, so it freezes itself", state.hands[0].status === "frozen" && state.phase === "round-over");
+  ok("no Second Chance message for a Freeze", !state.log.some((e) => /Second Chance/.test(e.text)));
+})();
+
+(function emptyDrawSourceTests() {
+  const state = dealt(2, N(1, 2));
+  state.deck = [];
+  state.discard = [];
+  ok("AI stays when nothing is left to draw", !B.aiShouldHit(state, 1));
+})();
+
 (function sevenExactTests() {
   const state = dealt(2, N(1, 2, 3, 4, 5, 6, 7, 8));
   B.hit(state, 1); // 3

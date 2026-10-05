@@ -152,6 +152,10 @@
       } else {
         state.discard.push(...task.deferred);
       }
+    } else if (task.type === "resolve" && !isActive(state, task.seat)) {
+      // A seat that bust or froze itself resolving one waiting card loses the rest.
+      state.discard.push(task.card);
+      say(state, nameOf(state, task.seat) + " is out of the round - their " + cardLabel(task.card) + " is discarded.");
     } else if (task.type === "resolve") {
       beginResolve(state, task.seat, task.card);
     }
@@ -202,12 +206,12 @@
   }
 
   // Only a real choice stops for a decision; one legal target is applied
-  // straight away, and a Second Chance nobody can take is discarded.
+  // straight away, and a card nobody can take is discarded.
   function beginResolve(state, seat, card) {
     const targets = targetsFor(state, seat, card);
     if (targets.length === 0) {
       state.discard.push(card);
-      say(state, "Nobody can take the extra Second Chance - it's discarded.");
+      say(state, "Nobody can take the " + cardLabel(card) + " - it's discarded.");
     } else if (targets.length === 1) {
       applyAction(state, seat, card, targets[0]);
     } else {
@@ -244,8 +248,10 @@
     state.pending = null;
     // A seven ends the round mid-queue; deferred action cards still waiting
     // on a Flip Three go to the discards with everything else.
-    state.queue.forEach((task) => { if (task.type === "ftEnd") state.discard.push(...task.deferred); });
-    state.queue.filter((task) => task.type === "resolve").forEach((task) => state.discard.push(task.card));
+    state.queue.forEach((task) => {
+      if (task.type === "ftEnd") state.discard.push(...task.deferred);
+      else if (task.type === "resolve") state.discard.push(task.card);
+    });
     state.queue = [];
     state.hands.forEach((hand, i) => {
       hand.roundScore = handScore(hand);
@@ -335,6 +341,7 @@
   // already banked more than this seat can by stopping.
   function aiShouldHit(state, seat) {
     const hand = state.hands[seat];
+    if (drawSource(state).length === 0) return false; // nothing left to draw
     const p = bustChance(state, seat);
     if (p === 0) return true;
     const now = handScore(hand);

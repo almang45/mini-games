@@ -198,7 +198,9 @@ function bustSevenHumanMove(state, seat) {
   if (state.phase === "target") {
     // One button per legal target, in the same order.
     const buttons = app.getCurrentGame().actionButtons(state, seat);
-    return app.clickAction(buttons[state.pending.targets.indexOf(BUST_SEVEN.aiChooseTarget(state, seat))].label);
+    const index = state.pending.targets.indexOf(BUST_SEVEN.aiChooseTarget(state, seat));
+    ok("AI picks a legal target", index !== -1, { targets: state.pending.targets });
+    return app.clickAction(buttons[index].label);
   }
   return app.clickAction(BUST_SEVEN.aiShouldHit(state, seat) ? "Hit" : "Stay");
 }
