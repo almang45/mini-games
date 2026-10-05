@@ -64,8 +64,8 @@
   // `value` lets tests (and replays) fix the die; play leaves it out.
   function roll(state, value) {
     if (state.gameOver || state.phase !== "roll") throw new Error("not time to roll");
-    const die = value || 1 + Math.floor(state.rng() * 6);
-    if (die < 1 || die > 6) throw new Error("bad die " + die);
+    const die = value === undefined ? 1 + Math.floor(state.rng() * 6) : value;
+    if (!Number.isInteger(die) || die < 1 || die > 6) throw new Error("bad die " + die);
     state.die = die;
     state.lastMove = null;
     const seat = state.turn;
@@ -180,8 +180,8 @@
   function chooseMove(state, level) {
     const legal = state.legal;
     if (level === "easy") return legal[Math.floor(state.rng() * legal.length)];
-    const seat = state.turn;
-    return legal.reduce((best, t) => (scoreMove(state, seat, t, state.die) > scoreMove(state, seat, best, state.die) ? t : best));
+    const scored = legal.map((t) => ({ t, score: scoreMove(state, state.turn, t, state.die) }));
+    return scored.reduce((best, m) => (m.score > best.score ? m : best)).t;
   }
 
   const api = {

@@ -36,6 +36,9 @@ function game(n, tokens) {
   ok("seat colours sit opposite for two", L.SEAT_COLORS[2].join() === "red,yellow");
   assert.throws(() => L.createGame(["ai"]), /2-4/);
   assert.throws(() => L.createGame(Array(5).fill("ai")), /2-4/);
+  const dice = game(2);
+  for (const bad of [0, 7, 2.5, "3"]) assert.throws(() => L.roll(dice, bad), /bad die/, "rejects die " + bad);
+  ok("a bad die leaves the turn alone", dice.phase === "roll" && dice.die === null);
 })();
 
 // ---- rolling and moving ---------------------------------------------------------

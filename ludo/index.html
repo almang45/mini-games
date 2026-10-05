@@ -22,6 +22,7 @@
     border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 8px 10px;
   }
   .status { margin: 0; min-height: 1.3em; text-align: center; font-size: 0.9rem; color: var(--ink-dim); }
+  .last { margin: -6px 0 0; min-height: 1.2em; text-align: center; font-size: 0.8rem; color: var(--ink); }
 
   .players { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
   .player {
@@ -125,7 +126,8 @@
   </div>
 
   <div class="players" id="players"></div>
-  <p class="status" id="status" aria-live="polite"></p>
+  <p class="status" id="status"></p>
+  <p class="last" id="last" aria-live="polite"></p>
 
   <div class="table">
     <div class="board" id="board" aria-label="Ludo board"></div>
@@ -239,6 +241,7 @@
   let state = null;
   let shown = null;   // token positions on screen, behind state while a move animates
   let busy = null;    // pending timer (AI thinking, rolling, animating); input waits
+  let mover = null;   // seat whose token is walking; state.turn may already be the next seat
   let tokenEls = [];
 
   const isHuman = (seat) => state.seats[seat].type === "human";
@@ -292,10 +295,12 @@
     });
 
     const die = $("die");
-    die.style.setProperty("--c", colorVar(state.seats[state.turn].color));
+    die.style.setProperty("--c", colorVar(state.seats[mover !== null ? mover : state.turn].color));
     die.disabled = !(humanTurn() && state.phase === "roll");
     drawDie(state.die);
     $("status").textContent = statusText();
+    // The engine's last line says why a turn passed (no move, a third 6).
+    $("last").textContent = state.log.length ? state.log[state.log.length - 1] : "";
     $("hint").textContent = humanTurn() ? (state.phase === "roll" ? "Tap the die to roll." : "Tap a glowing token.") : "";
   }
 
@@ -308,12 +313,13 @@
   }
 
   function statusText() {
-    if (state.gameOver) return resultText();
+    if (state.gameOver && mover === null) return resultText();
+    if (mover !== null) return state.seats[mover].name + " moves…";
     const s = state.seats[state.turn];
     const humans = state.seats.filter((x) => x.type === "human").length;
     const who = humans > 1 ? s.name : isHuman(state.turn) ? "You" : "AI (" + s.name + ")";
     if (!isHuman(state.turn)) return who + " is playing…";
-    return who + (state.phase === "roll" ? (humans > 1 ? " to roll." : ": your roll.") : ": rolled " + state.die + " - pick a token.");
+    return who + (state.phase === "roll" ? (humans > 1 ? " to roll." : ": your roll.") : ": rolled " + state.die + (busy ? "." : " - pick a token."));
   }
 
   function resultText() {
@@ -334,9 +340,12 @@
     void die.offsetWidth;
     die.classList.add("rolling");
     render();
-    // A single legal move plays itself; otherwise humans choose.
-    if (state.phase === "move" && (state.legal.length === 1 || !isHuman(state.turn))) {
-      wait(isHuman(state.turn) ? 380 : AI_DELAY_MS, () => doMove(state.legal.length === 1 ? state.legal[0] : L.chooseMove(state, $("level").value)));
+    // When every legal token makes the same move (one token, or all in the
+    // yard on a 6) it plays itself; otherwise humans choose.
+    const tokens = state.seats[state.turn].tokens;
+    const onlyChoice = new Set(state.legal.map((t) => tokens[t])).size === 1;
+    if (state.phase === "move" && (onlyChoice || !isHuman(state.turn))) {
+      wait(isHuman(state.turn) ? 380 : AI_DELAY_MS, () => doMove(onlyChoice ? state.legal[0] : L.chooseMove(state, $("level").value)));
       render();
       return;
     }
@@ -346,6 +355,7 @@
   // Plays the move at once, then walks the token there square by square.
   function doMove(token) {
     const seat = state.turn;
+    mover = seat;
     const { from, to, captured } = L.move(state, token);
     const path = from === -1 ? [0] : [];
     for (let p = from + 1; from !== -1 && p <= to; p++) path.push(p);
@@ -358,6 +368,7 @@
         return;
       }
       busy = null;
+      mover = null;
       captured.forEach((c) => { shown[c.seat][c.token] = -1; });
       advance();
     };
@@ -385,6 +396,7 @@
   function newGame() {
     clearTimeout(busy);
     busy = null;
+    mover = null;
     $("overlay").hidden = true;
     const n = Number($("count").value);
     const types = Array.from({ length: n }, (_, i) => ($("mode").value === "pvp" || i === 0 ? "human" : "ai"));
