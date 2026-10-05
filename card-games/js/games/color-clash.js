@@ -145,8 +145,7 @@
     } else if (starter.kind === "skip") {
       state.turnSeat = stepFrom(state, first, 1);
     } else if (starter.kind === "draw2") {
-      give(state, first, 2);
-      say(state, nameOf(state, first) + " draws 2 and is skipped.");
+      say(state, nameOf(state, first) + " draws " + give(state, first, 2) + " and is skipped.");
       state.turnSeat = stepFrom(state, first, 1);
     } else {
       state.turnSeat = first;
@@ -200,8 +199,7 @@
       const victim = stepFrom(state, seat, 1);
       if (c.kind === "draw2" || c.kind === "wild4") {
         const count = c.kind === "draw2" ? 2 : 4;
-        give(state, victim, count);
-        say(state, nameOf(state, victim) + " draws " + count + ".");
+        say(state, nameOf(state, victim) + " draws " + give(state, victim, count) + ".");
       }
       endHand(state, seat);
       return;
@@ -227,8 +225,7 @@
       state.turnSeat = n(state) === 2 ? seat : stepFrom(state, seat, 1);
     } else if (c.kind === "draw2") {
       const victim = stepFrom(state, seat, 1);
-      give(state, victim, 2);
-      say(state, nameOf(state, victim) + " draws 2 and is skipped.");
+      say(state, nameOf(state, victim) + " draws " + give(state, victim, 2) + " and is skipped.");
       state.turnSeat = stepFrom(state, seat, 2);
     } else {
       state.turnSeat = stepFrom(state, seat, 1);
@@ -258,18 +255,17 @@
     state.pending = null;
     state.phase = "play";
     if (!challenge) {
-      give(state, victim, 4);
-      say(state, nameOf(state, victim) + " draws 4 and is skipped.");
+      say(state, nameOf(state, victim) + " draws " + give(state, victim, 4) + " and is skipped.");
       state.turnSeat = stepFrom(state, victim, 1);
     } else if (honest) {
-      give(state, victim, 6);
+      const got = give(state, victim, 6);
       say(state, nameOf(state, victim) + " challenges, but " + nameOf(state, offender) + " had no " + COLOR_NAME[prevColor] + " - " +
-        nameOf(state, victim) + " draws 6 and is skipped.");
+        nameOf(state, victim) + " draws " + got + " and is skipped.");
       state.turnSeat = stepFrom(state, victim, 1);
     } else {
-      give(state, offender, 4);
+      const got = give(state, offender, 4);
       say(state, nameOf(state, victim) + " challenges and wins - " + nameOf(state, offender) + " was holding " +
-        COLOR_NAME[prevColor] + " and draws 4.");
+        COLOR_NAME[prevColor] + " and draws " + got + ".");
       state.turnSeat = victim;
     }
   }

@@ -197,6 +197,15 @@ function startWith(seatCount, starters) {
   ok("drawing is allowed even holding a match", any.hands[0].length === 2);
 })();
 
+(function shortPenaltyTests() {
+  // Empty pile: the only card to reshuffle is the old top under the Draw
+  // Two, so the victim gets one card, not two.
+  const state = table(2, { hands: [[act("draw2", "R"), num("B", 1)], [num("G", 1)]], top: num("R", 5), drawPile: [] });
+  C.playCard(state, 0, state.hands[0][0].id);
+  ok("the victim gets what was left", state.hands[1].length === 2);
+  ok("the log says how many were really drawn", state.log.some((e) => /Seat 2 draws 1 and is skipped/.test(e.text)));
+})();
+
 (function reshuffleTests() {
   const state = table(2, { hands: [[num("B", 1)], [num("G", 1)]], top: num("R", 5) });
   state.discard = [num("Y", 2), num("Y", 3), num("R", 5)];
