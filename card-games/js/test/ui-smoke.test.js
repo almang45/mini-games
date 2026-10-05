@@ -29,6 +29,8 @@ const OH_HELL = require("../games/oh-hell.js"); global.OH_HELL = OH_HELL;
 const EUCHRE = require("../games/euchre.js"); global.EUCHRE = EUCHRE;
 const HOLDEM = require("../games/texas-holdem.js"); global.HOLDEM = HOLDEM;
 const CRIBBAGE = require("../games/cribbage.js"); global.CRIBBAGE = CRIBBAGE;
+const BUST_SEVEN = require("../games/bust-seven.js"); global.BUST_SEVEN = BUST_SEVEN;
+const COLOR_CLASH = require("../games/color-clash.js"); global.COLOR_CLASH = COLOR_CLASH;
 require("../ui/hearts-ui.js");
 require("../ui/crazy-eights-ui.js");
 require("../ui/president-ui.js");
@@ -41,6 +43,8 @@ require("../ui/oh-hell-ui.js");
 require("../ui/euchre-ui.js");
 require("../ui/texas-holdem-ui.js");
 require("../ui/cribbage-ui.js");
+require("../ui/bust-seven-ui.js");
+require("../ui/color-clash-ui.js");
 const app = require("../app.js");
 global.document._fireDOMContentLoaded();
 
@@ -187,11 +191,47 @@ function cribbageHumanMove(state, seat) {
   return app.clickAction("Send to Crib (2/2)");
 }
 
+// Open hands: no interstitial ever, and every seat's cards are drawn with
+// the game's own faces.
+function bustSevenHumanMove(state, seat) {
+  ok("bust seven never asks to pass the device", !app.isInterstitialShowing());
+  const faces = findAll(global.document.getElementById("tableWrap"), (n) => n.classList && n.classList.contains("b7-card"));
+  ok("bust seven cards use its own faces", faces.length > 0);
+  if (state.phase === "target") {
+    // One button per legal target, in the same order.
+    const buttons = app.getCurrentGame().actionButtons(state, seat);
+    const index = state.pending.targets.indexOf(BUST_SEVEN.aiChooseTarget(state, seat));
+    ok("AI picks a legal target", index !== -1, { targets: state.pending.targets });
+    return app.clickAction(buttons[index].label);
+  }
+  return app.clickAction(BUST_SEVEN.aiShouldHit(state, seat) ? "Hit" : "Stay");
+}
+
+// Plays through the real buttons and card clicks: colour names after a
+// Wild, Challenge / Draw 4 on a Wild Draw Four, Play / Keep after a draw.
+function colorClashHumanMove(state, seat) {
+  if (state.phase === "color") return app.clickAction(COLOR_CLASH.COLOR_NAME[COLOR_CLASH.aiChooseColor(state, seat)]);
+  if (state.phase === "challenge") return app.clickAction(COLOR_CLASH.aiShouldChallenge(state, seat) ? "Challenge" : "Draw 4");
+  if (state.phase === "drawn") return app.clickAction(state.drawn.kind === "wild4" ? "Keep" : "Play " + COLOR_CLASH.cardLabel(state.drawn));
+  const faces = findAll(global.document.getElementById("tableWrap"), (n) => n.classList && n.classList.contains("cc-card"));
+  ok("color clash hand uses its own faces", faces.length > 0);
+  const card = COLOR_CLASH.aiChoosePlay(state, seat);
+  return card ? app.playCard(seat, card) : app.clickAction("Draw Card");
+}
+
+function findAll(node, pred, out) {
+  out = out || [];
+  if (pred(node)) out.push(node);
+  (node.children || []).forEach((c) => findAll(c, pred, out));
+  return out;
+}
+
 const HUMAN_MOVE = {
   hearts: heartsHumanMove, "crazy-eights": ceHumanMove, president: presHumanMove,
   "big-two": bigTwoHumanMove, "chinese-poker": cpHumanMove, blackjack: bjHumanMove,
   spades: spadesHumanMove, "gin-rummy": ginHumanMove, "oh-hell": ohHellHumanMove,
   euchre: euchreHumanMove, "texas-holdem": holdemHumanMove, cribbage: cribbageHumanMove,
+  "bust-seven": bustSevenHumanMove, "color-clash": colorClashHumanMove,
 };
 
 async function driveGame({ maxHumanSteps = 1500, maxTicks = 4000 } = {}) {
@@ -221,7 +261,31 @@ function setupSeats(gameKey, seatTypes) {
   for (let i = 0; i < 4; i++) app.setSeat(i, seatTypes[i] || "off");
 }
 
+// A game with its own deck passes renderFace; everything else keeps the
+// standard suit-and-rank face. Both must share the card frame's classes.
+function cardRendererChecks() {
+  const std = global.DOM.cardEl({ suit: "H", rank: 14 }, { small: true });
+  ok("standard face: red suit class", std.classList.contains("card-red"));
+  ok("standard face: corners and pip", std.children.length === 3);
+  ok("standard face: frame keeps small", std.classList.contains("card-small"));
+
+  const seen = [];
+  const renderFace = (card, face) => { seen.push(card.id); face.classList.add("custom-face"); };
+  const custom = global.DOM.cardEl({ id: "x7" }, { renderFace, selected: true });
+  ok("custom face: renderer called with the card", seen.join() === "x7");
+  ok("custom face: standard face not drawn", custom.children.length === 0 && !custom.classList.contains("card-black"));
+  ok("custom face: frame keeps selected", custom.classList.contains("card-selected") && custom.classList.contains("custom-face"));
+  global.DOM.cardEl({ id: "x8" }, { renderFace, faceDown: true });
+  ok("custom face: face-down skips the renderer", seen.length === 1);
+
+  const fan = global.document.createElement("div");
+  global.DOM.renderFan(fan, [{ id: "a" }, { id: "b" }], { renderFace });
+  ok("renderFan passes renderFace to every card", seen.slice(1).join() === "a,b" && fan.children.length === 2);
+}
+
 async function run() {
+  cardRendererChecks();
+
   // ---- vs-AI configs: one human at seat 0, AI filling the rest ----------
   const vsAiConfigs = [
     ["hearts", ["human", "ai", "ai", "ai"]],
@@ -241,6 +305,10 @@ async function run() {
     ["texas-holdem", ["human", "ai", "off", "off"]],
     ["texas-holdem", ["human", "ai", "ai", "ai"]],
     ["cribbage", ["human", "ai", "off", "off"]],
+    ["bust-seven", ["human", "ai", "off", "off"]],
+    ["bust-seven", ["human", "ai", "ai", "ai"]],
+    ["color-clash", ["human", "ai", "off", "off"]],
+    ["color-clash", ["human", "ai", "ai", "ai"]],
   ];
   for (const [key, seats] of vsAiConfigs) {
     setupSeats(key, seats);
@@ -269,6 +337,8 @@ async function run() {
     ["euchre", ["human", "human", "human", "human"], 3000],
     ["texas-holdem", ["human", "human", "human", "off"], 1500],
     ["cribbage", ["human", "human", "off", "off"], 1500],
+    ["bust-seven", ["human", "human", "human", "off"], 1500],
+    ["color-clash", ["human", "human", "human", "off"], 3000],
   ];
   for (const [key, seats, maxHumanSteps] of hotseatConfigs) {
     setupSeats(key, seats);

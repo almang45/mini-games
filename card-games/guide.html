@@ -17,7 +17,7 @@
   <header class="guide-header">
     <a class="back-link" href="index.html">&larr; Back to Game</a>
     <h1>Card Table — Rules Guide</h1>
-    <p class="tagline">Twelve classic card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
+    <p class="tagline">Fourteen card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
   </header>
 
   <div class="guide-layout">
@@ -31,6 +31,7 @@
       <a href="#oh-hell">Oh Hell</a>
       <a href="#euchre">Euchre</a>
       <a href="#crazy-eights">Crazy Eights</a>
+      <a href="#color-clash">Color Clash</a>
       <a href="#president">President</a>
       <a href="#big-two">Big Two</a>
       <a href="#gin-rummy">Gin Rummy</a>
@@ -38,6 +39,7 @@
       <a href="#chinese-poker">Chinese Poker</a>
       <a href="#texas-holdem">Texas Hold'em</a>
       <a href="#blackjack">Blackjack</a>
+      <a href="#bust-seven">Bust Seven</a>
       <a href="#simplifications">Simplifications</a>
       <a href="#glossary">Glossary</a>
     </nav>
@@ -47,10 +49,10 @@
       <section id="quick-start">
         <h2>Quick Start</h2>
         <ol class="steps">
-          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Oh Hell, Euchre, Crazy Eights, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, or Blackjack.</li>
+          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Oh Hell, Euchre, Crazy Eights, Color Clash, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, Blackjack, or Bust Seven.</li>
           <li>For each of the 4 seats, choose <strong>Human</strong>, <strong>AI</strong>, or (where allowed) <strong>Off</strong>. One human seat plays "vs AI"; every seat set to Human plays local hot-seat, passing the device around the table. Picking a game that seats fewer players (Gin Rummy, Cribbage) switches the extra seats Off for you, AI seats first.</li>
-          <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Bid, Draw, Pass, Play Selected, Knock, Call, Raise, Hit, Stand, Submit, etc.) when one is lit up. In Gin Rummy, click a card to select it and then press Discard or Knock. In Cribbage, click two cards and press Send to Crib. Chinese Poker is the other exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
-          <li>In hot-seat mode, a "Pass the device" screen appears between turns so other players can't see your hand until you're ready.</li>
+          <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Bid, Draw, Pass, Play Selected, Knock, Call, Raise, Hit, Stand, Stay, Submit, etc.) when one is lit up. In Gin Rummy, click a card to select it and then press Discard or Knock. In Cribbage, click two cards and press Send to Crib. Chinese Poker is the other exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
+          <li>In hot-seat mode, a "Pass the device" screen appears between turns so other players can't see your hand until you're ready. Bust Seven skips it: every card is face up, so there's nothing to hide.</li>
         </ol>
       </section>
 
@@ -74,21 +76,21 @@
             <li><strong>Name &amp; tag</strong> - the seat number plus whether it's an AI, a fellow human, or "You".</li>
             <li><strong>Score/status</strong> - Hearts shows running points, Spades shows each seat's team, bid and tricks won, Crazy Eights shows cards left, President shows your finish place once you're out.</li>
             <li><strong>Glowing border</strong> - the seat outlined in green is the one currently acting.</li>
-            <li><strong>Hand</strong> - your own cards are face up and clickable; every other seat is shown face down, count only.</li>
+            <li><strong>Hand</strong> - your own cards are face up and clickable; every other seat is shown face down, count only (in Bust Seven, every card on the table is face up).</li>
           </ul>
         </div>
       </section>
 
       <section id="basics">
         <h2>Universal Basics</h2>
-        <p>Every game uses a standard deck with no jokers (Euchre keeps only the 9s through Aces, 24 cards) and the same table chrome:</p>
+        <p>Every game but Bust Seven and Color Clash uses a standard deck with no jokers (Euchre keeps only the 9s through Aces, 24 cards). Bust Seven and Color Clash have their own decks, of 94 and 108 cards. All of them share the same table chrome:</p>
         <ul>
-          <li><strong>Turn order</strong> runs clockwise from whoever leads (except Blackjack, where every seat plays against the dealer rather than each other, and Chinese Poker, where everyone arranges privately at the same time).</li>
+          <li><strong>Turn order</strong> runs clockwise from whoever leads (except Blackjack, where every seat plays against the dealer rather than each other; Chinese Poker, where everyone arranges privately at the same time; and Color Clash, where a Reverse turns play the other way).</li>
           <li><strong>Human vs AI</strong>: the AI seats think for about half a second before acting, so you can follow along.</li>
-          <li><strong>Hot-seat privacy</strong>: with more than one human seat, the app never shows a hand that isn't the active player's - it gates every handoff behind a "Pass the device" screen.</li>
+          <li><strong>Hot-seat privacy</strong>: with more than one human seat, the app never shows a hand that isn't the active player's - it gates every handoff behind a "Pass the device" screen. Bust Seven has no hidden cards, so it skips that screen.</li>
           <li><strong>The log panel</strong> below the table lists the most recent plays, in case you look away for a second.</li>
         </ul>
-        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Euchre, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy and Cribbage are always exactly 2; Crazy Eights and Texas Hold'em play with 2-4; President and Oh Hell play with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other).</div>
+        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Euchre, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy and Cribbage are always exactly 2; Crazy Eights, Color Clash and Texas Hold'em play with 2-4; President and Oh Hell play with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other); Bust Seven plays with 2-4.</div>
       </section>
 
       <section id="hearts">
@@ -190,6 +192,39 @@
           <li>If the draw pile runs out, the discard pile (except its top card) is reshuffled into a new draw pile.</li>
         </ul>
         <p>First player to play their last card wins.</p>
+      </section>
+
+      <section id="color-clash">
+        <h2>Color Clash</h2>
+        <p><strong>Goal:</strong> be the first to empty your hand, hand after hand, until someone reaches 500 points.</p>
+        <h3>The deck</h3>
+        <ul>
+          <li>Four colours - red, yellow, green, blue - each with one 0, two each of 1-9, and two each of <strong>Skip</strong> (&#8856;), <strong>Reverse</strong> (&#8644;) and <strong>Draw Two</strong> (+2).</li>
+          <li>Four <strong>Wild</strong> cards (W) and four <strong>Wild Draw Four</strong> cards (+4). 108 cards in all.</li>
+        </ul>
+        <h3>Your turn</h3>
+        <ul>
+          <li>Everyone gets 7 cards and one card is turned up to start the discard. Play goes clockwise from the dealer's left.</li>
+          <li>Play a card that matches the top of the discard by <strong>colour</strong>, <strong>number</strong> or <strong>symbol</strong>, or any Wild. After a Wild, pick the new colour from the buttons. The chip under the discard shows the colour in play.</li>
+          <li>Or press <strong>Draw Card</strong>. If the card you draw can be played, you may play it straight away or keep it; either way your turn then ends.</li>
+          <li><strong>Skip</strong>: the next player misses a turn. <strong>Reverse</strong>: play changes direction (with two players it acts as a Skip). <strong>Draw Two</strong>: the next player draws 2 and misses a turn.</li>
+        </ul>
+        <h3>Wild Draw Four and challenges</h3>
+        <ul>
+          <li>A <strong>Wild Draw Four</strong> changes the colour and makes the next player draw 4 and miss a turn.</li>
+          <li>You're only supposed to play it when you have no card of the current colour - but nothing stops you bluffing.</li>
+          <li>The player it hits may press <strong>Draw 4</strong>, or <strong>Challenge</strong>. If the card was a bluff, its player draws the 4 instead and the challenger plays as normal. If it was honest, the challenger draws 6 and misses a turn.</li>
+        </ul>
+        <h3>Scoring</h3>
+        <ul>
+          <li>The first player to empty their hand wins the hand. A Draw Two or Wild Draw Four played as the last card still makes the next player draw.</li>
+          <li>The winner scores the cards left in everyone else's hand: number cards at face value, Skip/Reverse/Draw Two 20 each, Wilds 50 each. First to 500 wins the game.</li>
+        </ul>
+        <h3>Starting card</h3>
+        <ul>
+          <li>A Wild Draw Four can't start the discard; it goes back and another card is turned.</li>
+          <li>A Wild lets the first player name the colour. A Skip skips the first player; a Draw Two makes them draw 2 and skips them; a Reverse means the dealer plays first, in the other direction.</li>
+        </ul>
       </section>
 
       <section id="president">
@@ -318,6 +353,37 @@
         </ul>
       </section>
 
+      <section id="bust-seven">
+        <h2>Bust Seven</h2>
+        <p><strong>Goal:</strong> be the first to 200 points. Keep turning cards over for points, and stop before you turn over a number you already have.</p>
+        <h3>The deck</h3>
+        <ul>
+          <li><strong>Number cards</strong> 0-12. There are as many copies of each number as its value: twelve 12s, eleven 11s, down to a single 1, plus one 0.</li>
+          <li><strong>Modifiers</strong>: +2, +4, +6, +8, +10 and x2, one each. They add points and can never bust you.</li>
+          <li><strong>Action cards</strong>, three of each: <strong>Freeze</strong> (&#10052;), <strong>Flip Three</strong> (&#8694;) and <strong>Second Chance</strong> (&#9829;).</li>
+        </ul>
+        <h3>A round</h3>
+        <ul>
+          <li>Every seat is dealt one card face up, then players take turns. On your turn, <strong>Hit</strong> (turn over another card) or <strong>Stay</strong> (bank what's in front of you and sit out the rest of the round).</li>
+          <li>Turn over a number you already have and you <strong>bust</strong>: you score nothing this round.</li>
+          <li>Collect <strong>seven different numbers</strong> and the round ends at once. You score a 15-point bonus, and everyone who hasn't busted banks their cards too.</li>
+          <li>Otherwise the round ends when nobody is left drawing. The deal moves one seat to the left each round.</li>
+        </ul>
+        <h3>Action cards</h3>
+        <ul>
+          <li><strong>Freeze</strong>: choose any player still in the round, yourself included. They bank their cards now and are out of the round.</li>
+          <li><strong>Flip Three</strong>: choose any player still in the round, yourself included. They must turn over the next three cards, stopping early if they bust or reach seven numbers. A Freeze or Flip Three turned up along the way waits until all three are flipped, and is lost if they bust.</li>
+          <li><strong>Second Chance</strong>: keep it. The next time you turn over a repeat number, the repeat and the Second Chance are both thrown away instead of busting you. You can only hold one: a second one must go to another player who doesn't have one, or is thrown away if nobody can take it.</li>
+          <li>If only one player can receive an action card, it goes to them automatically.</li>
+        </ul>
+        <h3>Scoring</h3>
+        <ul>
+          <li>Add up your number cards. The x2 doubles that sum (only the numbers), then add any +N modifiers, then the 15-point bonus if you got seven numbers.</li>
+          <li>The game ends after a round in which someone has 200 or more. The highest total wins; a tie for the lead plays another round.</li>
+          <li>Cards aren't reshuffled between rounds. The discard pile is only shuffled back in when the deck runs out, so watching what's gone tells you how risky the next card is.</li>
+        </ul>
+      </section>
+
       <section id="simplifications">
         <h2>Simplifications</h2>
         <p>This build favors clean, fast games over tournament-exact rulebooks. Notable differences from "official" rules:</p>
@@ -329,6 +395,7 @@
             <tr><td>Oh Hell</td><td>Hands run 7 down to 1 and back to 7 for every table size, with no no-trump rounds. Only exact bids score (10 + bid); there are no per-trick points for missed bids.</td></tr>
             <tr><td>Euchre</td><td>No going alone, so no 4-point loner hands. The dealer is always stuck in the second round, and there are no misdeal or "farmer's hand" redeals.</td></tr>
             <tr><td>Crazy Eights</td><td>No point-scoring across multiple hands - the game ends the moment someone empties their hand. No special-action cards besides the wild 8 (no skip/reverse/draw-two).</td></tr>
+            <tr><td>Color Clash</td><td>No "Uno!" button and no penalty for forgetting it - one card left is announced for you. No stacking Draw Twos and no jump-ins. A Wild Draw Four played as your last card can't be challenged.</td></tr>
             <tr><td>President</td><td>No jokers, no card-exchange between the President and the Bum between rounds, and no "8 clears the pile" or "revolution" house rules - just pure rank climbing.</td></tr>
             <tr><td>Big Two</td><td>Only singles, pairs, triples, and 5-card poker hands are legal plays - no other combo sizes. 5-card hands rank by standard poker strength (straight &lt; flush &lt; full house &lt; four-of-a-kind &lt; straight flush), a common but not universal house convention.</td></tr>
             <tr><td>Gin Rummy</td><td>No game bonus, line or box bonuses, or shutout doubling - hand points simply add up to 100. No first-turn upcard offer: the first player just draws from either pile. No Big Gin. Lay-offs are placed automatically and greedily, so a rare better lay-off can be missed.</td></tr>
@@ -336,6 +403,7 @@
             <tr><td>Chinese Poker</td><td>Single round per game (no multi-round match, no running score across deals). No royalty/bonus points for strong hands (three-of-a-kind in front, four-of-a-kind, straight flushes, etc.) - every row win is worth exactly 1 point. A 3-card Front hand only recognizes high card, pair, or trips.</td></tr>
             <tr><td>Texas Hold'em</td><td>Blinds stay at 10/20 with no antes, and the session is a fixed 20 hands. Any raise reopens the betting, even an all-in too short to be a full raise. Every hand left at the showdown is shown; there is no mucking a losing hand.</td></tr>
             <tr><td>Blackjack</td><td>Flat 25-chip bet every round, no betting UI. Hit, Stand, and Double Down only - no splitting pairs, no surrender, no insurance. Dealer always stands on all 17s (including a soft 17). Fixed 15-round session rather than playing until you're out of chips.</td></tr>
+            <tr><td>Bust Seven</td><td>Plays with 2-4 seats; the printed game is for 3 or more. An action card with only one possible receiver is given automatically, without asking. With more than one human, nobody is asked to pass the device, since every card is face up.</td></tr>
           </tbody>
         </table>
       </section>
@@ -367,7 +435,8 @@
           <dt>Pegging</dt><dd>The Cribbage play phase: cards go down one at a time, scoring for 15s, 31s, pairs and runs.</dd>
           <dt>Go</dt><dd>Being unable to play without passing 31 in Cribbage. The last player to lay a card scores 1.</dd>
           <dt>Nobs</dt><dd>The jack of the starter's suit in a Cribbage hand or crib, worth 1. A jack turned up as the starter is "his heels", worth 2 to the dealer.</dd>
-          <dt>Wild card</dt><dd>An 8 in Crazy Eights - playable on anything, and lets you set the next suit.</dd>
+          <dt>Wild card</dt><dd>An 8 in Crazy Eights - playable on anything, and lets you set the next suit. In Color Clash, a Wild or Wild Draw Four - playable on anything, and lets you set the next colour.</dd>
+          <dt>Challenge</dt><dd>In Color Clash, claiming a Wild Draw Four was a bluff. Right: its player draws 4. Wrong: you draw 6.</dd>
           <dt>Pile</dt><dd>The set of cards currently in play that must be beaten or passed on, in President or Big Two.</dd>
           <dt>Combo</dt><dd>A legal play shape in Big Two - single, pair, triple, or 5-card poker hand.</dd>
           <dt>Foul</dt><dd>A Chinese Poker hand whose Front/Middle/Back rows aren't in ascending strength - auto-loses all 3 rows.</dd>
@@ -376,7 +445,9 @@
           <dt>All in</dt><dd>Betting every chip you have left. You stay in to the showdown but can only win what you matched.</dd>
           <dt>Side pot</dt><dd>Chips bet beyond what an all-in player could match, contested only by the players who put them in.</dd>
           <dt>Natural / Blackjack</dt><dd>A 2-card total of 21 (an Ace plus a 10-value card) - pays 1.5x unless the dealer also has one.</dd>
-          <dt>Bust</dt><dd>A hand total over 21 in Blackjack - an automatic loss regardless of the dealer's hand.</dd>
+          <dt>Bust</dt><dd>A hand total over 21 in Blackjack - an automatic loss regardless of the dealer's hand. In Bust Seven, turning over a number you already have - you score nothing that round.</dd>
+          <dt>Stay</dt><dd>Ending your Bust Seven round by banking the cards in front of you.</dd>
+          <dt>Seven</dt><dd>Seven different numbers in front of one Bust Seven player: a 15-point bonus, and the round ends.</dd>
           <dt>Hot-seat</dt><dd>Multiple human players sharing one device, taking turns with their hand hidden between turns.</dd>
         </dl>
       </section>

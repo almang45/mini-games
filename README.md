@@ -23,7 +23,7 @@ to, both here and in `index.html`.
 
 | | |
 |---|---|
-| **[Card Table](card-games/)** | Twelve classic card games in one shared table shell — Hearts, Spades, Oh Hell, Euchre, Crazy Eights, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, Blackjack. |
+| **[Card Table](card-games/)** | Fourteen card games in one shared table shell — Hearts, Spades, Oh Hell, Euchre, Crazy Eights, Color Clash, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, Blackjack, Bust Seven. |
 | **[Klondike Solitaire](klondike-solitaire/)** | Classic single-player card game — build runs, fill the four foundations. |
 | **[FreeCell](freecell/)** | Classic FreeCell solitaire with Microsoft-numbered, shareable deals and a solver-backed hint. |
 | **[Spider Solitaire](spider-solitaire/)** | Two-deck Spider with 1, 2 or 4 suits. |
@@ -35,6 +35,7 @@ to, both here and in `index.html`.
 | **[Reversi](reversi/)** | Reversi/Othello against a three-level AI, or two players on one device. |
 | **[Connect Four](connect-four/)** | Connect Four against a three-level AI, or two players on one device. |
 | **[Mancala](mancala/)** | Kalah-rules Mancala against a three-level AI, or two players on one device. |
+| **[Ludo](ludo/)** | Ludo for 2-4 players on the classic cross board, against an AI on two levels or with everyone on one device. |
 
 Each game folder is self-contained (its own README and CSS/JS) and can be
 opened directly via its own `index.html` without the others. Mahjong

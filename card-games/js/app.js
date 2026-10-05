@@ -17,8 +17,10 @@
     "chinese-poker": window.CHINESE_POKER_UI,
     "texas-holdem": window.HOLDEM_UI,
     blackjack: window.BLACKJACK_UI,
+    "bust-seven": window.BUST_SEVEN_UI,
+    "color-clash": window.COLOR_CLASH_UI,
   };
-  const GAME_ORDER = ["hearts", "spades", "oh-hell", "euchre", "crazy-eights", "president", "big-two", "gin-rummy", "cribbage", "chinese-poker", "texas-holdem", "blackjack"];
+  const GAME_ORDER = ["hearts", "spades", "oh-hell", "euchre", "crazy-eights", "color-clash", "president", "big-two", "gin-rummy", "cribbage", "chinese-poker", "texas-holdem", "blackjack", "bust-seven"];
 
   let selectedGameKey = null;
   let seatConfig = ["human", "ai", "ai", "ai"];
@@ -116,10 +118,17 @@
     return humanSeats.length <= 1 ? "You" : "Human";
   }
 
+  // The seat whose hand this device is showing (any seat with one human).
+  function isViewer(seat) { return humanSeats.length <= 1 || viewerSeat === seat; }
+
   function revealSeat(seat) {
-    if (engineState.seats[seat].type !== "human") return false;
-    return humanSeats.length <= 1 || viewerSeat === seat;
+    return engineState.seats[seat].type === "human" && isViewer(seat);
   }
+
+  // In an open-hands game (every card face up, nothing played from hand)
+  // there is nothing to hide, so any human seat may act on this device
+  // without the "pass the device" handoff.
+  function canActHere(seat) { return currentGame.openHands || isViewer(seat); }
 
   function renderTable() {
     const g = currentGame;
@@ -142,14 +151,21 @@
         DOM.el("span", "seat-tag", seatKindTag(i)),
         DOM.el("span", "seat-score", g.seatTag(state, i)),
       ]));
-      const handEl = DOM.el("div", "seat-hand");
+      const handEl = DOM.el("div", "seat-hand" + (g.openHands ? " is-open" : ""));
       const hand = g.handOf(state, i);
-      if (revealSeat(i)) {
+      if (g.openHands) {
+        DOM.renderFan(handEl, hand, {
+          small: offset !== 0,
+          tag: g.cardTag ? (c) => g.cardTag(state, i, c) : undefined,
+          renderFace: g.renderFace,
+        });
+      } else if (revealSeat(i)) {
         DOM.renderFan(handEl, hand, {
           isSelected: (c) => g.isCardSelected(state, i, c),
           isDisabled: (c) => actSeat !== i || g.isCardDisabled(state, i, c),
           onCard: (c) => { g.onCardClick(state, i, c, { pickSuit }); syncTable(); },
           tag: g.cardTag ? (c) => g.cardTag(state, i, c) : undefined,
+          renderFace: g.renderFace,
         });
       } else {
         for (let k = 0; k < hand.length; k++) handEl.appendChild(DOM.cardEl(null, { faceDown: true, small: true }));
@@ -171,7 +187,7 @@
     const bar = $("actionBar");
     DOM.clear(bar);
     const showButtons = !state.gameOver && (g.isInterim(state) ||
-      (actSeat != null && state.seats[actSeat].type === "human" && (humanSeats.length <= 1 || viewerSeat === actSeat)));
+      (actSeat != null && state.seats[actSeat].type === "human" && canActHere(actSeat)));
     if (!showButtons) return;
     const seat = actSeat != null ? actSeat : (viewerSeat != null ? viewerSeat : 0);
     g.actionButtons(state, seat).forEach((b) => {
@@ -221,7 +237,7 @@
       aiTimer = setTimeout(() => { g.stepAI(state, seat); syncTable(); }, 600);
       return;
     }
-    if (humanSeats.length > 1 && viewerSeat !== seat) {
+    if (!canActHere(seat)) {
       showInterstitial(state.seats[seat].name, () => { viewerSeat = seat; syncTable(); });
     } else {
       hideInterstitial();

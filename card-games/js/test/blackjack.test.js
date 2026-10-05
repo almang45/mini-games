@@ -44,6 +44,17 @@ function C(rank, suit) { return { rank, suit, id: rank + suit }; }
   ok("starts before any round is dealt", state.round === 0 && state.phase === "round-over" && !state.gameOver);
 })();
 
+// Without an rng every session used to share one fixed seed, so the browser
+// dealt the same cards every time.
+(function unseededSessionsDiffer() {
+  const deckOrder = () => {
+    const state = BJ.createGame(["human"]);
+    BJ.dealRound(state);
+    return state.deck.map((c) => c.id).join();
+  };
+  ok("two unseeded sessions shuffle differently", deckOrder() !== deckOrder());
+})();
+
 // ---- dealRound integration (deterministic via a rigged rng) -------------------
 
 // CARDS.shuffle with an rng that always returns 0 always swaps arr[i] with
