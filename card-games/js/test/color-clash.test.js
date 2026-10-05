@@ -49,8 +49,11 @@ function table(seatCount, { hands, top, color, drawPile, turn, direction }) {
 (function createTests() {
   assert.throws(() => C.createGame(["human"]), /2-4/);
   assert.throws(() => C.createGame(Array(5).fill("ai")), /2-4/);
-  const state = C.createGame(["human", "ai", "ai"]);
+  // Seeded: an unseeded deal sometimes starts on a Draw Two, which hands the
+  // first player 9 cards. Every starter is covered in starterTests.
+  const state = C.createGame(["human", "ai", "ai"], { rng: CARDS.makeRng(1) });
   C.dealHand(state);
+  ok("seeded starter is a number card", C.topCard(state).kind === "number");
   ok("seven cards each", state.hands.every((h) => h.length === 7));
   ok("one card starts the discard", state.discard.length === 1 && state.drawPile.length === 108 - 21 - 1);
   ok("colour follows the starter", state.color === state.discard[0].color || state.phase === "color");
