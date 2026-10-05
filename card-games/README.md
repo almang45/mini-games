@@ -297,13 +297,16 @@ covers the pot odds and fold otherwise (no bluffs, position or reads);
 Blackjack: mimic dealer strategy — hit anything under hard 17, double only a
 hard 10 or 11; Bust Seven: count what's left in the deck (contents, never
 order) for the exact chance the next card busts, and hit while the expected
-hand after one more card beats the hand now, always taking a card that can't
-bust, banking a winning total and drawing on when someone has already banked
-more; aim Freeze at the seat with the most to gain from its next card and
+hand after one more card beats the hand now; it banks a winning total first
+(a Flip Three can still bust a hand no number can), otherwise always takes a
+card that can't repeat a number, and draws on when someone has already
+banked more; aim Freeze at the seat with the most to gain from its next card and
 Flip Three at the biggest, riskiest hand, or take Flip Three itself when it's
-safe. It wins about two games in three against a fixed stop-at-20 player) but don't model deeper strategy like deliberately holding
-back a winning play, reading opponents' hands, card counting, or (Hearts)
-angling to shoot the moon themselves.
+safe. It wins about two games in three against a fixed stop-at-20 player)
+but don't model deeper strategy like deliberately holding back a winning
+play, reading opponents' hands, or (Hearts) angling to shoot the moon
+themselves. Only Bust Seven and Color Clash count cards, and only from
+what's public: the cards left in the deck and the cards already seen.
 
 ## Testing notes
 

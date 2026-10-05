@@ -118,17 +118,17 @@
     return humanSeats.length <= 1 ? "You" : "Human";
   }
 
+  // The seat whose hand this device is showing (any seat with one human).
+  function isViewer(seat) { return humanSeats.length <= 1 || viewerSeat === seat; }
+
   function revealSeat(seat) {
-    if (engineState.seats[seat].type !== "human") return false;
-    return humanSeats.length <= 1 || viewerSeat === seat;
+    return engineState.seats[seat].type === "human" && isViewer(seat);
   }
 
   // In an open-hands game (every card face up, nothing played from hand)
   // there is nothing to hide, so any human seat may act on this device
   // without the "pass the device" handoff.
-  function canActHere(seat) {
-    return currentGame.openHands || humanSeats.length <= 1 || viewerSeat === seat;
-  }
+  function canActHere(seat) { return currentGame.openHands || isViewer(seat); }
 
   function renderTable() {
     const g = currentGame;
@@ -151,7 +151,7 @@
         DOM.el("span", "seat-tag", seatKindTag(i)),
         DOM.el("span", "seat-score", g.seatTag(state, i)),
       ]));
-      const handEl = DOM.el("div", "seat-hand");
+      const handEl = DOM.el("div", "seat-hand" + (g.openHands ? " is-open" : ""));
       const hand = g.handOf(state, i);
       if (g.openHands) {
         DOM.renderFan(handEl, hand, {

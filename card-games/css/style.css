@@ -168,6 +168,8 @@
 .card.selectable, .card[data-clickable] { cursor: pointer; }
 .card:not(.card-disabled):not(.card-back):hover { transform: translateY(-4px); }
 .card-disabled { filter: grayscale(0.5) brightness(0.8); cursor: not-allowed; }
+/* Open hands (Bust Seven) are never played from, so they don't lift on hover. */
+.seat-hand.is-open .card:hover { transform: none; }
 
 .card-back {
   background: repeating-linear-gradient(45deg, var(--card-back-a), var(--card-back-a) 6px, var(--card-back-b) 6px, var(--card-back-b) 12px);

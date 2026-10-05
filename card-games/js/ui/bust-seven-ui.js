@@ -1,7 +1,7 @@
 // Bust Seven table binding. Every card is face up and nothing is played from
-// hand, so the adapter sets openHands: all seats render as plain fans and
-// hot-seat play needs no "pass the device" screen. All decisions (hit, stay,
-// who gets an action card) go through the action bar.
+// hand, so the adapter sets openHands and has no card-click hooks: all seats
+// render as plain fans and hot-seat play needs no "pass the device" screen.
+// All decisions (hit, stay, who gets an action card) go through the action bar.
 (function (root) {
   "use strict";
   const B7 = root.BUST_SEVEN;
@@ -43,10 +43,6 @@
       face.appendChild(DOM.el("div", "b7-value", B7.cardLabel(card)));
     }
   }
-
-  function onCardClick() {} // nothing is played from hand
-  function isCardSelected() { return false; }
-  function isCardDisabled() { return true; }
 
   const TARGET_LABEL = { freeze: "Freeze ", flip3: "Flip Three: ", second: "Give to " };
 
@@ -115,7 +111,7 @@
     key: "bust-seven", label: "Bust Seven", seatMin: 2, seatMax: 4, seatFixed: false, openHands: true,
     tagline: "Flip numbers until you stop - a repeat busts you. Seven different numbers ends the round. First to 200.",
     create, actingSeat, isInterim, handOf, stepAI,
-    onCardClick, isCardSelected, isCardDisabled, actionButtons, cardTag, renderFace,
+    actionButtons, cardTag, renderFace,
     centerNode, statusLine, seatTag, standings,
   };
 })(typeof window !== "undefined" ? window : globalThis);
