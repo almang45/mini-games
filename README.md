@@ -35,6 +35,7 @@ to, both here and in `index.html`.
 | **[Reversi](reversi/)** | Reversi/Othello against a three-level AI, or two players on one device. |
 | **[Connect Four](connect-four/)** | Connect Four against a three-level AI, or two players on one device. |
 | **[Mancala](mancala/)** | Kalah-rules Mancala against a three-level AI, or two players on one device. |
+| **[Ludo](ludo/)** | Ludo for 2-4 players on the classic cross board, against an AI on two levels or with everyone on one device. |
 
 Each game folder is self-contained (its own README and CSS/JS) and can be
 opened directly via its own `index.html` without the others. Mahjong

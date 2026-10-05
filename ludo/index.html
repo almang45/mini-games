@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ludo</title>
+<link rel="icon" href="favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<script src="../shared/register-sw.js" defer></script>
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+  :root {
+    --red: #d1453b; --green: #2f9a52; --yellow: #e4b21c; --blue: #2f6fc4;
+    --cell: #f6efe0; --cell-line: #c9b892;
+  }
+  header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .controls label { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  select {
+    font: inherit; font-size: 0.85rem; background: #1c4a34; color: var(--ink);
+    border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 8px 10px;
+  }
+  .status { margin: 0; min-height: 1.3em; text-align: center; font-size: 0.9rem; color: var(--ink-dim); }
+
+  .players { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .player {
+    display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    background: var(--panel-strong); font-size: 0.8rem; border: 2px solid transparent;
+  }
+  .player .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); }
+  .player .home { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+  .player.is-turn { border-color: var(--c); }
+
+  .table { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+
+  /* 15x15 cross board: four 6x6 yards, 3-wide arms and a 3x3 centre. Cells
+     and tokens are placed by grid coordinate in 1/15ths of the board. */
+  .board {
+    position: relative; width: min(560px, 100%); aspect-ratio: 1;
+    background: var(--cell); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  }
+  .sq { position: absolute; width: calc(100% / 15); height: calc(100% / 15); box-shadow: inset 0 0 0 0.5px var(--cell-line); display: flex; align-items: center; justify-content: center; }
+  .sq.tint { background: var(--c); }
+  .sq.star::after { content: "★"; color: rgba(0, 0, 0, 0.35); font-size: clamp(9px, 2.6vw, 16px); }
+  .sq.tint.star::after { color: rgba(255, 255, 255, 0.85); }
+  .yard { position: absolute; width: calc(100% * 6 / 15); height: calc(100% * 6 / 15); background: var(--c); }
+  .yard::before { content: ""; position: absolute; inset: calc(100% / 6); background: var(--cell); border-radius: 8px; }
+  .spot { position: absolute; width: calc(100% / 15); height: calc(100% / 15); border-radius: 50%; background: var(--c); opacity: 0.35; }
+  .centre { position: absolute; left: 40%; top: 40%; width: 20%; height: 20%;
+    background: conic-gradient(from -45deg, var(--green) 0 25%, var(--yellow) 0 50%, var(--blue) 0 75%, var(--red) 0); }
+
+  .token {
+    position: absolute; width: calc(100% / 15); height: calc(100% / 15); padding: 0; border: 0; background: none;
+    display: flex; align-items: center; justify-content: center; cursor: default;
+    transition: left 0.14s ease, top 0.14s ease, transform 0.14s ease; z-index: 2;
+  }
+  .token:hover, .token:active { filter: none; }
+  .token::before {
+    content: ""; width: 74%; height: 74%; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.7), var(--c) 55%);
+    border: 2px solid rgba(0, 0, 0, 0.55); box-shadow: 0 2px 3px rgba(0, 0, 0, 0.45);
+  }
+  .token.movable { cursor: pointer; z-index: 3; }
+  .token.movable::before { box-shadow: 0 0 0 3px #fff, 0 0 0 5px rgba(0, 0, 0, 0.6); animation: pulse 0.9s ease-in-out infinite alternate; }
+  @keyframes pulse { to { transform: scale(1.12); } }
+
+  .dice-row { display: flex; align-items: center; gap: 14px; }
+  .die {
+    width: 64px; height: 64px; padding: 8px; border-radius: 12px; background: #fff;
+    border: 3px solid var(--c, #888); display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  }
+  .die:disabled { opacity: 1; cursor: default; }
+  .die:not(:disabled):hover { transform: translateY(-2px); }
+  .die .pip { width: 70%; height: 70%; margin: auto; border-radius: 50%; background: #222; visibility: hidden; }
+  .die .pip.on { visibility: visible; }
+  .die.rolling { animation: shake 0.3s ease; }
+  @keyframes shake { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+  .dice-hint { font-size: 0.8rem; color: var(--ink-dim); max-width: 180px; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  .overlay[hidden] { display: none; }
+  .modal { background: #12321f; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 14px; padding: 26px 30px; text-align: center; max-width: 340px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+  .modal h2 { margin: 0 0 8px; color: var(--accent); }
+  .modal p { margin: 4px 0 18px; color: var(--ink-dim); font-size: 0.95rem; }
+
+  footer { color: var(--ink-dim); font-size: 0.75rem; text-align: center; max-width: 560px; line-height: 1.5; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .token { transition: none; }
+    .token.movable::before, .die.rolling { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="back-link" href="../index.html">← All Games</a>
+    <h1>Ludo</h1>
+  </header>
+
+  <div class="controls">
+    <label>Players
+      <select id="count">
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4" selected>4</option>
+      </select>
+    </label>
+    <label>Mode
+      <select id="mode">
+        <option value="solo">You play Red vs AI</option>
+        <option value="pvp">Everyone on this device</option>
+      </select>
+    </label>
+    <label>AI
+      <select id="level">
+        <option value="easy">Easy</option>
+        <option value="normal" selected>Normal</option>
+      </select>
+    </label>
+    <button id="btnNew" type="button">New Game</button>
+  </div>
+
+  <div class="players" id="players"></div>
+  <p class="status" id="status" aria-live="polite"></p>
+
+  <div class="table">
+    <div class="board" id="board" aria-label="Ludo board"></div>
+    <div class="dice-row">
+      <button class="die" id="die" type="button" aria-label="Roll the die"></button>
+      <div class="dice-hint" id="hint"></div>
+    </div>
+  </div>
+
+  <footer>Roll a 6 to bring a token out of your yard. Move clockwise round the board and up your own coloured column, and land exactly on home to finish. Landing on an opponent sends it back to its yard, except on a start square or a star. A 6, a capture or a token getting home earns another roll; a third 6 in a row loses the turn. First to get all four tokens home wins.</footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h2>Game over</h2>
+    <p id="resultText"></p>
+    <div class="controls">
+      <button class="btn-primary" id="modalNew" type="button">New Game</button>
+      <button id="modalClose" type="button">See Board</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/ludo.js"></script>
+<script>
+(function () {
+  "use strict";
+  const L = window.LUDO;
+  const $ = (id) => document.getElementById(id);
+  const AI_DELAY_MS = 550;
+  const STEP_MS = 150;
+
+  // ---- board geometry: grid cells as [row, col] -----------------------------
+
+  // The 52 loop squares clockwise from red's start (row 6, column 1).
+  const LOOP_CELLS = [];
+  const run = (cells) => cells.forEach((c) => LOOP_CELLS.push(c));
+  const span = (a, b) => { const out = []; for (let i = a; a <= b ? i <= b : i >= b; i += a <= b ? 1 : -1) out.push(i); return out; };
+  run(span(1, 5).map((c) => [6, c]));
+  run(span(5, 0).map((r) => [r, 6]));
+  run([[0, 7]]);
+  run(span(0, 5).map((r) => [r, 8]));
+  run(span(9, 14).map((c) => [6, c]));
+  run([[7, 14]]);
+  run(span(14, 9).map((c) => [8, c]));
+  run(span(9, 14).map((r) => [r, 8]));
+  run([[14, 7]]);
+  run(span(14, 9).map((r) => [r, 6]));
+  run(span(5, 0).map((c) => [8, c]));
+  run([[7, 0], [6, 0]]);
+
+  const HOME_COLUMN = {
+    red: span(1, 5).map((c) => [7, c]),
+    green: span(1, 5).map((r) => [r, 7]),
+    yellow: span(13, 9).map((c) => [7, c]),
+    blue: span(13, 9).map((r) => [r, 7]),
+  };
+  const HOME_CELL = { red: [7, 6], green: [6, 7], yellow: [7, 8], blue: [8, 7] };
+  const YARD = { red: [0, 0], green: [0, 9], yellow: [9, 9], blue: [9, 0] };
+  const YARD_SPOTS = [[1.5, 1.5], [1.5, 3.5], [3.5, 1.5], [3.5, 3.5]];
+
+  function cellOf(color, p, token) {
+    if (p === -1) { const [r, c] = YARD[color]; const [dr, dc] = YARD_SPOTS[token]; return [r + dr, c + dc]; }
+    if (p === L.HOME) return HOME_CELL[color];
+    if (p > L.LAST_LOOP) return HOME_COLUMN[color][p - L.LAST_LOOP - 1];
+    return LOOP_CELLS[L.loopSquare(color, p)];
+  }
+
+  const place = (el, r, c) => { el.style.top = (r * 100 / 15) + "%"; el.style.left = (c * 100 / 15) + "%"; };
+  const colorVar = (color) => "var(--" + color + ")";
+
+  function drawBoard() {
+    const board = $("board");
+    board.innerHTML = "";
+    L.COLORS.forEach((color) => {
+      const yard = document.createElement("div");
+      yard.className = "yard";
+      yard.style.setProperty("--c", colorVar(color));
+      place(yard, ...YARD[color]);
+      board.appendChild(yard);
+      YARD_SPOTS.forEach(([dr, dc]) => {
+        const spot = document.createElement("div");
+        spot.className = "spot";
+        spot.style.setProperty("--c", colorVar(color));
+        place(spot, YARD[color][0] + dr, YARD[color][1] + dc);
+        board.appendChild(spot);
+      });
+      HOME_COLUMN[color].forEach(([r, c]) => board.appendChild(square(r, c, color)));
+    });
+    LOOP_CELLS.forEach(([r, c], i) => {
+      const startOf = L.COLORS.find((color) => L.START[color] === i);
+      const sq = square(r, c, startOf);
+      if (L.SAFE.has(i)) sq.classList.add("star");
+      board.appendChild(sq);
+    });
+    const centre = document.createElement("div");
+    centre.className = "centre";
+    board.appendChild(centre);
+  }
+
+  function square(r, c, tint) {
+    const el = document.createElement("div");
+    el.className = "sq" + (tint ? " tint" : "");
+    if (tint) el.style.setProperty("--c", colorVar(tint));
+    place(el, r, c);
+    return el;
+  }
+
+  // ---- game state and rendering ---------------------------------------------
+
+  let state = null;
+  let shown = null;   // token positions on screen, behind state while a move animates
+  let busy = null;    // pending timer (AI thinking, rolling, animating); input waits
+  let tokenEls = [];
+
+  const isHuman = (seat) => state.seats[seat].type === "human";
+  const humanTurn = () => !state.gameOver && !busy && isHuman(state.turn);
+
+  function buildTokens() {
+    tokenEls = state.seats.map((s, seat) => s.tokens.map((p, t) => {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = "token";
+      el.style.setProperty("--c", colorVar(s.color));
+      el.addEventListener("click", () => onToken(seat, t));
+      $("board").appendChild(el);
+      return el;
+    }));
+  }
+
+  function render() {
+    // Tokens sharing a square shrink and fan out so each stays clickable.
+    const groups = new Map();
+    state.seats.forEach((s, seat) => shown[seat].forEach((p, t) => {
+      const key = cellOf(s.color, p, t).join();
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push([seat, t]);
+    }));
+    const movable = humanTurn() && state.phase === "move" ? new Set(state.legal) : new Set();
+    groups.forEach((members, key) => {
+      const [r, c] = key.split(",").map(Number);
+      members.forEach(([seat, t], k) => {
+        const el = tokenEls[seat][t];
+        const fan = members.length > 1 ? (k - (members.length - 1) / 2) * 0.28 : 0;
+        place(el, r + (members.length > 1 ? fan * 0.6 : 0), c + fan);
+        el.style.transform = members.length > 1 ? "scale(0.75)" : "";
+        const can = seat === state.turn && movable.has(t);
+        el.classList.toggle("movable", can);
+        el.setAttribute("aria-label", state.seats[seat].name + " token " + (t + 1) + (can ? ", can move" : ""));
+        el.tabIndex = can ? 0 : -1;
+      });
+    });
+
+    $("players").innerHTML = "";
+    state.seats.forEach((s, seat) => {
+      const tag = state.seats.filter((x) => x.type === "human").length > 1 ? s.name : isHuman(seat) ? "You" : "AI";
+      const chip = document.createElement("div");
+      chip.className = "player" + (!state.gameOver && state.turn === seat ? " is-turn" : "");
+      chip.style.setProperty("--c", colorVar(s.color));
+      chip.innerHTML = '<span class="dot"></span><b></b><span class="home"></span>';
+      chip.children[1].textContent = tag === s.name ? s.name : tag + " (" + s.name + ")";
+      chip.children[2].textContent = s.tokens.filter((p) => p === L.HOME).length + "/4 home";
+      $("players").appendChild(chip);
+    });
+
+    const die = $("die");
+    die.style.setProperty("--c", colorVar(state.seats[state.turn].color));
+    die.disabled = !(humanTurn() && state.phase === "roll");
+    drawDie(state.die);
+    $("status").textContent = statusText();
+    $("hint").textContent = humanTurn() ? (state.phase === "roll" ? "Tap the die to roll." : "Tap a glowing token.") : "";
+  }
+
+  const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  function drawDie(value) {
+    const die = $("die");
+    if (die.children.length !== 9) { die.innerHTML = ""; for (let i = 0; i < 9; i++) die.appendChild(Object.assign(document.createElement("span"), { className: "pip" })); }
+    Array.from(die.children).forEach((pip, i) => pip.classList.toggle("on", !!value && PIPS[value].includes(i)));
+    die.setAttribute("aria-label", value ? "Die shows " + value : "Roll the die");
+  }
+
+  function statusText() {
+    if (state.gameOver) return resultText();
+    const s = state.seats[state.turn];
+    const humans = state.seats.filter((x) => x.type === "human").length;
+    const who = humans > 1 ? s.name : isHuman(state.turn) ? "You" : "AI (" + s.name + ")";
+    if (!isHuman(state.turn)) return who + " is playing…";
+    return who + (state.phase === "roll" ? (humans > 1 ? " to roll." : ": your roll.") : ": rolled " + state.die + " - pick a token.");
+  }
+
+  function resultText() {
+    const w = state.seats[state.winner];
+    const humans = state.seats.filter((x) => x.type === "human").length;
+    if (humans > 1) return w.name + " wins!";
+    return isHuman(state.winner) ? "You win!" : "The AI (" + w.name + ") wins.";
+  }
+
+  // ---- turn flow --------------------------------------------------------------
+
+  function wait(ms, fn) { busy = setTimeout(() => { busy = null; fn(); }, ms); }
+
+  function doRoll() {
+    L.roll(state);
+    const die = $("die");
+    die.classList.remove("rolling");
+    void die.offsetWidth;
+    die.classList.add("rolling");
+    render();
+    // A single legal move plays itself; otherwise humans choose.
+    if (state.phase === "move" && (state.legal.length === 1 || !isHuman(state.turn))) {
+      wait(isHuman(state.turn) ? 380 : AI_DELAY_MS, () => doMove(state.legal.length === 1 ? state.legal[0] : L.chooseMove(state, $("level").value)));
+      render();
+      return;
+    }
+    advance();
+  }
+
+  // Plays the move at once, then walks the token there square by square.
+  function doMove(token) {
+    const seat = state.turn;
+    const { from, to, captured } = L.move(state, token);
+    const path = from === -1 ? [0] : [];
+    for (let p = from + 1; from !== -1 && p <= to; p++) path.push(p);
+    let i = 0;
+    const step = () => {
+      if (i < path.length) {
+        shown[seat][token] = path[i++];
+        render();
+        busy = setTimeout(step, STEP_MS);
+        return;
+      }
+      busy = null;
+      captured.forEach((c) => { shown[c.seat][c.token] = -1; });
+      advance();
+    };
+    busy = setTimeout(step, 0);
+    render();
+  }
+
+  function advance() {
+    shown = state.seats.map((s) => s.tokens.slice());
+    render();
+    if (state.gameOver) {
+      $("resultText").textContent = resultText();
+      $("overlay").hidden = false;
+      return;
+    }
+    if (!isHuman(state.turn) && state.phase === "roll") wait(AI_DELAY_MS, doRoll);
+    render();
+  }
+
+  function onToken(seat, token) {
+    if (!humanTurn() || state.phase !== "move" || seat !== state.turn || !state.legal.includes(token)) return;
+    doMove(token);
+  }
+
+  function newGame() {
+    clearTimeout(busy);
+    busy = null;
+    $("overlay").hidden = true;
+    const n = Number($("count").value);
+    const types = Array.from({ length: n }, (_, i) => ($("mode").value === "pvp" || i === 0 ? "human" : "ai"));
+    state = L.createGame(types);
+    drawBoard();
+    buildTokens();
+    advance();
+  }
+
+  $("die").addEventListener("click", () => { if (humanTurn() && state.phase === "roll") doRoll(); });
+  $("btnNew").addEventListener("click", newGame);
+  $("modalNew").addEventListener("click", newGame);
+  $("modalClose").addEventListener("click", () => { $("overlay").hidden = true; });
+  ["count", "mode"].forEach((id) => $(id).addEventListener("change", newGame));
+
+  newGame();
+})();
+</script>
+</body>
+</html>
