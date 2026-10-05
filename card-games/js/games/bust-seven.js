@@ -336,19 +336,20 @@
   }
 
   // One-card lookahead: hit while the expected hand after the next card beats
-  // the hand now. A card that can't bust is always taken. Two end-of-game
-  // overrides: bank a winning total, and keep drawing when someone has
-  // already banked more than this seat can by stopping.
+  // the hand now. A winning total is banked first, since bustChance only
+  // counts repeated numbers and a Flip Three can still bust it. Otherwise a
+  // card that can't repeat a number is always taken, and this seat keeps
+  // drawing when someone has already banked more than it can by stopping.
   function aiShouldHit(state, seat) {
     const hand = state.hands[seat];
     if (drawSource(state).length === 0) return false; // nothing left to draw
-    const p = bustChance(state, seat);
-    if (p === 0) return true;
     const now = handScore(hand);
     const mine = state.seats[seat].score + now;
     const others = state.seats.map((s, i) => i).filter((i) => i !== seat);
     const projected = (i) => state.seats[i].score + handScore(state.hands[i]);
     if (mine >= TARGET && others.every((i) => mine > projected(i))) return false;
+    const p = bustChance(state, seat);
+    if (p === 0) return true;
     const banked = others.filter((i) => ["stayed", "frozen"].includes(state.hands[i].status) && projected(i) >= TARGET);
     if (banked.some((i) => projected(i) >= mine)) return true;
     if (hand.second) return true;

@@ -248,7 +248,7 @@ function dealt(seatCount, stack) {
   state.seats[1].score = 160;
   state.hands[1].numbers = N(12, 11, 10, 9);
   state.deck = N(1, 2, 3, 4, 5);
-  ok("no risk even at a winning total: keeps drawing", B.aiShouldHit(state, 1));
+  ok("a winning total is banked even when no number can bust it", !B.aiShouldHit(state, 1));
   state.deck = N(12, 2, 3, 4, 5);
   ok("banks a winning total rather than risk it", !B.aiShouldHit(state, 1));
 
@@ -258,6 +258,20 @@ function dealt(seatCount, stack) {
   state.hands[0].numbers = N(10);
   state.deck = N(12, 11, 10, 9, 1);
   ok("draws on when an opponent has banked the win", B.aiShouldHit(state, 1));
+})();
+
+// Review repro: a "safe" draw is a Flip Three the AI must take itself, and
+// it busts away a won game.
+(function aiKeepsWonGameTests() {
+  const state = dealt(2, N(5, 12));
+  state.seats[0].score = 195;
+  B.stay(state, 1); // seat 1 banks 5
+  state.seats[1].score = 103;
+  state.deck = [B.action("flip3")].concat(N(7, 7, 9));
+  ok("no held number can come next", B.bustChance(state, 0) === 0);
+  ok("banks 207 instead of drawing", !B.aiShouldHit(state, 0));
+  B.stepAI(state, 0);
+  ok("and wins", state.gameOver && state.winner === 0 && state.seats[0].score === 207);
 })();
 
 (function aiTargetTests() {
