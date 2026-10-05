@@ -274,6 +274,32 @@
 .b7-pile-label { font-size: 0.68rem; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 .b7-prompt { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--accent); text-align: left; }
 
+/* ------------------------------------------------------ Color Clash faces */
+
+/* Four colours plus black wilds, drawn by color-clash-ui.js's renderFace.
+   The tilted white oval is the classic shape, not anyone's artwork. */
+.cc-card { --cc: #333; background: var(--cc); border-color: rgba(0, 0, 0, 0.35); color: #fff; overflow: hidden; }
+.cc-R { --cc: #c8322b; } .cc-Y { --cc: #e2a812; } .cc-G { --cc: #2f8f46; } .cc-B { --cc: #2763b3; }
+.cc-wild { --cc: #1c1c1c; background: conic-gradient(from 45deg, #c8322b 0 25%, #2763b3 0 50%, #2f8f46 0 75%, #e2a812 0); }
+.cc-oval {
+  position: absolute; inset: 9px 5px; border-radius: 50%; background: #fff; transform: rotate(-24deg);
+  display: flex; align-items: center; justify-content: center;
+}
+.cc-value { transform: rotate(24deg); font-weight: 800; font-size: 1.05rem; color: var(--cc); line-height: 1; }
+.cc-wild .cc-value { color: #1c1c1c; }
+.cc-corner { position: absolute; top: 2px; left: 4px; font-size: 0.6rem; font-weight: 800; line-height: 1; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5); }
+.card-small .cc-oval { inset: 7px 4px; }
+.card-small .cc-value { font-size: 0.78rem; }
+.card-small .cc-corner { display: none; }
+/* The shared grayscale filter turns yellow and red into the same brown; fade instead. */
+.cc-card.card-disabled { filter: none; opacity: 0.55; }
+
+.cc-center { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 14px; }
+.cc-piles { display: flex; gap: 22px; align-items: flex-start; justify-content: center; }
+.cc-pile { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.cc-pile-label { font-size: 0.68rem; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.cc-current { font-size: 0.68rem; font-weight: 700; padding: 1px 8px; border-radius: 10px; background: var(--cc, var(--panel-strong)); color: #fff; }
+
 /* ------------------------------------------------------------------ chrome */
 
 .table-header {
@@ -334,5 +360,6 @@
   .card-corner { font-size: 0.58rem; }
   .card-pip { font-size: 1rem; }
   .b7-value { font-size: 1.1rem; }
+  .cc-value { font-size: 0.9rem; }
   .seat-row .seat-row-label { flex-basis: 60px; font-size: 0.78rem; }
 }

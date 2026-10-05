@@ -18,8 +18,9 @@
     "texas-holdem": window.HOLDEM_UI,
     blackjack: window.BLACKJACK_UI,
     "bust-seven": window.BUST_SEVEN_UI,
+    "color-clash": window.COLOR_CLASH_UI,
   };
-  const GAME_ORDER = ["hearts", "spades", "oh-hell", "euchre", "crazy-eights", "president", "big-two", "gin-rummy", "cribbage", "chinese-poker", "texas-holdem", "blackjack", "bust-seven"];
+  const GAME_ORDER = ["hearts", "spades", "oh-hell", "euchre", "crazy-eights", "color-clash", "president", "big-two", "gin-rummy", "cribbage", "chinese-poker", "texas-holdem", "blackjack", "bust-seven"];
 
   let selectedGameKey = null;
   let seatConfig = ["human", "ai", "ai", "ai"];

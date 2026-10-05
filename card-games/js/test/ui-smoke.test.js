@@ -30,6 +30,7 @@ const EUCHRE = require("../games/euchre.js"); global.EUCHRE = EUCHRE;
 const HOLDEM = require("../games/texas-holdem.js"); global.HOLDEM = HOLDEM;
 const CRIBBAGE = require("../games/cribbage.js"); global.CRIBBAGE = CRIBBAGE;
 const BUST_SEVEN = require("../games/bust-seven.js"); global.BUST_SEVEN = BUST_SEVEN;
+const COLOR_CLASH = require("../games/color-clash.js"); global.COLOR_CLASH = COLOR_CLASH;
 require("../ui/hearts-ui.js");
 require("../ui/crazy-eights-ui.js");
 require("../ui/president-ui.js");
@@ -43,6 +44,7 @@ require("../ui/euchre-ui.js");
 require("../ui/texas-holdem-ui.js");
 require("../ui/cribbage-ui.js");
 require("../ui/bust-seven-ui.js");
+require("../ui/color-clash-ui.js");
 const app = require("../app.js");
 global.document._fireDOMContentLoaded();
 
@@ -205,6 +207,18 @@ function bustSevenHumanMove(state, seat) {
   return app.clickAction(BUST_SEVEN.aiShouldHit(state, seat) ? "Hit" : "Stay");
 }
 
+// Plays through the real buttons and card clicks: colour names after a
+// Wild, Challenge / Draw 4 on a Wild Draw Four, Play / Keep after a draw.
+function colorClashHumanMove(state, seat) {
+  if (state.phase === "color") return app.clickAction(COLOR_CLASH.COLOR_NAME[COLOR_CLASH.aiChooseColor(state, seat)]);
+  if (state.phase === "challenge") return app.clickAction(COLOR_CLASH.aiShouldChallenge(state, seat) ? "Challenge" : "Draw 4");
+  if (state.phase === "drawn") return app.clickAction(state.drawn.kind === "wild4" ? "Keep" : "Play " + COLOR_CLASH.cardLabel(state.drawn));
+  const faces = findAll(global.document.getElementById("tableWrap"), (n) => n.classList && n.classList.contains("cc-card"));
+  ok("color clash hand uses its own faces", faces.length > 0);
+  const card = COLOR_CLASH.aiChoosePlay(state, seat);
+  return card ? app.playCard(seat, card) : app.clickAction("Draw Card");
+}
+
 function findAll(node, pred, out) {
   out = out || [];
   if (pred(node)) out.push(node);
@@ -217,7 +231,7 @@ const HUMAN_MOVE = {
   "big-two": bigTwoHumanMove, "chinese-poker": cpHumanMove, blackjack: bjHumanMove,
   spades: spadesHumanMove, "gin-rummy": ginHumanMove, "oh-hell": ohHellHumanMove,
   euchre: euchreHumanMove, "texas-holdem": holdemHumanMove, cribbage: cribbageHumanMove,
-  "bust-seven": bustSevenHumanMove,
+  "bust-seven": bustSevenHumanMove, "color-clash": colorClashHumanMove,
 };
 
 async function driveGame({ maxHumanSteps = 1500, maxTicks = 4000 } = {}) {
@@ -293,6 +307,8 @@ async function run() {
     ["cribbage", ["human", "ai", "off", "off"]],
     ["bust-seven", ["human", "ai", "off", "off"]],
     ["bust-seven", ["human", "ai", "ai", "ai"]],
+    ["color-clash", ["human", "ai", "off", "off"]],
+    ["color-clash", ["human", "ai", "ai", "ai"]],
   ];
   for (const [key, seats] of vsAiConfigs) {
     setupSeats(key, seats);
@@ -322,6 +338,7 @@ async function run() {
     ["texas-holdem", ["human", "human", "human", "off"], 1500],
     ["cribbage", ["human", "human", "off", "off"], 1500],
     ["bust-seven", ["human", "human", "human", "off"], 1500],
+    ["color-clash", ["human", "human", "human", "off"], 3000],
   ];
   for (const [key, seats, maxHumanSteps] of hotseatConfigs) {
     setupSeats(key, seats);

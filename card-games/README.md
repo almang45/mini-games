@@ -3,13 +3,14 @@
 A small collection of classic card games — static HTML/CSS/JS, no build step,
 no server. Open `index.html` directly in a browser.
 
-Thirteen games, each seatable from 1-4 players depending on the game:
+Fourteen games, each seatable from 1-4 players depending on the game:
 
 - **Hearts** — 4 players, trick-taking, avoid points, dodge the moon
 - **Spades** — 4 players in two partnerships, bid tricks, spades trump, nil and bags, to 500
 - **Oh Hell** — 3-4 players, hands shrink 7 to 1 and back, turned-card trump, only exact bids score
 - **Euchre** — 4 players in two partnerships, 24-card deck, bowers, order up or name trump, to 10
 - **Crazy Eights** — 2-4 players, shed your hand, wild 8s
+- **Color Clash** — 2-4 players, shed your hand on the Uno rules: Skip/Reverse/Draw Two, Wilds, challengeable Wild Draw Four, to 500
 - **President** — 3-4 players, shed your hand, climbing sets
 - **Big Two** — 4 players, shed your hand, singles/pairs/triples/5-card poker hands
 - **Gin Rummy** — 2 players, draw and discard into melds, knock or go gin, to 100
@@ -42,6 +43,7 @@ js/games/spades.js           Spades rules engine + AI
 js/games/oh-hell.js          Oh Hell rules engine + AI
 js/games/euchre.js           Euchre rules engine + AI
 js/games/crazy-eights.js     Crazy Eights rules engine + AI
+js/games/color-clash.js      Color Clash rules engine + AI (Wild Draw Four challenges)
 js/games/president.js        President rules engine + AI
 js/games/big-two.js          Big Two rules engine + AI
 js/games/gin-rummy.js        Gin Rummy rules engine + AI (meld search, lay-offs)
@@ -55,6 +57,7 @@ js/ui/spades-ui.js           binds Spades state to the shared table shell
 js/ui/oh-hell-ui.js          binds Oh Hell state to the shared table shell
 js/ui/euchre-ui.js           binds Euchre state to the shared table shell
 js/ui/crazy-eights-ui.js     binds Crazy Eights state to the shared table shell
+js/ui/color-clash-ui.js      binds Color Clash state to the shared table shell (own card faces)
 js/ui/president-ui.js        binds President state to the shared table shell
 js/ui/big-two-ui.js          binds Big Two state to the shared table shell
 js/ui/gin-rummy-ui.js        binds Gin Rummy state to the shared table shell
@@ -153,6 +156,25 @@ disabled, tag) stays the same across every game.
 - Deal size is 7 cards for a 2-player game, 5 cards for 3-4 players (a common
   convention, not the only one in circulation).
 
+**Color Clash:**
+- Plays the published Uno rules (Mattel) under a generic name; the
+  mechanics are the game, the name and card art are not reused.
+- No "Uno!" call: having one card left is announced automatically, and
+  there's no penalty for forgetting to say it.
+- Wild Draw Four can be played at any time. It's honest only with no card
+  of the current colour in hand, and the next seat may challenge: a caught
+  bluff draws 4 and the challenger plays on; a wrong challenge draws 6 and
+  is skipped. A Wild Draw Four played as a last card can't be challenged;
+  its 4 cards are dealt and scored.
+- No stacking Draw Two on Draw Two (or Draw Four), and no jump-ins.
+- Drawing is always allowed, even with a match in hand. A playable drawn
+  card can be played at once or kept; the turn then passes.
+- The draw pile is refilled from the discards under the top card. If every
+  card is in someone's hand, a player who must draw just passes.
+- Scoring: the seat that goes out scores every card left in the others'
+  hands (numbers at face value, actions 20, wilds 50); first to 500. That
+  takes about 12 hands at four seats and closer to 19 at two.
+
 **President:**
 - No jokers, and no rank other than the standard 13 (2 is the highest card,
   3 the lowest, ace second-highest — no "1" or wild rank).
@@ -237,7 +259,7 @@ disabled, tag) stays the same across every game.
 - `openHands: true` on the UI adapter: every seat renders face up and hot-seat
   play skips the "pass the device" screen, since nothing is hidden.
 
-**AI opponents (all thirteen games):** heuristic, not a full game-tree search —
+**AI opponents (all fourteen games):** heuristic, not a full game-tree search —
 they play legally and reasonably (Hearts: duck under the current trick
 winner when possible, dump dangerous cards — the Queen of Spades and high
 spades/hearts — when void; Spades: bid a rule-of-thumb trick count from
@@ -259,7 +281,12 @@ the four cards with the best average hand over every possible starter, nudged
 by what the two discards add to (or give away in) the crib, and peg for the
 most points now while avoiding counts of 5 or 21 that a ten-card turns into
 15 or 31; Crazy Eights: hold 8s back until forced, prefer
-suits it holds more of; President/Big Two: lead the lowest legal group, beat
+suits it holds more of; Color Clash: hold wilds back, play from the colour
+it holds most and dump high points, hit a seat with two or fewer cards with
+Skip/Draw Two, play Wild Draw Four honestly unless the next seat is down to
+one card, name the colour it holds most, and challenge a Wild Draw Four when
+the cards it can't see make a bluff more than 60% likely (it beats a
+first-legal-card player in about 98% of two-seat games); President/Big Two: lead the lowest legal group, beat
 the pile as cheaply as possible; Chinese Poker: build the strongest possible
 Back hand first, then the strongest Middle that still keeps Front ≤ Middle
 ≤ Back, falling back to the least-bad foul if no valid split exists;
@@ -286,7 +313,7 @@ environment this was built in, so testing happens on two levels:
 1. **Engine tests** (`cards.test.js`, `hearts.test.js`, `spades.test.js`,
    `oh-hell.test.js`, `euchre.test.js`, `crazy-eights.test.js`, `president.test.js`, `big-two.test.js`,
    `gin-rummy.test.js`, `cribbage.test.js`, `chinese-poker.test.js`, `texas-holdem.test.js`, `blackjack.test.js`,
-   `bust-seven.test.js`)
+   `bust-seven.test.js`, `color-clash.test.js`)
    exercise each rules engine directly in Node: rule checks against
    hand-built scenarios (forced leads, moon shots, illegal plays,
    pile-clearing edge cases around a player finishing mid-round, hand
@@ -295,7 +322,8 @@ environment this was built in, so testing happens on two levels:
    fixture states, Spades contract/Nil/bag scoring, Gin Rummy meld search,
    lay-offs and knock/undercut/gin settlement, Cribbage counting from the
    29 hand to crib flushes, and go/31/last-card pegging, Bust Seven's action-card
-   ordering from stacked decks), deck conservation, and dozens
+   ordering from stacked decks, every Color Clash starter card and Wild Draw
+   Four challenge outcome), deck conservation, and dozens
    of full randomized AI-vs-AI
    games per player count to catch stuck states, non-terminating games, or a
    degenerate AI.
