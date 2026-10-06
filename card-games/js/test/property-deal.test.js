@@ -364,6 +364,30 @@ function cardCount(state) {
   ok("always Blocks a Set Grab", P.aiShouldBlock(block, 1));
 })();
 
+(function aiWildAndBlockTests() {
+  // Review: the AI stranded any-colour wilds in colours with no real card,
+  // and spent Blocks on payments that would have cost it nothing.
+  const any = P.prop(P.COLORS.slice(), 0);
+  const lone = table(2, { hands: [[any, P.money(1)]] });
+  const m = P.aiChoosePlay(lone, 0);
+  ok("holds an any-colour wild with no real card to join", m.type === "play" && m.id !== any.id);
+
+  const stranded = table(2, { sets: [{ darkblue: [P.prop(P.COLORS.slice(), 0)], green: [prop("green"), prop("green")] }] });
+  const rescue = P.aiChoosePlay(stranded, 0);
+  ok("moves a stranded wild to a real set, for free", rescue.type === "move" && rescue.color === "green");
+  P.stepAI(stranded, 0);
+  ok("which completes it", P.isFull(stranded.tables[0], "green") && stranded.plays === 0);
+
+  const debt = act("debt");
+  const broke = table(2, { hands: [[debt], [act("block")]] });
+  P.playCard(broke, 0, debt.id, { as: "action", target: 1 });
+  ok("keeps its Block when it has nothing to pay with", !P.aiShouldBlock(broke, 1));
+
+  const empty = table(2, { hands: [[], [P.money(1)]], drawPile: [] });
+  P.endTurn(empty, 0);
+  ok("the log says when there's nothing to draw", /nothing left to draw/.test(empty.log[empty.log.length - 1].text));
+})();
+
 // ---- full games --------------------------------------------------------------------------
 
 // Every legal play for the seat to move.

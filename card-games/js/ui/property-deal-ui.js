@@ -91,7 +91,8 @@
       const full = PD.isFull(t, color);
       const text = Math.min(set.cards.length, PD.setSize(color)) + "/" + PD.setSize(color) +
         (set.cards.length > PD.setSize(color) ? "+" + (set.cards.length - PD.setSize(color)) : "") +
-        (set.hotel ? " · Hotel" : set.house ? " · House" : "");
+        (set.hotel ? " · Hotel" : set.house ? " · House" : "") +
+        (set.cards.every(PD.isAnyColor) ? " · wilds only" : "");
       const chip = DOM.el("span", "pd-chip pd-set" + (full ? " is-full" : ""), [DOM.el("i", "pd-swatch pd-c-" + color), text]);
       chip.title = PD.COLOR_NAME[color] + ": " + set.cards.map(PD.cardLabel).join(", ") + " - rent $" + PD.rentFor(t, color) + "M";
       wrap.appendChild(chip);
@@ -107,7 +108,7 @@
     if (state.phase !== "play" || state.plays >= PD.PLAYS_PER_TURN) return;
     const u = ui(state);
     u.moving = false;
-    u.draft = u.draft && u.draft.id === card.id ? null : { id: card.id };
+    u.draft = u.draft && u.draft.id === card.id ? null : { id: card.id, step: 0 };
   }
 
   function isCardSelected(state, seat, card) { const d = ui(state).draft; return !!d && d.id === card.id; }
@@ -121,6 +122,14 @@
   }
 
   const name = (state, seat) => state.seats[seat].name;
+
+  // A property where it sits, saying which wild it is: an any-colour wild
+  // ($0) and a two-colour wild in the same set must never read the same.
+  function propName(card, where) {
+    if (PD.isAnyColor(card)) return PD.COLOR_NAME[where] + " (any-colour wild)";
+    if (PD.isWild(card)) return PD.COLOR_NAME[where] + " (" + card.colors.map((c) => PD.COLOR_NAME[c]).join("/") + " wild)";
+    return PD.COLOR_NAME[where];
+  }
 
   // Two identical cards give identical labels; number them so each button
   // (found by its label) is distinct.
@@ -136,8 +145,7 @@
     const others = PD.others(state, seat);
     const out = [];
     const final = (label, opt) => { if (!PD.playError(state, seat, card, opt)) out.push({ label, opt }); };
-    const firstStep = Object.keys(draft).length === 1; // only the card id so far
-    if (card.kind !== "prop" && card.value > 0 && firstStep) final("Bank $" + card.value + "M", { as: "bank" });
+    if (card.kind !== "prop" && card.value > 0 && draft.step === 0) final("Bank $" + card.value + "M", { as: "bank" });
 
     if (card.kind === "prop") {
       card.colors.forEach((color) => final(card.colors.length > 1 ? "Play as " + PD.COLOR_NAME[color] : "Play to table", { as: "prop", color }));
@@ -165,16 +173,16 @@
         case "debt": others.forEach((t) => final("Collect $5M from " + name(state, t), { as: "action", target: t })); break;
         case "steal":
           others.forEach((t) => loose(t).forEach(({ card: c, where }) =>
-            final("Steal " + name(state, t) + "'s " + PD.COLOR_NAME[where] + (PD.isWild(c) ? " wild" : ""), { as: "action", target: t, theirId: c.id })));
+            final("Steal " + name(state, t) + "'s " + propName(c, where), { as: "action", target: t, theirId: c.id })));
           break;
         case "swap":
           if (draft.theirId == null) {
             others.forEach((t) => loose(t).forEach(({ card: c, where }) => {
-              if (PD.loosePropertyIds(state.tables[seat]).length) out.push({ label: "Take " + name(state, t) + "'s " + PD.COLOR_NAME[where] + (PD.isWild(c) ? " wild" : ""), step: { target: t, theirId: c.id } });
+              if (PD.loosePropertyIds(state.tables[seat]).length) out.push({ label: "Take " + name(state, t) + "'s " + propName(c, where), step: { target: t, theirId: c.id } });
             }));
           } else {
             loose(seat).forEach(({ card: c, where }) =>
-              final("Give my " + PD.COLOR_NAME[where] + (PD.isWild(c) ? " wild" : ""), { as: "action", target: draft.target, theirId: draft.theirId, myId: c.id }));
+              final("Give my " + propName(c, where), { as: "action", target: draft.target, theirId: draft.theirId, myId: c.id }));
           }
           break;
         case "setgrab":
@@ -218,7 +226,7 @@
         opt: c.opt,
         step: c.step,
         onClick: () => {
-          if (c.step) { Object.assign(u.draft, c.step); return; }
+          if (c.step) { Object.assign(u.draft, c.step); u.draft.step += 1; return; }
           u.draft = null;
           PD.playCard(state, seat, card.id, c.opt);
         },
@@ -229,7 +237,7 @@
     PD.COLORS.forEach((from) => {
       if (t.sets[from].house) return;
       t.sets[from].cards.filter(PD.isWild).forEach((c) => c.colors.forEach((to) => {
-        if (to !== from) moves.push({ label: PD.COLOR_NAME[from] + " wild → " + PD.COLOR_NAME[to], onClick: () => { u.moving = false; PD.moveWild(state, seat, c.id, to); } });
+        if (to !== from) moves.push({ label: propName(c, from) + " → " + PD.COLOR_NAME[to], move: { id: c.id, color: to }, onClick: () => { u.moving = false; PD.moveWild(state, seat, c.id, to); } });
       }));
     });
     // An any-colour wild can go to nine colours, so the moves wait behind one button.

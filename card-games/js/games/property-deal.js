@@ -191,25 +191,26 @@
     return state;
   }
 
+  // Returns how many cards were actually drawn.
   function draw(state, seat, count) {
     for (let k = 0; k < count; k++) {
       if (state.drawPile.length === 0) {
-        if (state.discard.length === 0) return;
+        if (state.discard.length === 0) return k;
         state.drawPile = CARDS.shuffle(state.discard, state.rng);
         state.discard = [];
         say(state, "The draw pile ran out - the discards are reshuffled.");
       }
       state.hands[seat].push(state.drawPile.pop());
     }
+    return count;
   }
 
   function startTurn(state) {
     const seat = state.turn;
-    const count = state.hands[seat].length === 0 ? 5 : 2;
-    draw(state, seat, count);
+    const got = draw(state, seat, state.hands[seat].length === 0 ? 5 : 2);
     state.plays = 0;
     state.phase = "play";
-    say(state, nameOf(state, seat) + " draws " + count + ".");
+    say(state, nameOf(state, seat) + (got ? " draws " + got + "." : " has nothing left to draw."));
   }
 
   // Checked after every change to a table. If one move completes three sets
@@ -318,6 +319,11 @@
       checkWin(state, seat);
       return;
     }
+    if (card.type === "house" || card.type === "hotel") {
+      mine.sets[opt.color][card.type] = card;
+      say(state, who + " builds a " + card.type + " on " + COLOR_NAME[opt.color] + ".");
+      return;
+    }
     state.discard.push(card);
     if (opt.as === "rent") {
       let amount = rentFor(mine, opt.color);
@@ -334,8 +340,7 @@
     const target = opt.target;
     switch (card.type) {
       case "bonusdraw":
-        draw(state, seat, 2);
-        say(state, who + " plays Bonus Draw and draws 2.");
+        say(state, who + " plays Bonus Draw and draws " + draw(state, seat, 2) + ".");
         return;
       case "birthday":
         say(state, who + " has a birthday: $" + BIRTHDAY + "M from everyone.");
@@ -352,11 +357,6 @@
       case "setgrab":
         say(state, who + " tries to grab " + nameOf(state, target) + "'s " + COLOR_NAME[opt.color] + " set.");
         return startPending(state, seat, { type: "setgrab", color: opt.color }, [target]);
-      case "house": case "hotel":
-        mine.sets[opt.color][card.type] = card;
-        state.discard.pop();
-        say(state, who + " builds a " + card.type + " on " + COLOR_NAME[opt.color] + ".");
-        return;
       default:
         throw new Error("unhandled action " + card.type);
     }
@@ -535,15 +535,20 @@
 
   // How much a property card helps a table in a colour: completing a set
   // matters most, then progress toward one.
-  function colorNeed(table, color) {
-    const have = table.sets[color].cards.length;
+  // How much one more card of `color` helps a table. An any-colour wild in a
+  // colour with no other card is nearly worthless (it can't make a set on
+  // its own), and a real card that joins wild-only cards may complete it.
+  function colorNeed(table, color, card) {
+    if (isFull(table, color)) return 0;
+    const set = table.sets[color];
+    if (card && isAnyColor(card) && !anchored(set)) return 0.01;
     const size = setSize(color);
-    if (have >= size) return 0;
-    return (have + 1) / size + (have + 1 === size ? 2 : 0) + PROP_VALUE[color] / 20;
+    const after = Math.min(set.cards.length + 1, size);
+    return after / size + (set.cards.length + 1 >= size ? 2 : 0) + PROP_VALUE[color] / 20;
   }
 
   function bestColorFor(table, card) {
-    return card.colors.reduce((a, b) => (colorNeed(table, b) > colorNeed(table, a) ? b : a));
+    return card.colors.reduce((a, b) => (colorNeed(table, b, card) > colorNeed(table, a, card) ? b : a));
   }
 
   // The opponent with the most to pay with.
@@ -558,6 +563,17 @@
     const left = PLAYS_PER_TURN - state.plays;
     const of = (pred) => hand.filter(pred);
     const end = { type: "end" };
+    // Any-colour wilds left with no real card (their anchor was paid away or
+    // stolen) move, for free, to the colour where they help most.
+    for (const color of COLORS) {
+      const set = mine.sets[color];
+      if (!set.cards.length || anchored(set)) continue;
+      const homes = COLORS.filter((c) => c !== color && anchored(mine.sets[c]) && !isFull(mine, c));
+      if (homes.length) {
+        const to = homes.reduce((a, b) => (colorNeed(mine, b) > colorNeed(mine, a) ? b : a));
+        return { type: "move", id: set.cards[0].id, color: to };
+      }
+    }
     if (left <= 0) return end;
     const play = (card, opt) => ({ type: "play", id: card.id, opt });
 
@@ -573,9 +589,12 @@
       }
     }
 
+    // An any-colour wild waits in hand until some colour has a real card.
     const props = of((c) => c.kind === "prop");
-    if (props.length) {
-      const card = props.reduce((a, b) => (colorNeed(mine, bestColorFor(mine, b)) > colorNeed(mine, bestColorFor(mine, a)) ? b : a));
+    const need = (c) => colorNeed(mine, bestColorFor(mine, c), c);
+    const playable = props.filter((c) => !isAnyColor(c) || need(c) > 0.01);
+    if (playable.length) {
+      const card = playable.reduce((a, b) => (need(b) > need(a) ? b : a));
       return play(card, { as: "prop", color: bestColorFor(mine, card) });
     }
 
@@ -584,15 +603,17 @@
       let best = null;
       others(state, seat).forEach((t) => loosePropertyIds(state.tables[t]).forEach((id) => {
         const found = locate(state.tables[t], id);
-        const need = colorNeed(mine, found.where);
+        const need = colorNeed(mine, found.where, found.card);
         if (mine.sets[found.where].cards.length > 0 && (!best || need > best.need)) best = { t, id, need };
       }));
       if (!best) continue;
       if (c.type === "steal") return play(c, { as: "action", target: best.t, theirId: best.id });
-      const giveable = loosePropertyIds(mine).filter((id) => locate(mine, id).where !== locate(state.tables[best.t], best.id).where);
+      const wantColor = locate(state.tables[best.t], best.id).where;
+      const giveable = loosePropertyIds(mine).map((id) => locate(mine, id)).filter((x) => x.where !== wantColor)
+        .map((x) => ({ id: x.card.id, need: colorNeed(mine, x.where) }));
       if (giveable.length) {
-        const give = giveable.reduce((a, b) => (colorNeed(mine, locate(mine, b).where) < colorNeed(mine, locate(mine, a).where) ? b : a));
-        if (colorNeed(mine, locate(mine, give).where) < best.need) return play(c, { as: "action", target: best.t, theirId: best.id, myId: give });
+        const give = giveable.reduce((a, b) => (b.need < a.need ? b : a));
+        if (give.need < best.need) return play(c, { as: "action", target: best.t, theirId: best.id, myId: give.id });
       }
     }
 
@@ -614,7 +635,10 @@
     }
 
     const debt = of((x) => x.type === "debt");
-    if (debt.length && payableTotal(state.tables[richest(state, seat)]) >= 3) return play(debt[0], { as: "action", target: richest(state, seat) });
+    if (debt.length) {
+      const target = richest(state, seat);
+      if (payableTotal(state.tables[target]) >= 3) return play(debt[0], { as: "action", target });
+    }
     const bday = of((x) => x.type === "birthday");
     if (bday.length && others(state, seat).some((t) => payableTotal(state.tables[t]) > 0)) return play(bday[0], { as: "action" });
 
@@ -628,16 +652,17 @@
     return end;
   }
 
-  // Block what hurts: a Set Grab, a Steal or Swap of a set-building card, or
-  // a payment that's big or most of what this seat has.
+  // Block what hurts: any Set Grab, Steal or Swap, and a payment that's big
+  // or most of what the payer has, never one that would cost nothing.
   function aiShouldBlock(state, seat) {
     if (!holdsBlock(state, seat)) return false;
     const p = state.pending;
     const e = p.effect;
     const target = p.targets[p.idx];
+    const payerHas = payableTotal(state.tables[target]);
+    if (e.type === "pay" && payerHas === 0) return false;
     if (seat !== target) return e.type === "setgrab" || (e.type === "pay" && e.amount >= 5);
-    if (e.type === "setgrab") return true;
-    if (e.type === "pay") return e.amount >= 5 || e.amount * 2 >= payableTotal(state.tables[seat]);
+    if (e.type === "pay") return e.amount >= 5 || e.amount * 2 >= payerHas;
     return true;
   }
 
@@ -685,6 +710,7 @@
     }
     const move = aiChoosePlay(state, seat);
     if (move.type === "end") return endTurn(state, seat);
+    if (move.type === "move") return moveWild(state, seat, move.id, move.color);
     return playCard(state, seat, move.id, move.opt);
   }
 

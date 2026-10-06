@@ -240,6 +240,12 @@ function propertyDealHumanMove(state, seat) {
   if (state.phase === "discard") return app.playCard(seat, state.hands[seat][0]);
   const move = PD.aiChoosePlay(state, seat);
   if (move.type === "end") return app.clickAction("End Turn");
+  if (move.type === "move") {
+    app.clickAction("Move a wild…");
+    const btn = game.actionButtons(state, seat).find((b) => b.move && b.move.id === move.id && b.move.color === move.color);
+    ok("the AI's wild move is in the menu", !!btn, move);
+    return app.clickAction(btn.label);
+  }
   app.playCard(seat, state.hands[seat].find((c) => c.id === move.id));
   const matches = (part) => !!part && Object.keys(part).every((k) => (k === "double" ? !!part[k] === !!move.opt[k] : part[k] === move.opt[k]));
   for (let step = 0; step < 3; step++) {
@@ -369,12 +375,22 @@ function propertyDealScripted() {
   app.clickAction("Let it happen");
   ok("scripted: Blocked, nothing paid", PD.bankTotal(blockState.tables[1]) === 10 && blockState.phase === "play");
 
+  // Review: a two-colour wild and an any-colour wild in one set read the same.
+  const steal = PD.action("steal");
+  const labelState = setup([[steal], []], [[], []], {});
+  labelState.tables[1].sets.red.cards.push(PD.prop(["red", "yellow"], 3), PD.prop(PD.COLORS.slice(), 0));
+  app.syncTable();
+  app.playCard(0, steal);
+  const steals = buttons(labelState).filter((l) => l.startsWith("Steal"));
+  ok("scripted: each wild is named for what it is", steals.join() === "Steal Seat 2's Red (Red/Yellow wild),Steal Seat 2's Red (any-colour wild)", steals);
+  app.clickAction("Cancel");
+
   const anyWild = PD.prop(PD.COLORS.slice(), 0);
   const wildState = setup([[], []], [[], []], { red: [PD.prop(["red"], 3), anyWild] });
   ok("scripted: wild moves wait behind one button", buttons(wildState).join() === "End Turn,Move a wild…");
   app.clickAction("Move a wild…");
-  ok("scripted: then list every colour", buttons(wildState).length === 10 && buttons(wildState).includes("Red wild → Dark Blue"));
-  app.clickAction("Red wild → Green");
+  ok("scripted: then list every colour, naming the wild", buttons(wildState).length === 10 && buttons(wildState).includes("Red (any-colour wild) → Dark Blue"));
+  app.clickAction("Red (any-colour wild) → Green");
   ok("scripted: and the wild moves", wildState.tables[0].sets.green.cards[0] === anyWild && buttons(wildState)[0] === "End Turn");
 }
 

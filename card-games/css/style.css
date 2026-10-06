@@ -253,6 +253,8 @@
 .pile-row { display: flex; gap: 22px; align-items: flex-start; justify-content: center; }
 .pile-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .pile-caption { font-size: 0.68rem; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+/* Bust Seven's centre also stacks a pick prompt, and always had a little more air. */
+.deck-center.b7-center { gap: 10px; }
 
 /* ------------------------------------------------------- Bust Seven faces */
 

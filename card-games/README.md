@@ -339,7 +339,10 @@ Property Deal: draw first with Bonus Draw, grab a full set when it can,
 lay the property that does most for an unfinished set, steal or swap
 toward its fullest sets, build, then charge the biggest rent (doubled when
 worth two plays) at the richest opponent, then collect debts and bank cash;
-it Blocks any Set Grab or Steal and big payments, pays with the closest
+it keeps an any-colour wild in hand until some colour has a real card and
+moves stranded ones (for free) to a set they help; it Blocks any Set Grab,
+Steal or Swap and big payments (never one that would cost it nothing), pays
+with the closest
 bank combination before giving up properties it needs least, and beats a
 random legal player in about 98% of two-seat games)
 but don't model deeper strategy like deliberately holding back a winning

@@ -82,7 +82,7 @@
         DOM.el("span", null, state.seats[p.seat].name + " picks who gets " + B7.cardLabel(p.card)),
       ]));
     }
-    return DOM.el("div", "deck-center", children);
+    return DOM.el("div", "deck-center b7-center", children);
   }
 
   function statusLine(state) {
