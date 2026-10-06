@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Word Grid</title>
+<link rel="icon" href="favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<script src="../shared/register-sw.js" defer></script>
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+  :root {
+    --sq: #e9dfc8; --sq-line: #c7b894;
+    --tw: #c8483f; --dw: #e7a0a0; --tl: #3f7fbf; --dl: #a9cde8;
+    --tile: #f4d58d; --tile-edge: #b38a3a; --tile-ink: #2b1d05;
+  }
+  header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .controls label { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  select {
+    font: inherit; font-size: 0.85rem; background: #1c4a34; color: var(--ink);
+    border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 8px 10px;
+  }
+
+  .scores { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .score { padding: 5px 12px; border-radius: 999px; background: var(--panel-strong); font-size: 0.85rem; border: 2px solid transparent; font-variant-numeric: tabular-nums; }
+  .score.is-turn { border-color: var(--accent); }
+  .bag { font-size: 0.78rem; color: var(--ink-dim); }
+  .status { margin: 0; min-height: 1.3em; text-align: center; font-size: 0.9rem; color: var(--ink-dim); }
+  .last { margin: -8px 0 0; min-height: 1.2em; text-align: center; font-size: 0.8rem; color: var(--ink); max-width: 560px; }
+
+  .board {
+    width: min(560px, 100%); aspect-ratio: 1; display: grid;
+    grid-template-columns: repeat(15, 1fr); grid-template-rows: repeat(15, 1fr);
+    gap: 1px; padding: 4px; background: #6b5a35; border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  }
+  .sq {
+    position: relative; padding: 0; border: 0; border-radius: 2px; min-width: 0; min-height: 0;
+    background: var(--sq); color: rgba(0, 0, 0, 0.55); font-size: clamp(6px, 1.5vw, 9px); font-weight: 700;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1;
+  }
+  .sq:hover, .sq:active { filter: none; transform: none; }
+  .sq.TW { background: var(--tw); color: #fff; }
+  .sq.DW { background: var(--dw); }
+  .sq.TL { background: var(--tl); color: #fff; }
+  .sq.DL { background: var(--dl); }
+  .sq.target { box-shadow: inset 0 0 0 2px var(--accent); }
+
+  .tile {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    background: var(--tile); color: var(--tile-ink); border-radius: 3px;
+    box-shadow: inset 0 -2px 0 var(--tile-edge); font-weight: 800; line-height: 1;
+  }
+  .sq .tile { position: absolute; inset: 0; font-size: clamp(10px, 2.9vw, 18px); }
+  .tile .pts { position: absolute; right: 2px; bottom: 1px; font-size: 0.5em; font-weight: 700; }
+  .tile.blank { color: #8a5a00; font-style: italic; }
+  .tile.pending { background: #ffe9a8; box-shadow: inset 0 0 0 2px #e08a00; }
+  .tile.recent { box-shadow: inset 0 -2px 0 var(--tile-edge), inset 0 0 0 2px #2f8f46; }
+
+  .rack { display: flex; gap: 6px; justify-content: center; min-height: 52px; flex-wrap: wrap; }
+  .rack button.tile {
+    width: 44px; height: 48px; padding: 0; border: 0; font-size: 1.35rem; cursor: pointer;
+  }
+  .rack button.tile:hover { transform: translateY(-2px); filter: none; }
+  .rack button.tile.selected { transform: translateY(-6px); box-shadow: inset 0 -2px 0 var(--tile-edge), 0 0 0 3px var(--accent); }
+  .rack button.tile.marked { background: #e0736c; color: #fff; }
+  .rack .hidden-rack { font-size: 0.85rem; color: var(--ink-dim); align-self: center; }
+
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .note { font-size: 0.8rem; color: var(--danger); min-height: 1.1em; text-align: center; margin: -6px 0 0; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  .overlay[hidden] { display: none; }
+  .modal { background: #12321f; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 14px; padding: 22px 26px; text-align: center; max-width: 360px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+  .modal h2 { margin: 0 0 8px; color: var(--accent); }
+  .modal p { margin: 4px 0 16px; color: var(--ink-dim); font-size: 0.95rem; }
+  .letters { display: grid; grid-template-columns: repeat(7, 36px); gap: 6px; justify-content: center; }
+  .letters button { padding: 6px 0; font-weight: 800; }
+  footer { color: var(--ink-dim); font-size: 0.75rem; text-align: center; max-width: 560px; line-height: 1.5; }
+  footer a { color: var(--ink-dim); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="back-link" href="../index.html">← All Games</a>
+    <h1>Word Grid</h1>
+  </header>
+
+  <div class="controls">
+    <label>Mode
+      <select id="mode">
+        <option value="normal">You vs AI (Normal)</option>
+        <option value="easy">You vs AI (Easy)</option>
+        <option value="pvp">Two players</option>
+      </select>
+    </label>
+    <button id="btnNew" type="button">New Game</button>
+  </div>
+
+  <div class="scores" id="scores"></div>
+  <p class="status" id="status"></p>
+  <p class="last" id="last" aria-live="polite"></p>
+
+  <div class="board" id="board" aria-label="Board"></div>
+  <div class="rack" id="rack" aria-label="Your rack"></div>
+  <p class="note" id="note" aria-live="polite"></p>
+  <div class="actions" id="actions"></div>
+
+  <footer>Lay tiles in one row or column to make words that join what's on the board; the first word covers the centre star. Every word you make must be in the word list. Coloured squares double or triple a letter (DL, TL) or the whole word (DW, TW) the first time a tile covers them. Use all seven tiles in one turn for 50 extra. The game ends when someone uses their last tile with the bag empty, or both players pass twice. Words: the public-domain <a href="CREDITS.md">ENABLE</a> list.</footer>
+</div>
+
+<div class="overlay" id="blankOverlay" hidden>
+  <div class="modal">
+    <h2>Blank tile</h2>
+    <p>Which letter should it be?</p>
+    <div class="letters" id="letters"></div>
+    <p></p>
+    <button id="blankCancel" type="button">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay" id="handoff" hidden>
+  <div class="modal">
+    <h2 id="handoffTitle">Pass the device</h2>
+    <p>Everyone else look away - this player's tiles are about to show.</p>
+    <button class="btn-primary" id="handoffReady" type="button">I'm ready</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h2>Game over</h2>
+    <p id="resultText"></p>
+    <div class="controls">
+      <button class="btn-primary" id="modalNew" type="button">New Game</button>
+      <button id="modalClose" type="button">See Board</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/words.js"></script>
+<script src="js/lexicon.js"></script>
+<script src="js/wordgrid.js"></script>
+<script>
+(function () {
+  "use strict";
+  const W = window.WORD_GRID;
+  const lexicon = window.WORD_GRID_LEXICON.buildLexicon(window.WORD_GRID_WORDS);
+  const $ = (id) => document.getElementById(id);
+  const AI_DELAY_MS = 500;
+  const PREMIUM_LABEL = { T: "TW", D: "DW", t: "TL", d: "DL" };
+
+  let state = null;
+  let pending = [];       // tiles this player has put down this turn: { row, col, tileId, letter }
+  let selected = null;    // rack tile id waiting for a square
+  let exchanging = null;  // Set of tile ids marked to exchange, or null
+  let rackOrder = [[], []];
+  let viewer = 0;         // whose rack this device shows
+  let timer = null;
+  let note = "";
+
+  const mode = () => $("mode").value;
+  const isHuman = (seat) => state.seats[seat].type === "human";
+  const myTurn = () => !state.gameOver && !timer && isHuman(state.turn) && viewer === state.turn;
+
+  // ---- board ------------------------------------------------------------------
+
+  const squares = [];
+  function buildBoard() {
+    const board = $("board");
+    board.innerHTML = "";
+    for (let r = 0; r < W.SIZE; r++) {
+      squares.push([]);
+      for (let c = 0; c < W.SIZE; c++) {
+        const el = document.createElement("button");
+        el.type = "button";
+        const p = W.premium(r, c);
+        el.className = "sq" + (p ? " " + PREMIUM_LABEL[p] : "");
+        el.addEventListener("click", () => onSquare(r, c));
+        board.appendChild(el);
+        squares[r].push(el);
+      }
+    }
+  }
+
+  function tileEl(letter, blank, extra) {
+    const t = document.createElement("span");
+    t.className = "tile" + (blank ? " blank" : "") + (extra ? " " + extra : "");
+    t.textContent = letter;
+    if (!blank) t.appendChild(Object.assign(document.createElement("span"), { className: "pts", textContent: W.value(letter) }));
+    return t;
+  }
+
+  function render() {
+    const recent = new Set(state.lastMove && state.lastMove.cells ? state.lastMove.cells.map(([r, c]) => r + "," + c) : []);
+    const mine = new Map(pending.map((p) => [p.row + "," + p.col, p]));
+    for (let r = 0; r < W.SIZE; r++) for (let c = 0; c < W.SIZE; c++) {
+      const el = squares[r][c];
+      const key = r + "," + c;
+      const placed = state.board[r][c];
+      const p = W.premium(r, c);
+      el.innerHTML = "";
+      el.classList.toggle("target", !!selected && !placed && !mine.has(key));
+      if (placed) el.appendChild(tileEl(placed.letter, placed.blank, recent.has(key) ? "recent" : ""));
+      else if (mine.has(key)) { const t = mine.get(key); el.appendChild(tileEl(t.letter, t.blank, "pending")); }
+      else el.textContent = r === W.CENTRE && c === W.CENTRE ? "★" : p ? PREMIUM_LABEL[p] : "";
+      const what = placed ? placed.letter : mine.has(key) ? mine.get(key).letter + " (yours, tap to take back)" : p ? PREMIUM_LABEL[p] : "empty";
+      el.setAttribute("aria-label", "Row " + (r + 1) + ", column " + (c + 1) + ": " + what);
+    }
+    renderRack();
+    renderScores();
+    renderActions();
+    $("status").textContent = statusText();
+    $("last").textContent = state.log.length ? state.log[state.log.length - 1] : "";
+    $("note").textContent = note;
+  }
+
+  function renderRack() {
+    const rackEl = $("rack");
+    rackEl.innerHTML = "";
+    const seat = viewer;
+    if (!state.gameOver && state.turn !== seat && mode() === "pvp") {
+      rackEl.appendChild(Object.assign(document.createElement("span"), { className: "hidden-rack", textContent: "Tiles hidden until your turn." }));
+      return;
+    }
+    const inUse = new Set(pending.map((p) => p.tileId));
+    const tiles = state.racks[seat].filter((t) => !inUse.has(t.id));
+    const order = rackOrder[seat];
+    tiles.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+    tiles.forEach((t) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      const blank = t.letter === W.BLANK;
+      b.className = "tile" + (blank ? " blank" : "") + (selected === t.id ? " selected" : "") + (exchanging && exchanging.has(t.id) ? " marked" : "");
+      b.textContent = blank ? "" : t.letter;
+      if (!blank) b.appendChild(Object.assign(document.createElement("span"), { className: "pts", textContent: W.value(t.letter) }));
+      b.setAttribute("aria-label", blank ? "Blank tile" : t.letter + ", " + W.value(t.letter) + " points");
+      b.disabled = !myTurn();
+      b.addEventListener("click", () => onRackTile(t.id));
+      rackEl.appendChild(b);
+    });
+  }
+
+  function renderScores() {
+    const el = $("scores");
+    el.innerHTML = "";
+    state.seats.forEach((s, i) => {
+      const who = mode() === "pvp" ? s.name : isHuman(i) ? "You" : "AI";
+      el.appendChild(Object.assign(document.createElement("span"), {
+        className: "score" + (!state.gameOver && state.turn === i ? " is-turn" : ""),
+        textContent: who + ": " + s.score,
+      }));
+    });
+    el.appendChild(Object.assign(document.createElement("span"), { className: "bag", textContent: state.bag.length + " in the bag" }));
+  }
+
+  function button(label, onClick, opts) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    if (opts && opts.primary) b.className = "btn-primary";
+    b.disabled = !!(opts && opts.disabled);
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  function renderActions() {
+    const el = $("actions");
+    el.innerHTML = "";
+    if (!myTurn()) return;
+    if (exchanging) {
+      el.appendChild(button("Exchange " + exchanging.size, doExchange, { primary: true, disabled: exchanging.size === 0 }));
+      el.appendChild(button("Cancel", () => { exchanging = null; note = ""; render(); }));
+      return;
+    }
+    const preview = pending.length ? W.evaluate(state, state.turn, pending) : null;
+    const label = preview && preview.ok ? "Play " + preview.words.map((w) => w.word).join(", ") + " (" + preview.score + ")" : "Play";
+    el.appendChild(button(label, doPlay, { primary: true, disabled: !(preview && preview.ok) }));
+    el.appendChild(button("Recall", () => { pending = []; selected = null; note = ""; render(); }, { disabled: !pending.length }));
+    el.appendChild(button("Shuffle", shuffleRack));
+    el.appendChild(button("Exchange", () => { recall(); exchanging = new Set(); note = "Tap the tiles to swap, then Exchange."; render(); }, { disabled: state.bag.length < W.RACK }));
+    el.appendChild(button("Pass", () => { recall(); W.pass(state, state.turn); afterMove(); }));
+    // While tiles are down, the note says what's wrong with them (or nothing).
+    if (pending.length) note = preview.ok ? "" : preview.error;
+  }
+
+  function statusText() {
+    if (state.gameOver) return resultText();
+    const s = state.seats[state.turn];
+    if (!isHuman(state.turn)) return "The AI is thinking…";
+    const who = mode() === "pvp" ? s.name : "Your";
+    if (exchanging) return who + (mode() === "pvp" ? "'s" : "") + " exchange: pick tiles to swap.";
+    return mode() === "pvp" ? s.name + " to play." : "Your turn: tap a tile, then a square.";
+  }
+
+  function resultText() {
+    const [a, b] = state.seats.map((s) => s.score);
+    if (state.winner === null) return "A draw, " + a + "-" + b + ".";
+    const w = state.seats[state.winner];
+    const score = Math.max(a, b) + "-" + Math.min(a, b);
+    if (mode() === "pvp") return w.name + " wins " + score + ".";
+    return (isHuman(state.winner) ? "You win " : "The AI wins ") + score + ".";
+  }
+
+  // ---- input ----------------------------------------------------------------------
+
+  function onRackTile(id) {
+    if (!myTurn()) return;
+    if (exchanging) {
+      if (exchanging.has(id)) exchanging.delete(id); else exchanging.add(id);
+    } else {
+      selected = selected === id ? null : id;
+    }
+    render();
+  }
+
+  function onSquare(r, c) {
+    if (!myTurn() || exchanging) return;
+    const i = pending.findIndex((p) => p.row === r && p.col === c);
+    if (i !== -1) { pending.splice(i, 1); note = ""; render(); return; }
+    if (!selected || state.board[r][c]) return;
+    const t = state.racks[state.turn].find((x) => x.id === selected);
+    const put = (letter) => { pending.push({ row: r, col: c, tileId: t.id, letter, blank: t.letter === W.BLANK }); selected = null; note = ""; render(); };
+    if (t.letter === W.BLANK) askLetter(put); else put(t.letter);
+  }
+
+  function askLetter(done) {
+    const box = $("letters");
+    box.innerHTML = "";
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((l) => box.appendChild(button(l, () => { $("blankOverlay").hidden = true; done(l); })));
+    $("blankOverlay").hidden = false;
+  }
+
+  function recall() { pending = []; selected = null; }
+
+  function shuffleRack() {
+    const order = rackOrder[state.turn];
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    render();
+  }
+
+  function doPlay() {
+    try {
+      W.play(state, state.turn, pending);
+    } catch (e) {
+      note = e.message;
+      render();
+      return;
+    }
+    afterMove();
+  }
+
+  function doExchange() {
+    W.exchange(state, state.turn, Array.from(exchanging));
+    exchanging = null;
+    afterMove();
+  }
+
+  // ---- turn flow ----------------------------------------------------------------------
+
+  function syncOrder() {
+    state.racks.forEach((rack, i) => {
+      const ids = rack.map((t) => t.id);
+      rackOrder[i] = rackOrder[i].filter((id) => ids.includes(id)).concat(ids.filter((id) => !rackOrder[i].includes(id)));
+    });
+  }
+
+  function afterMove() {
+    pending = [];
+    selected = null;
+    note = "";
+    syncOrder();
+    advance();
+  }
+
+  function advance() {
+    render();
+    if (state.gameOver) {
+      viewer = mode() === "pvp" ? viewer : 0;
+      $("resultText").textContent = resultText();
+      $("overlay").hidden = false;
+      render();
+      return;
+    }
+    if (!isHuman(state.turn)) {
+      timer = setTimeout(() => {
+        timer = null;
+        W.stepAI(state, state.turn, mode());
+        syncOrder();
+        advance();
+      }, AI_DELAY_MS);
+      render();
+      return;
+    }
+    if (state.turn !== viewer) {
+      $("handoffTitle").textContent = "Pass the device to " + state.seats[state.turn].name;
+      $("handoff").hidden = false;
+    }
+  }
+
+  function newGame() {
+    clearTimeout(timer);
+    timer = null;
+    ["overlay", "handoff", "blankOverlay"].forEach((id) => { $(id).hidden = true; });
+    const types = mode() === "pvp" ? ["human", "human"] : ["human", "ai"];
+    state = W.createGame(types, { lexicon, names: mode() === "pvp" ? ["Player 1", "Player 2"] : ["You", "AI"] });
+    pending = [];
+    selected = null;
+    exchanging = null;
+    note = "";
+    viewer = 0;
+    rackOrder = [[], []];
+    syncOrder();
+    advance();
+  }
+
+  $("handoffReady").addEventListener("click", () => { $("handoff").hidden = true; viewer = state.turn; render(); });
+  $("blankCancel").addEventListener("click", () => { $("blankOverlay").hidden = true; });
+  $("btnNew").addEventListener("click", newGame);
+  $("modalNew").addEventListener("click", newGame);
+  $("modalClose").addEventListener("click", () => { $("overlay").hidden = true; });
+  $("mode").addEventListener("change", newGame);
+
+  buildBoard();
+  newGame();
+})();
+</script>
+</body>
+</html>

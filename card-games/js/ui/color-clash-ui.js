@@ -73,13 +73,13 @@
       ? DOM.el("div", "cc-current cc-" + state.color, CC.COLOR_NAME[state.color])
       : DOM.el("div", "cc-current", "Choosing...");
     const arrow = state.direction === 1 ? "↻ clockwise" : "↺ counter-clockwise";
-    return DOM.el("div", "cc-center", [
+    return DOM.el("div", "deck-center", [
       DOM.el("div", "center-label", "Hand " + state.handNo + " · first to " + CC.TARGET),
-      DOM.el("div", "cc-piles", [
-        DOM.el("div", "cc-pile", [DOM.cardEl(null, { faceDown: true }), DOM.el("div", "cc-pile-label", "Draw " + state.drawPile.length)]),
-        DOM.el("div", "cc-pile", [discard, colorChip]),
+      DOM.el("div", "pile-row", [
+        DOM.el("div", "pile-col", [DOM.cardEl(null, { faceDown: true }), DOM.el("div", "pile-caption", "Draw " + state.drawPile.length)]),
+        DOM.el("div", "pile-col", [discard, colorChip]),
       ]),
-      DOM.el("div", "cc-pile-label", arrow),
+      DOM.el("div", "pile-caption", arrow),
     ]);
   }
 

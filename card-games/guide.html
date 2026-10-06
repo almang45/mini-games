@@ -17,7 +17,7 @@
   <header class="guide-header">
     <a class="back-link" href="index.html">&larr; Back to Game</a>
     <h1>Card Table — Rules Guide</h1>
-    <p class="tagline">Fourteen card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
+    <p class="tagline">Fifteen card games, one table: how to read the layout, how to play each game, and every rule this build simplifies.</p>
   </header>
 
   <div class="guide-layout">
@@ -40,6 +40,7 @@
       <a href="#texas-holdem">Texas Hold'em</a>
       <a href="#blackjack">Blackjack</a>
       <a href="#bust-seven">Bust Seven</a>
+      <a href="#property-deal">Property Deal</a>
       <a href="#simplifications">Simplifications</a>
       <a href="#glossary">Glossary</a>
     </nav>
@@ -49,7 +50,7 @@
       <section id="quick-start">
         <h2>Quick Start</h2>
         <ol class="steps">
-          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Oh Hell, Euchre, Crazy Eights, Color Clash, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, Blackjack, or Bust Seven.</li>
+          <li>On the start screen, pick a <strong>game</strong> - Hearts, Spades, Oh Hell, Euchre, Crazy Eights, Color Clash, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, Blackjack, Bust Seven, or Property Deal.</li>
           <li>For each of the 4 seats, choose <strong>Human</strong>, <strong>AI</strong>, or (where allowed) <strong>Off</strong>. One human seat plays "vs AI"; every seat set to Human plays local hot-seat, passing the device around the table. Picking a game that seats fewer players (Gin Rummy, Cribbage) switches the extra seats Off for you, AI seats first.</li>
           <li>On your turn, click a card in your own hand to play it, or use a button in the action bar (Bid, Draw, Pass, Play Selected, Knock, Call, Raise, Hit, Stand, Stay, Submit, etc.) when one is lit up. In Gin Rummy, click a card to select it and then press Discard or Knock. In Cribbage, click two cards and press Send to Crib. Chinese Poker is the other exception: clicking a card cycles it between your Front/Middle/Back rows instead of playing it.</li>
           <li>In hot-seat mode, a "Pass the device" screen appears between turns so other players can't see your hand until you're ready. Bust Seven skips it: every card is face up, so there's nothing to hide.</li>
@@ -83,14 +84,14 @@
 
       <section id="basics">
         <h2>Universal Basics</h2>
-        <p>Every game but Bust Seven and Color Clash uses a standard deck with no jokers (Euchre keeps only the 9s through Aces, 24 cards). Bust Seven and Color Clash have their own decks, of 94 and 108 cards. All of them share the same table chrome:</p>
+        <p>Every game but Bust Seven, Color Clash and Property Deal uses a standard deck with no jokers (Euchre keeps only the 9s through Aces, 24 cards). Those three have their own decks, of 94, 108 and 106 cards. All of them share the same table chrome:</p>
         <ul>
           <li><strong>Turn order</strong> runs clockwise from whoever leads (except Blackjack, where every seat plays against the dealer rather than each other; Chinese Poker, where everyone arranges privately at the same time; and Color Clash, where a Reverse turns play the other way).</li>
           <li><strong>Human vs AI</strong>: the AI seats think for about half a second before acting, so you can follow along.</li>
           <li><strong>Hot-seat privacy</strong>: with more than one human seat, the app never shows a hand that isn't the active player's - it gates every handoff behind a "Pass the device" screen. Bust Seven has no hidden cards, so it skips that screen.</li>
           <li><strong>The log panel</strong> below the table lists the most recent plays, in case you look away for a second.</li>
         </ul>
-        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Euchre, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy and Cribbage are always exactly 2; Crazy Eights, Color Clash and Texas Hold'em play with 2-4; President and Oh Hell play with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other); Bust Seven plays with 2-4.</div>
+        <div class="callout callout-info">Seat counts differ by game: Hearts, Spades, Euchre, Big Two, and Chinese Poker are always exactly 4 players; Gin Rummy and Cribbage are always exactly 2; Crazy Eights, Color Clash and Texas Hold'em play with 2-4; President and Oh Hell play with 3-4; Blackjack plays with 1-4 (everyone plays against the dealer, not each other); Bust Seven and Property Deal play with 2-4.</div>
       </section>
 
       <section id="hearts">
@@ -384,6 +385,37 @@
         </ul>
       </section>
 
+      <section id="property-deal">
+        <h2>Property Deal</h2>
+        <p><strong>Goal:</strong> be the first to have three full property sets of different colours on the table in front of you.</p>
+        <h3>The cards</h3>
+        <ul>
+          <li><strong>Money</strong> ($1M-$10M). <strong>Properties</strong> in ten colours, each colour with its own set size (Brown, Dark Blue and Utility 2; Station 4; the rest 3). <strong>Wilds</strong> count as either of two colours, and two count as any colour (but are worth nothing as money, and on their own they don't make a set or charge rent).</li>
+          <li><strong>Rent</strong> cards charge for one of their colours. <strong>Action</strong> cards: Set Grab, Block, Steal, Swap, Debt Collector, Birthday, Bonus Draw, House, Hotel and Double Rent.</li>
+          <li>Every card but a property shows a money value in its corner, so it can be banked instead of played.</li>
+        </ul>
+        <h3>Your turn</h3>
+        <ul>
+          <li>Draw 2 (or 5 if your hand is empty), then play up to 3 cards. Click a card, then choose what to do with it in the action bar: bank it, lay it as a property (picking a colour for a wild), or play its action. <strong>Cancel</strong> puts it back.</li>
+          <li>Moving a wild on your table to its other colour is free (but not out of a set with a House).</li>
+          <li>Press <strong>End Turn</strong> when done. With more than 7 cards in hand you discard down to 7 first.</li>
+        </ul>
+        <h3>Actions</h3>
+        <ul>
+          <li><strong>Rent</strong>: two-colour rent charges every other player; an any-colour rent charges one player you pick. Rent depends on how many cards of that colour you have, plus $3M for a House and $4M for a Hotel. Play <strong>Double Rent</strong> with it (two plays) to double it.</li>
+          <li><strong>Debt Collector</strong>: one player pays $5M. <strong>Birthday</strong>: everyone pays $2M. <strong>Bonus Draw</strong>: draw 2.</li>
+          <li><strong>Steal</strong>: take one property that isn't part of a full set. <strong>Swap</strong>: trade one of yours for one of theirs (neither in a full set). <strong>Set Grab</strong>: take a whole full set, buildings and all.</li>
+          <li><strong>House</strong> on a full set, then <strong>Hotel</strong> on top of a House (not on Stations or Utilities).</li>
+          <li><strong>Block</strong>: cancel an action aimed at you. Whoever played it can Block your Block, and so on. Blocking never uses one of your plays. Everyone is asked, Block in hand or not, so the question gives nothing away.</li>
+        </ul>
+        <h3>Paying</h3>
+        <ul>
+          <li>You pay from the table, never your hand: click cards in your own table area (money, properties, buildings), then <strong>Pay</strong>. There's no change.</li>
+          <li>If what's on your table only just covers the debt, or doesn't cover it, everything goes without asking.</li>
+          <li>Properties you're paid with go straight onto your table in their colour.</li>
+        </ul>
+      </section>
+
       <section id="simplifications">
         <h2>Simplifications</h2>
         <p>This build favors clean, fast games over tournament-exact rulebooks. Notable differences from "official" rules:</p>
@@ -404,6 +436,7 @@
             <tr><td>Texas Hold'em</td><td>Blinds stay at 10/20 with no antes, and the session is a fixed 20 hands. Any raise reopens the betting, even an all-in too short to be a full raise. Every hand left at the showdown is shown; there is no mucking a losing hand.</td></tr>
             <tr><td>Blackjack</td><td>Flat 25-chip bet every round, no betting UI. Hit, Stand, and Double Down only - no splitting pairs, no surrender, no insurance. Dealer always stands on all 17s (including a soft 17). Fixed 15-round session rather than playing until you're out of chips.</td></tr>
             <tr><td>Bust Seven</td><td>Plays with 2-4 seats; the printed game is for 3 or more. An action card with only one possible receiver is given automatically, without asking. With more than one human, nobody is asked to pass the device, since every card is face up.</td></tr>
+            <tr><td>Property Deal</td><td>2-4 players (the printed game allows 5). One stack per colour, so extra cards of a full colour don't start a second set. A set that stops being full drops its House and Hotel into its owner's bank.</td></tr>
           </tbody>
         </table>
       </section>
@@ -448,6 +481,8 @@
           <dt>Bust</dt><dd>A hand total over 21 in Blackjack - an automatic loss regardless of the dealer's hand. In Bust Seven, turning over a number you already have - you score nothing that round.</dd>
           <dt>Stay</dt><dd>Ending your Bust Seven round by banking the cards in front of you.</dd>
           <dt>Seven</dt><dd>Seven different numbers in front of one Bust Seven player: a 15-point bonus, and the round ends.</dd>
+          <dt>Full set</dt><dd>In Property Deal, as many properties of one colour as that colour's set size. Three full sets of different colours win.</dd>
+          <dt>Block</dt><dd>A Property Deal card that cancels an action aimed at you. It can itself be Blocked.</dd>
           <dt>Hot-seat</dt><dd>Multiple human players sharing one device, taking turns with their hand hidden between turns.</dd>
         </dl>
       </section>

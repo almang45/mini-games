@@ -31,6 +31,7 @@ const HOLDEM = require("../games/texas-holdem.js"); global.HOLDEM = HOLDEM;
 const CRIBBAGE = require("../games/cribbage.js"); global.CRIBBAGE = CRIBBAGE;
 const BUST_SEVEN = require("../games/bust-seven.js"); global.BUST_SEVEN = BUST_SEVEN;
 const COLOR_CLASH = require("../games/color-clash.js"); global.COLOR_CLASH = COLOR_CLASH;
+const PROPERTY_DEAL = require("../games/property-deal.js"); global.PROPERTY_DEAL = PROPERTY_DEAL;
 require("../ui/hearts-ui.js");
 require("../ui/crazy-eights-ui.js");
 require("../ui/president-ui.js");
@@ -45,6 +46,7 @@ require("../ui/texas-holdem-ui.js");
 require("../ui/cribbage-ui.js");
 require("../ui/bust-seven-ui.js");
 require("../ui/color-clash-ui.js");
+require("../ui/property-deal-ui.js");
 const app = require("../app.js");
 global.document._fireDOMContentLoaded();
 
@@ -219,6 +221,42 @@ function colorClashHumanMove(state, seat) {
   return card ? app.playCard(seat, card) : app.clickAction("Draw Card");
 }
 
+// Plays the AI's move through the real UI: click the card to draft it, then
+// the option buttons whose (partial) options match the AI's, step by step.
+// Payments click the chips in the seat's own table area, then Pay.
+function propertyDealHumanMove(state, seat) {
+  const PD = PROPERTY_DEAL;
+  const game = app.getCurrentGame();
+  const wrap = global.document.getElementById("tableWrap");
+  ok("every seat shows its table", findAll(wrap, (n) => n.classList && n.classList.contains("pd-tableau")).length === state.seats.length);
+  if (state.phase === "respond") return app.clickAction(PD.aiShouldBlock(state, seat) ? "Block" : "Let it happen");
+  if (state.phase === "pay") {
+    const ids = new Set(PD.aiChoosePayment(state, seat));
+    const chips = findAll(wrap, (n) => n.dataset && ids.has(n.dataset.id));
+    ok("a chip for every card the payment uses", chips.length === ids.size);
+    chips.forEach((chip) => chip.click());
+    return app.clickAction(game.actionButtons(state, seat).find((b) => b.primary).label);
+  }
+  if (state.phase === "discard") return app.playCard(seat, state.hands[seat][0]);
+  const move = PD.aiChoosePlay(state, seat);
+  if (move.type === "end") return app.clickAction("End Turn");
+  if (move.type === "move") {
+    app.clickAction("Move a wild…");
+    const btn = game.actionButtons(state, seat).find((b) => b.move && b.move.id === move.id && b.move.color === move.color);
+    ok("the AI's wild move is in the menu", !!btn, move);
+    return app.clickAction(btn.label);
+  }
+  app.playCard(seat, state.hands[seat].find((c) => c.id === move.id));
+  const matches = (part) => !!part && Object.keys(part).every((k) => (k === "double" ? !!part[k] === !!move.opt[k] : part[k] === move.opt[k]));
+  for (let step = 0; step < 3; step++) {
+    const btn = game.actionButtons(state, seat).find((b) => matches(b.opt || b.step));
+    ok("the AI's play is offered as a button", !!btn, move.opt);
+    app.clickAction(btn.label);
+    if (!btn.step) return undefined;
+  }
+  throw new Error("play dialogue did not finish");
+}
+
 function findAll(node, pred, out) {
   out = out || [];
   if (pred(node)) out.push(node);
@@ -231,7 +269,7 @@ const HUMAN_MOVE = {
   "big-two": bigTwoHumanMove, "chinese-poker": cpHumanMove, blackjack: bjHumanMove,
   spades: spadesHumanMove, "gin-rummy": ginHumanMove, "oh-hell": ohHellHumanMove,
   euchre: euchreHumanMove, "texas-holdem": holdemHumanMove, cribbage: cribbageHumanMove,
-  "bust-seven": bustSevenHumanMove, "color-clash": colorClashHumanMove,
+  "bust-seven": bustSevenHumanMove, "color-clash": colorClashHumanMove, "property-deal": propertyDealHumanMove,
 };
 
 async function driveGame({ maxHumanSteps = 1500, maxTicks = 4000 } = {}) {
@@ -283,6 +321,79 @@ function cardRendererChecks() {
   ok("renderFan passes renderFace to every card", seen.slice(1).join() === "a,b" && fan.children.length === 2);
 }
 
+// Random games don't reliably reach every Property Deal dialogue, so these
+// set up the table by hand and click through each one: a two-step rent,
+// paying by chips across a hot-seat handoff, and a Block.
+function propertyDealScripted() {
+  const PD = PROPERTY_DEAL;
+  const wrap = global.document.getElementById("tableWrap");
+  const setup = (hands, banks, sets) => {
+    setupSeats("property-deal", ["human", "human", "off", "off"]);
+    app.startGame();
+    const state = app.getEngineState();
+    state.hands = hands;
+    state.tables = [PD.emptyTable(), PD.emptyTable()];
+    banks.forEach((b, i) => state.tables[i].bank.push(...b));
+    Object.keys(sets).forEach((color) => state.tables[0].sets[color].cards.push(...sets[color]));
+    state.turn = 0; state.plays = 0; state.phase = "play"; state.pending = null; state.ui = null;
+    app.syncTable();
+    if (app.isInterstitialShowing()) app.confirmInterstitial();
+    return state;
+  };
+  const buttons = (state) => app.getCurrentGame().actionButtons(state, PD.actingSeat(state)).map((b) => b.label);
+
+  const anyRent = PD.rent(PD.COLORS.slice(), 3);
+  const five = PD.money(5);
+  const rentState = setup([[anyRent], []], [[], [five, PD.money(1)]], { red: [PD.prop(["red"], 3), PD.prop(["red"], 3)] });
+  app.playCard(0, anyRent);
+  ok("scripted: drafting offers bank and rent", buttons(rentState).includes("Bank $3M") && buttons(rentState).includes("Rent: Red $3M"));
+  app.clickAction("Rent: Red $3M");
+  ok("scripted: an any-colour rent then asks who pays", buttons(rentState).includes("Charge Seat 2"));
+  app.clickAction("Charge Seat 2");
+  ok("scripted: the target is asked first, behind a handoff", rentState.phase === "respond" && app.isInterstitialShowing());
+  app.confirmInterstitial();
+  const respondButtons = app.getCurrentGame().actionButtons(rentState, 1);
+  ok("scripted: without a Block the button is there but disabled", respondButtons[0].label === "Block" && respondButtons[0].disabled);
+  app.clickAction("Let it happen");
+  ok("scripted: then it pays, no second handoff", rentState.phase === "pay" && !app.isInterstitialShowing());
+  const chips = findAll(wrap, (n) => n.dataset && n.dataset.id === five.id);
+  ok("scripted: the payer's table shows a chip per card", chips.length === 1);
+  ok("scripted: Pay waits for enough", app.getCurrentGame().actionButtons(rentState, 1)[0].disabled);
+  chips[0].click();
+  app.clickAction("Pay $5M of $3M");
+  ok("scripted: paid, no change", PD.bankTotal(rentState.tables[0]) === 5 && PD.bankTotal(rentState.tables[1]) === 1);
+
+  const debt = PD.action("debt");
+  const blockState = setup([[debt], [PD.action("block")]], [[], [PD.money(10)]], {});
+  app.playCard(0, debt);
+  app.clickAction("Collect $5M from Seat 2");
+  if (app.isInterstitialShowing()) app.confirmInterstitial();
+  ok("scripted: the target may Block", buttons(blockState).join() === "Block,Let it happen");
+  app.clickAction("Block");
+  ok("scripted: the player gets to answer the Block", blockState.phase === "respond" && PD.actingSeat(blockState) === 0);
+  if (app.isInterstitialShowing()) app.confirmInterstitial();
+  app.clickAction("Let it happen");
+  ok("scripted: Blocked, nothing paid", PD.bankTotal(blockState.tables[1]) === 10 && blockState.phase === "play");
+
+  // Review: a two-colour wild and an any-colour wild in one set read the same.
+  const steal = PD.action("steal");
+  const labelState = setup([[steal], []], [[], []], {});
+  labelState.tables[1].sets.red.cards.push(PD.prop(["red", "yellow"], 3), PD.prop(PD.COLORS.slice(), 0));
+  app.syncTable();
+  app.playCard(0, steal);
+  const steals = buttons(labelState).filter((l) => l.startsWith("Steal"));
+  ok("scripted: each wild is named for what it is", steals.join() === "Steal Seat 2's Red (Red/Yellow wild),Steal Seat 2's Red (any-colour wild)", steals);
+  app.clickAction("Cancel");
+
+  const anyWild = PD.prop(PD.COLORS.slice(), 0);
+  const wildState = setup([[], []], [[], []], { red: [PD.prop(["red"], 3), anyWild] });
+  ok("scripted: wild moves wait behind one button", buttons(wildState).join() === "End Turn,Move a wild…");
+  app.clickAction("Move a wild…");
+  ok("scripted: then list every colour, naming the wild", buttons(wildState).length === 10 && buttons(wildState).includes("Red (any-colour wild) → Dark Blue"));
+  app.clickAction("Red (any-colour wild) → Green");
+  ok("scripted: and the wild moves", wildState.tables[0].sets.green.cards[0] === anyWild && buttons(wildState)[0] === "End Turn");
+}
+
 async function run() {
   cardRendererChecks();
 
@@ -309,6 +420,8 @@ async function run() {
     ["bust-seven", ["human", "ai", "ai", "ai"]],
     ["color-clash", ["human", "ai", "off", "off"]],
     ["color-clash", ["human", "ai", "ai", "ai"]],
+    ["property-deal", ["human", "ai", "off", "off"]],
+    ["property-deal", ["human", "ai", "ai", "ai"]],
   ];
   for (const [key, seats] of vsAiConfigs) {
     setupSeats(key, seats);
@@ -324,6 +437,9 @@ async function run() {
   // Every seat is human in hot-seat mode, so every single card play (not just
   // the AI-chain's pauses) costs a driver step - Hearts in particular can run
   // many rounds before someone crosses 100, so it gets a much larger budget.
+  // The budgets only catch a game that never ends: Spades to 500 usually
+  // takes under 2,500 steps but ran past 4,000 in 1 of 200 runs, so it gets
+  // plenty of room.
   const hotseatConfigs = [
     ["hearts", ["human", "human", "human", "human"], 6000],
     ["crazy-eights", ["human", "human", "off", "off"], 1500],
@@ -331,7 +447,7 @@ async function run() {
     ["big-two", ["human", "human", "human", "human"], 1500],
     ["chinese-poker", ["human", "human", "human", "human"], 1500],
     ["blackjack", ["human", "human", "human", "human"], 1500],
-    ["spades", ["human", "human", "human", "human"], 4000],
+    ["spades", ["human", "human", "human", "human"], 20000],
     ["gin-rummy", ["human", "human", "off", "off"], 3000],
     ["oh-hell", ["human", "human", "human", "human"], 1500],
     ["euchre", ["human", "human", "human", "human"], 3000],
@@ -339,6 +455,7 @@ async function run() {
     ["cribbage", ["human", "human", "off", "off"], 1500],
     ["bust-seven", ["human", "human", "human", "off"], 1500],
     ["color-clash", ["human", "human", "human", "off"], 3000],
+    ["property-deal", ["human", "human", "human", "off"], 3000],
   ];
   for (const [key, seats, maxHumanSteps] of hotseatConfigs) {
     setupSeats(key, seats);
@@ -364,6 +481,8 @@ async function run() {
   app.selectGame("gin-rummy");
   app.startGame();
   ok("gin lobby keeps both humans when trimming 4 seats to 2", app.getEngineState().seats.map((s) => s.type).join() === "human,human");
+
+  propertyDealScripted();
 
   console.log("ui-smoke.test.js: " + passed + " assertions passed");
 }

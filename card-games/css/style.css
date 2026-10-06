@@ -245,6 +245,17 @@
 /* Empty discard pile (Gin Rummy, right after the only discard is taken). */
 .card.card-slot { background: transparent; border: 1px dashed rgba(255, 255, 255, 0.3); box-shadow: none; }
 
+/* -------------------------------------------- own-deck games: centre piles */
+
+/* Draw pile and discards side by side, with captions, for the games that
+   draw their own decks (Bust Seven, Color Clash, Property Deal). */
+.deck-center { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 14px; }
+.pile-row { display: flex; gap: 22px; align-items: flex-start; justify-content: center; }
+.pile-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.pile-caption { font-size: 0.68rem; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+/* Bust Seven's centre also stacks a pick prompt, and always had a little more air. */
+.deck-center.b7-center { gap: 10px; }
+
 /* ------------------------------------------------------- Bust Seven faces */
 
 /* Its own deck: numbers 0-12, +N/x2 modifiers and three action cards, drawn
@@ -270,10 +281,6 @@
 .b7-flip3 { background: linear-gradient(160deg, #ffe0cc, #f5a76c); color: #6b2c00; }
 .b7-second { background: linear-gradient(160deg, #ffe0e0, #f2a0a0); color: #7a1b1b; }
 
-.b7-center { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 14px; }
-.b7-piles { display: flex; gap: 22px; align-items: flex-start; justify-content: center; }
-.b7-pile { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.b7-pile-label { font-size: 0.68rem; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 .b7-prompt { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--accent); text-align: left; }
 
 /* ------------------------------------------------------ Color Clash faces */
@@ -296,11 +303,45 @@
 /* The shared grayscale filter turns yellow and red into the same brown; fade instead. */
 .cc-card.card-disabled { filter: none; opacity: 0.55; }
 
-.cc-center { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 14px; }
-.cc-piles { display: flex; gap: 22px; align-items: flex-start; justify-content: center; }
-.cc-pile { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.cc-pile-label { font-size: 0.68rem; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 .cc-current { font-size: 0.68rem; font-weight: 700; padding: 1px 8px; border-radius: 10px; background: var(--cc, var(--panel-strong)); color: #fff; }
+
+/* ---------------------------------------------------- Property Deal faces */
+
+/* Money, colour-banded properties and rent cards, and named actions, drawn
+   by property-deal-ui.js's renderFace. Plain colour names only: no board-game
+   street names or artwork. */
+.pd-c-brown { --pd: #7a4b2a; } .pd-c-lightblue { --pd: #8fd0f0; } .pd-c-pink { --pd: #d6589a; }
+.pd-c-orange { --pd: #f08a24; } .pd-c-red { --pd: #d33a2f; } .pd-c-yellow { --pd: #f2cf2a; }
+.pd-c-green { --pd: #2d9a4c; } .pd-c-darkblue { --pd: #23408f; } .pd-c-station { --pd: #2b2b2b; } .pd-c-utility { --pd: #a7b6a3; }
+
+.pd-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; overflow: hidden; color: #1c1c1c; }
+.pd-money { background: linear-gradient(160deg, #e6f4dc, #b9dca2); }
+.pd-action { background: linear-gradient(160deg, #fff4dc, #f1d7a0); }
+.pd-rent { background: linear-gradient(160deg, #eef0ff, #c9cff2); }
+.pd-corner { position: absolute; top: 2px; left: 4px; z-index: 1; font-size: 0.55rem; font-weight: 800; color: #3d3d3d; }
+.pd-prop .pd-corner { color: #fff; text-shadow: 0 0 2px #000, 0 0 2px #000; }
+.pd-value { font-weight: 800; font-size: 0.9rem; color: #285c1f; }
+.pd-label { font-weight: 800; font-size: 0.56rem; text-align: center; line-height: 1.1; padding: 0 2px; }
+.pd-band { display: flex; width: 80%; height: 14px; border-radius: 3px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); }
+.pd-band span { flex: 1; background: var(--pd); }
+.pd-band.pd-rainbow { background: linear-gradient(90deg, #7a4b2a, #8fd0f0, #d6589a, #f08a24, #d33a2f, #f2cf2a, #2d9a4c, #23408f); }
+.pd-prop .pd-band { position: absolute; top: 0; width: 100%; height: 34%; border-radius: 0; }
+.pd-prop .pd-label { margin-top: 30%; }
+.card-small .pd-label, .card-small .pd-value { font-size: 0.48rem; }
+.card-small .pd-corner { display: none; }
+
+/* A seat's public bank and sets, as wrapping chips under its name. */
+.pd-tableau { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; max-width: 100%; }
+.pd-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 10px;
+  background: var(--panel-strong); font-size: 0.68rem; font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.pd-chip.is-full { box-shadow: 0 0 0 1.5px var(--accent); }
+.pd-swatch { width: 10px; height: 10px; border-radius: 2px; background: var(--pd); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35); }
+button.pd-pick { border: 1px solid rgba(255, 255, 255, 0.25); background: var(--panel); cursor: pointer; padding: 3px 8px; }
+button.pd-pick.is-picked { background: var(--accent); color: #2a1c00; font-weight: 700; }
+
+.pd-prompt { font-size: 0.78rem; color: var(--accent); text-align: center; max-width: 260px; }
 
 /* ------------------------------------------------------------------ chrome */
 
