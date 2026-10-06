@@ -3,7 +3,7 @@
 A small collection of classic card games — static HTML/CSS/JS, no build step,
 no server. Open `index.html` directly in a browser.
 
-Fifteen games, each seatable from 1-4 players depending on the game:
+Sixteen games, each seatable from 1-4 players depending on the game:
 
 - **Hearts** — 4 players, trick-taking, avoid points, dodge the moon
 - **Spades** — 4 players in two partnerships, bid tricks, spades trump, nil and bags, to 500
@@ -19,6 +19,7 @@ Fifteen games, each seatable from 1-4 players depending on the game:
 - **Texas Hold'em** — 2-4 players, no-limit with 10/20 blinds and side pots, 20-hand session
 - **Blackjack** — 1-4 players vs. the dealer, hit/stand/double, 15-round session
 - **Bust Seven** — 2-4 players, push-your-luck on the Flip 7 rules with its own 94-card deck, to 200
+- **Last Fuse** — 2-4 players, the Exploding Kittens rules: play cards, then draw and hope it isn't a Bomb; last one standing wins
 - **Property Deal** — 2-4 players, the Monopoly Deal rules: bank money, collect sets, charge rent, steal and Block; three full sets wins
 
 Every seat is independently set to **Human**, **AI**, or **Off** (where the
@@ -54,6 +55,7 @@ js/games/texas-holdem.js     Texas Hold'em rules engine + AI (7-card evaluator, 
 js/games/blackjack.js        Blackjack rules engine + AI
 js/games/bust-seven.js       Bust Seven rules engine + AI (own deck, action-card queue)
 js/games/property-deal.js    Property Deal rules engine + AI (tables, payments, Block chains)
+js/games/last-fuse.js        Last Fuse rules engine + AI (Nope windows, pile knowledge)
 js/ui/hearts-ui.js           binds Hearts state to the shared table shell
 js/ui/spades-ui.js           binds Spades state to the shared table shell
 js/ui/oh-hell-ui.js          binds Oh Hell state to the shared table shell
@@ -69,6 +71,7 @@ js/ui/texas-holdem-ui.js     binds Texas Hold'em state to the shared table shell
 js/ui/blackjack-ui.js        binds Blackjack state to the shared table shell
 js/ui/bust-seven-ui.js       binds Bust Seven state to the shared table shell (own card faces)
 js/ui/property-deal-ui.js    binds Property Deal state to the shared table shell (own faces, seat tables)
+js/ui/last-fuse-ui.js        binds Last Fuse state to the shared table shell (own faces, Bomb placement)
 js/app.js                    lobby + table controller (screens, seat setup,
                               AI pacing, hot-seat handoff, modals)
 js/test/*.test.js            plain Node test scripts (run with `node js/test/x.test.js`)
@@ -291,7 +294,28 @@ disabled, tag) stays the same across every game.
 - Seat 1 goes first; there's no deal-order shuffle. A 400-turn limit (never
   reached in testing) ends a stalemate on most full sets, then value.
 
-**AI opponents (all fifteen games):** heuristic, not a full game-tree search —
+**Last Fuse:**
+- Plays the published Exploding Kittens rules under a generic name, with
+  plain card names (Bomb for the Exploding Kitten) and no original art.
+- 2-4 seats; each starts with 7 cards plus a Defuse, two spare Defuses go
+  in the pile, and one Bomb fewer than the players. Unused Bombs and
+  Defuses stay out of the game.
+- Attacks stack: attacked while attacked, the next player owes the turns
+  left plus two.
+- Cat combos are pairs (a random card) and triples (name a card). The
+  five-different-cats combo isn't in.
+- Who may Nope depends on the table. With one human, anyone may, as in the
+  printed game: the AIs decide at once, so no pause gives a Nope away, and
+  the human is asked only when holding one. With two or more humans, only
+  the player an action is aimed at may Nope it, then the player who made
+  it may Nope back, and so on. Both are always asked, Nope or not, so the
+  question gives nothing away, and the device never goes round the table
+  for every card. Actions with no target (Skip, Shuffle, See the Future)
+  can't be Noped there.
+- What a player has seen of the pile (See the Future, or where they put a
+  Bomb back) is shown only to them, and forgotten on a shuffle.
+
+**AI opponents (all sixteen games):** heuristic, not a full game-tree search —
 they play legally and reasonably (Hearts: duck under the current trick
 winner when possible, dump dangerous cards — the Queen of Spades and high
 spades/hearts — when void; Spades: bid a rule-of-thumb trick count from
@@ -344,7 +368,14 @@ moves stranded ones (for free) to a set they help; it Blocks any Set Grab,
 Steal or Swap and big payments (never one that would cost it nothing), pays
 with the closest
 bank combination before giving up properties it needs least, and beats a
-random legal player in about 98% of two-seat games)
+random legal player in about 98% of two-seat games; Last Fuse: work out
+the Bomb risk from what's left in the pile (or know it from See the
+Future), skip or attack away a Bomb it knows is on top, peek when the risk
+climbs and skip when it's high, hunt for a Defuse with Favors and cat
+combos when it has none, Nope Attacks and steals aimed at it when they
+matter, give away its least useful card, and put a defused Bomb on top for
+the next player; it beats a random legal player in about 88% of two-seat
+games)
 but don't model deeper strategy like deliberately holding back a winning
 play, reading opponents' hands, or (Hearts) angling to shoot the moon
 themselves. Only Bust Seven and Color Clash count cards, and only from
@@ -358,7 +389,8 @@ environment this was built in, so testing happens on two levels:
 1. **Engine tests** (`cards.test.js`, `hearts.test.js`, `spades.test.js`,
    `oh-hell.test.js`, `euchre.test.js`, `crazy-eights.test.js`, `president.test.js`, `big-two.test.js`,
    `gin-rummy.test.js`, `cribbage.test.js`, `chinese-poker.test.js`, `texas-holdem.test.js`, `blackjack.test.js`,
-   `bust-seven.test.js`, `color-clash.test.js`, `property-deal.test.js`)
+   `bust-seven.test.js`, `color-clash.test.js`, `property-deal.test.js`,
+   `last-fuse.test.js`)
    exercise each rules engine directly in Node: rule checks against
    hand-built scenarios (forced leads, moon shots, illegal plays,
    pile-clearing edge cases around a player finishing mid-round, hand

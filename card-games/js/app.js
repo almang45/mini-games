@@ -20,8 +20,9 @@
     "bust-seven": window.BUST_SEVEN_UI,
     "color-clash": window.COLOR_CLASH_UI,
     "property-deal": window.PROPERTY_DEAL_UI,
+    "last-fuse": window.LAST_FUSE_UI,
   };
-  const GAME_ORDER = ["hearts", "spades", "oh-hell", "euchre", "crazy-eights", "color-clash", "president", "big-two", "gin-rummy", "cribbage", "chinese-poker", "texas-holdem", "blackjack", "bust-seven", "property-deal"];
+  const GAME_ORDER = ["hearts", "spades", "oh-hell", "euchre", "crazy-eights", "color-clash", "president", "big-two", "gin-rummy", "cribbage", "chinese-poker", "texas-holdem", "blackjack", "bust-seven", "property-deal", "last-fuse"];
 
   let selectedGameKey = null;
   let seatConfig = ["human", "ai", "ai", "ai"];

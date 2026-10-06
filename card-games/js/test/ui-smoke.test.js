@@ -32,6 +32,7 @@ const CRIBBAGE = require("../games/cribbage.js"); global.CRIBBAGE = CRIBBAGE;
 const BUST_SEVEN = require("../games/bust-seven.js"); global.BUST_SEVEN = BUST_SEVEN;
 const COLOR_CLASH = require("../games/color-clash.js"); global.COLOR_CLASH = COLOR_CLASH;
 const PROPERTY_DEAL = require("../games/property-deal.js"); global.PROPERTY_DEAL = PROPERTY_DEAL;
+const LAST_FUSE = require("../games/last-fuse.js"); global.LAST_FUSE = LAST_FUSE;
 require("../ui/hearts-ui.js");
 require("../ui/crazy-eights-ui.js");
 require("../ui/president-ui.js");
@@ -47,6 +48,7 @@ require("../ui/cribbage-ui.js");
 require("../ui/bust-seven-ui.js");
 require("../ui/color-clash-ui.js");
 require("../ui/property-deal-ui.js");
+require("../ui/last-fuse-ui.js");
 const app = require("../app.js");
 global.document._fireDOMContentLoaded();
 
@@ -257,6 +259,31 @@ function propertyDealHumanMove(state, seat) {
   throw new Error("play dialogue did not finish");
 }
 
+// Plays the AI's move through the real buttons and card clicks.
+function lastFuseHumanMove(state, seat) {
+  const LF = LAST_FUSE;
+  const game = app.getCurrentGame();
+  if (state.phase === "respond") {
+    const nope = state.hands[seat].some((c) => c.kind === "nope") && LF.aiShouldNope(state, seat);
+    return app.clickAction(nope ? "Nope" : "Let it happen");
+  }
+  if (state.phase === "favor") return app.playCard(seat, state.hands[seat].find((c) => c.id === LF.aiChooseFavor(state, seat)));
+  if (state.phase === "insert") return app.clickAction(game.actionButtons(state, seat)[0].label); // Top
+  const move = LF.aiChoosePlay(state, seat);
+  if (move.type === "draw") return app.clickAction(game.actionButtons(state, seat).find((b) => b.primary).label);
+  app.playCard(seat, state.hands[seat].find((c) => c.id === move.id));
+  const target = move.opt.target;
+  const matches = (b) => (b.opt && (b.opt.target === target || target === undefined) && (b.opt.name === move.opt.name) && (!move.opt.ids || b.opt.ids.length === move.opt.ids.length)) ||
+    (b.step && b.step.target === target && move.opt.ids && move.opt.ids.length === 3);
+  for (let step = 0; step < 2; step++) {
+    const btn = game.actionButtons(state, seat).find(matches);
+    ok("last fuse: the AI's play is offered", !!btn, move.opt);
+    app.clickAction(btn.label);
+    if (!btn.step) return undefined;
+  }
+  throw new Error("last fuse play did not finish");
+}
+
 function findAll(node, pred, out) {
   out = out || [];
   if (pred(node)) out.push(node);
@@ -270,6 +297,7 @@ const HUMAN_MOVE = {
   spades: spadesHumanMove, "gin-rummy": ginHumanMove, "oh-hell": ohHellHumanMove,
   euchre: euchreHumanMove, "texas-holdem": holdemHumanMove, cribbage: cribbageHumanMove,
   "bust-seven": bustSevenHumanMove, "color-clash": colorClashHumanMove, "property-deal": propertyDealHumanMove,
+  "last-fuse": lastFuseHumanMove,
 };
 
 async function driveGame({ maxHumanSteps = 1500, maxTicks = 4000 } = {}) {
@@ -394,6 +422,33 @@ function propertyDealScripted() {
   ok("scripted: and the wild moves", wildState.tables[0].sets.green.cards[0] === anyWild && buttons(wildState)[0] === "End Turn");
 }
 
+// Hot-seat Nope (target rule): the target is asked behind a handoff, Nope in
+// hand or not, and the player may Nope back.
+function lastFuseScripted() {
+  const LF = LAST_FUSE;
+  setupSeats("last-fuse", ["human", "human", "human", "off"]);
+  app.startGame();
+  const s = app.getEngineState();
+  ok("scripted last fuse: two humans use the target rule", s.nopeRule === "target");
+  const fav = LF.card("favor");
+  s.hands = [[fav, LF.card("nope")], [LF.card("tabby")], [LF.card("nope")]];
+  s.turn = 0; s.turnsLeft = 1; s.phase = "play"; s.pending = null; s.ui = null;
+  app.syncTable();
+  if (app.isInterstitialShowing()) app.confirmInterstitial();
+  const labels = () => app.getCurrentGame().actionButtons(s, LF.actingSeat(s)).map((b) => b.label);
+  app.playCard(0, fav);
+  ok("scripted last fuse: Favor asks who from", labels().includes("Favor from Seat 2") && labels().includes("Favor from Seat 3"));
+  app.clickAction("Favor from Seat 2");
+  ok("scripted last fuse: the target is asked behind a handoff", s.phase === "respond" && app.isInterstitialShowing());
+  app.confirmInterstitial();
+  const btns = app.getCurrentGame().actionButtons(s, 1);
+  ok("scripted last fuse: no Nope in hand, button disabled", btns[0].label === "Nope" && btns[0].disabled);
+  app.clickAction("Let it happen");
+  ok("scripted last fuse: then the target gives a card", s.phase === "favor" && LF.actingSeat(s) === 1);
+  app.playCard(1, s.hands[1][0]);
+  ok("scripted last fuse: the card changes hands; seat 3 never asked", s.hands[0].length === 2 && s.hands[2].length === 1);
+}
+
 async function run() {
   cardRendererChecks();
 
@@ -422,6 +477,8 @@ async function run() {
     ["color-clash", ["human", "ai", "ai", "ai"]],
     ["property-deal", ["human", "ai", "off", "off"]],
     ["property-deal", ["human", "ai", "ai", "ai"]],
+    ["last-fuse", ["human", "ai", "off", "off"]],
+    ["last-fuse", ["human", "ai", "ai", "ai"]],
   ];
   for (const [key, seats] of vsAiConfigs) {
     setupSeats(key, seats);
@@ -456,6 +513,7 @@ async function run() {
     ["bust-seven", ["human", "human", "human", "off"], 1500],
     ["color-clash", ["human", "human", "human", "off"], 3000],
     ["property-deal", ["human", "human", "human", "off"], 3000],
+    ["last-fuse", ["human", "human", "human", "off"], 1500],
   ];
   for (const [key, seats, maxHumanSteps] of hotseatConfigs) {
     setupSeats(key, seats);
@@ -483,6 +541,7 @@ async function run() {
   ok("gin lobby keeps both humans when trimming 4 seats to 2", app.getEngineState().seats.map((s) => s.type).join() === "human,human");
 
   propertyDealScripted();
+  lastFuseScripted();
 
   console.log("ui-smoke.test.js: " + passed + " assertions passed");
 }

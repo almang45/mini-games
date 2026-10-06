@@ -343,6 +343,28 @@ button.pd-pick.is-picked { background: var(--accent); color: #2a1c00; font-weigh
 
 .pd-prompt { font-size: 0.78rem; color: var(--accent); text-align: center; max-width: 260px; }
 
+/* ------------------------------------------------------- Last Fuse faces */
+
+.lf-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #1c1c1c; }
+.lf-glyph { font-size: 1.15rem; line-height: 1; }
+.lf-label { font-size: 0.55rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; }
+.card-small .lf-glyph { font-size: 0.85rem; }
+.card-small .lf-label { font-size: 0.45rem; }
+.lf-bomb { background: linear-gradient(160deg, #3a3a3a, #121212); color: #ffb347; }
+.lf-defuse { background: linear-gradient(160deg, #d9f5d0, #8fd17a); }
+.lf-attack { background: linear-gradient(160deg, #ffd8cc, #f08a6a); }
+.lf-skip { background: linear-gradient(160deg, #dbe8ff, #8fb0ee); }
+.lf-favor { background: linear-gradient(160deg, #f0e0ff, #c49be8); }
+.lf-shuffle { background: linear-gradient(160deg, #fff1c9, #eccb6a); }
+.lf-future { background: linear-gradient(160deg, #e0f6f6, #86cfcf); }
+.lf-nope { background: linear-gradient(160deg, #ffd6d6, #e57373); }
+.lf-cat { background: linear-gradient(160deg, #fdf8ee, #e8dcc2); }
+.lf-tabby .lf-glyph { color: #8a5a2b; } .lf-calico .lf-glyph { color: #c0692a; } .lf-siamese .lf-glyph { color: #6b5b4b; }
+.lf-sphynx .lf-glyph { color: #c28a8a; } .lf-ginger .lf-glyph { color: #d4721f; }
+.lf-peek { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.lf-peek-row { display: flex; gap: 4px; }
+.lf-prompt { font-size: 0.78rem; color: var(--accent); text-align: center; max-width: 260px; }
+
 /* ------------------------------------------------------------------ chrome */
 
 .table-header {
