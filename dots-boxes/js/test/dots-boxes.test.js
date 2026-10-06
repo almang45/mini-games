@@ -131,12 +131,29 @@ function drawn(w, h, lines) {
   ok("set-up: the rest is one 2-chain", JSON.stringify(D.components(g, t.lines.map((x, l) => (l === g.vLine(0, 1) || l === g.hLine(0, 1) ? 1 : x))).map((c) => c.size)) === "[2]");
   ok("with only a 2-chain left, hard takes", D.chooseMove(t, "hard", makeRng(1)) === g.vLine(0, 1));
 
+  // 5x2: an opened 4-loop on the left (boxes 0,1 / 5,6) and a 6-chain
+  // snaking through columns 2-4. Keeping control is worth giving four away.
+  const gl = D.geometry(5, 2);
+  const open = [gl.hLine(1, 0), gl.hLine(1, 1), gl.vLine(1, 1), // what's left of the loop
+    gl.hLine(0, 2), gl.vLine(0, 3), gl.vLine(0, 4), gl.hLine(1, 4), gl.vLine(1, 4), gl.vLine(1, 3), gl.hLine(2, 2)];
+  const loopPos = D.createGame(5, 2);
+  for (let l = 0; l < gl.lineCount; l++) if (!open.includes(l)) loopPos.lines[l] = P2;
+  ok("set-up: a 6-chain beside the loop", JSON.stringify(D.components(gl, loopPos.lines.map((x, l) =>
+    ([gl.hLine(1, 0), gl.hLine(1, 1), gl.vLine(1, 1)].includes(l) ? 1 : x))).map((c) => c.size)) === "[6]");
+  ok("hard declines the last four of a loop with the middle line", D.chooseMove(loopPos, "hard", makeRng(1)) === gl.vLine(1, 1));
+  ok("medium just takes", [gl.hLine(1, 0), gl.hLine(1, 1)].includes(D.chooseMove(loopPos, "medium", makeRng(1))));
+  // Nothing else on the board: take the four.
+  const g22 = D.geometry(2, 2);
+  const lone = D.createGame(2, 2);
+  for (let l = 0; l < g22.lineCount; l++) if (![g22.hLine(1, 0), g22.hLine(1, 1), g22.vLine(1, 1)].includes(l)) lone.lines[l] = P2;
+  ok("with nothing left after, hard takes the loop", D.captures(g22, lone.lines, D.chooseMove(lone, "hard", makeRng(1))));
+
   // With safe moves left, nobody gives a box away.
-  const open = D.createGame(4, 4);
+  const fresh = D.createGame(4, 4);
   const g4 = D.geometry(4, 4);
   for (const level of ["medium", "hard"]) {
-    const m = D.chooseMove(open, level, makeRng(2));
-    ok(level + " opens with a safe line", D.isSafe(g4, open.lines, m));
+    const m = D.chooseMove(fresh, level, makeRng(2));
+    ok(level + " opens with a safe line", D.isSafe(g4, fresh.lines, m));
   }
 })();
 

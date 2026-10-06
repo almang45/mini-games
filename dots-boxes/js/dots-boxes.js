@@ -205,7 +205,7 @@
   function bestOpening(g, lines, useValues) {
     const comps = components(g, lines);
     if (!comps.length) return null;
-    if (!useValues) return comps.slice().sort((a, b) => a.size - b.size || (a.loop ? 1 : -1))[0].open;
+    if (!useValues) return comps.slice().sort((a, b) => a.size - b.size || Number(a.loop) - Number(b.loop))[0].open;
     let best = null;
     let bestScore = -Infinity;
     comps.forEach((c, i) => {
@@ -231,11 +231,36 @@
     return far;
   }
 
+  // When line l takes into an opened loop that is down to four boxes (a run
+  // with a takeable box at each end), the middle line: drawing it hands all
+  // four over as two pairs. Returns { middle, lines } or null.
+  function loopLastFour(g, lines, l) {
+    const deg = (b) => undrawnSides(g, lines, b);
+    const a = g.lineBoxes[l].find((b) => deg(b) === 1);
+    if (a === undefined) return null;
+    const path = [a];
+    const between = [];
+    let cur = a;
+    let via = l;
+    for (;;) {
+      const n = g.lineBoxes[via].find((b) => b !== cur);
+      if (n === undefined) return null;
+      path.push(n);
+      between.push(via);
+      if (deg(n) === 1) break;
+      if (deg(n) !== 2 || path.length > 4) return null;
+      via = g.sides[n].find((x) => !lines[x] && x !== via);
+      cur = n;
+    }
+    return path.length === 4 ? { middle: between[1], lines: between } : null;
+  }
+
   // With only the last two boxes of a chain left to take, whether to hand
   // them over so the other player has to open the next chain. Returns that
   // line when declining is worth more, else null.
   function doubleDeal(g, lines) {
     const takeable = freeLines(g, lines).filter((l) => captures(g, lines, l));
+    if (takeable.length === 2) return loopDeal(g, lines, takeable);
     if (takeable.length !== 1) return null;
     const l = takeable[0];
     const far = farSideOfLastTwo(g, lines, l);
@@ -248,6 +273,18 @@
     const rest = chainValue(components(g, after));
     // Take two and open the rest, or give two and have them open it.
     return -2 - rest > 2 + rest ? far : null;
+  }
+
+  // The loop version: keep control by handing over the last four boxes.
+  function loopDeal(g, lines, takeable) {
+    const four = loopLastFour(g, lines, takeable[0]);
+    if (!four || !four.lines.includes(takeable[1])) return null;
+    const after = lines.slice();
+    four.lines.forEach((x) => { after[x] = 1; });
+    if (freeLines(g, after).some((x) => isSafe(g, after, x) || captures(g, after, x))) return null;
+    const rest = chainValue(components(g, after));
+    // Take four and open the rest, or give four and have them open it.
+    return -4 - rest > 4 + rest ? four.middle : null;
   }
 
   // Search over safe moves to win the fight for control: whoever runs out of
@@ -286,8 +323,9 @@
       if (dd != null) return dd;
     }
     if (taking.length) {
-      // Keep the end of a chain for last, so the double-cross is still on.
-      const first = cfg.chains ? taking.filter((l) => farSideOfLastTwo(g, lines, l) < 0) : [];
+      // Keep the end of a chain, and the last four of a loop, for last, so
+      // the double-cross is still on.
+      const first = cfg.chains ? taking.filter((l) => farSideOfLastTwo(g, lines, l) < 0 && !loopLastFour(g, lines, l)) : [];
       return pickRandom(first.length ? first : taking, rand);
     }
     if (rand() < cfg.randomMoveChance) return pickRandom(free, rand);

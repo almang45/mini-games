@@ -63,7 +63,7 @@
   // What the drafted card can do at its current step.
   function choices(state, seat, card, draft) {
     const out = [];
-    const others = state.seats.map((s, i) => i).filter((i) => i !== seat && state.alive[i]);
+    const others = LF.opponents(state, seat);
     const play = (label, opt) => { if (!LF.playError(state, seat, card, opt)) out.push({ label, opt }); };
     if (LF.isCat(card.kind)) {
       const same = state.hands[seat].filter((c) => c.kind === card.kind).map((c) => c.id);
@@ -137,14 +137,24 @@
         DOM.el("div", "pile-col", [top ? DOM.cardEl(top, { renderFace }) : DOM.el("div", "card card-slot"), DOM.el("div", "pile-caption", "Discards")]),
       ]),
     ];
-    // What this device's player has seen of the pile: theirs alone.
+    // What this device's player knows of the pile: theirs alone. The run of
+    // known cards from the top is shown face up; anything further down (a
+    // Bomb they put back deep) is named with its place.
     const viewer = anchor;
     const seen = viewer != null && state.seats[viewer].type === "human" ? state.known[viewer] : [];
-    if (seen.length) {
-      const ids = new Set(seen);
-      const cards = state.draw.filter((c) => ids.has(c.id));
-      children.push(DOM.el("div", "lf-peek", [DOM.el("span", "pile-caption", "Top of the pile (only you know):"),
-        DOM.el("div", "lf-peek-row", cards.map((c) => DOM.cardEl(c, { renderFace, small: true })))]));
+    const byId = new Map(state.draw.map((c) => [c.id, c]));
+    const run = [];
+    while (run.length < seen.length && seen[run.length] !== null) run.push(byId.get(seen[run.length]));
+    const deeper = seen.map((id, pos) => ({ id, pos })).slice(run.length).filter((e) => e.id !== null);
+    if (run.length || deeper.length) {
+      const parts = [];
+      if (run.length) {
+        parts.push(DOM.el("span", "pile-caption", "Top of the pile (only you know):"),
+          DOM.el("div", "lf-peek-row", run.map((c) => DOM.cardEl(c, { renderFace, small: true }))));
+      }
+      deeper.forEach((e) => parts.push(DOM.el("span", "pile-caption",
+        "Only you know: " + ordinal(e.pos + 1) + " from the top is a " + LF.NAME[byId.get(e.id).kind] + ".")));
+      children.push(DOM.el("div", "lf-peek", parts));
     }
     if (state.pending && state.pending.action) {
       children.push(DOM.el("div", "lf-prompt", state.pending.action.label + (state.pending.nopes ? " — Noped ×" + state.pending.nopes : "")));

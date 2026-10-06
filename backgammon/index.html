@@ -188,7 +188,7 @@
         <option value="hard">Hard</option>
       </select>
     </label>
-    <button id="btnNew" type="button">New Game</button>
+    <button id="btnNew" type="button">New Match</button>
   </div>
 
   <div class="scoreboard">
@@ -203,6 +203,7 @@
     <button class="btn-primary" id="btnRoll" type="button">Roll</button>
     <button id="btnUndo" type="button">Undo move</button>
     <button class="btn-primary" id="btnDone" type="button">Done</button>
+    <button class="btn-primary" id="btnNext" type="button" hidden>Next Game</button>
   </div>
 
   <footer>Move all fifteen checkers round the board into your home board (bottom right), then bear them off; the first to bear off all fifteen wins. Each die moves one checker that many points; doubles move four times. You can't land on a point held by two or more enemy checkers. Land on a single one to hit it to the bar — a checker on the bar must come back in before anything else moves. Use both dice if you can. Click a checker, then where it goes. A gammon (the loser bore off none) scores 2, a backgammon (and still has a checker on the bar or in the winner's home board) scores 3.</footer>
@@ -251,9 +252,7 @@
   function destinations(from) {
     const out = new Map();
     const k = state.done.length;
-    const same = (a, b) => a.from === b.from && a.to === b.to;
-    for (const t of state.turns) {
-      if (!state.done.every((st, j) => same(t[j], st))) continue;
+    for (const t of BG.following(state)) {
       if (!t[k] || t[k].from !== from) continue;
       const steps = [];
       for (let m = k; m < t.length; m++) {
@@ -497,8 +496,7 @@
     dice.className = "dice";
     if (state.dice) {
       const left = BG.diceLeft(state);
-      const faces = state.dice[0] === state.dice[1] ? [state.dice[0], state.dice[0], state.dice[0], state.dice[0]] : state.dice;
-      faces.forEach((d) => {
+      BG.diceFaces(state.dice).forEach((d) => {
         const k = left.indexOf(d);
         const el = document.createElement("span");
         el.className = "die " + CLS[s] + (k < 0 ? " used" : "");
@@ -522,6 +520,8 @@
     $("btnUndo").disabled = !state.done.length;
     $("btnDone").hidden = !(human && state.phase === "move");
     $("btnDone").disabled = !BG.turnComplete(state);
+    // After "See Board", the match carries on from here.
+    $("btnNext").hidden = !state.gameOver;
   }
 
   $("btnNew").addEventListener("click", () => {
@@ -530,6 +530,7 @@
     newGame();
   });
   $("modalNew").addEventListener("click", newGame);
+  $("btnNext").addEventListener("click", newGame);
   $("modalClose").addEventListener("click", () => { $("overlay").hidden = true; });
   $("btnRoll").addEventListener("click", roll);
   $("btnUndo").addEventListener("click", undoStep);

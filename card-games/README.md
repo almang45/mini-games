@@ -302,6 +302,9 @@ disabled, tag) stays the same across every game.
   Defuses stay out of the game.
 - Attacks stack: attacked while attacked, the next player owes the turns
   left plus two.
+- Pile knowledge: a player remembers what See the Future showed and where
+  they put a defused Bomb back, however deep. A Bomb goes back in secret,
+  so everyone else forgets what they had seen.
 - Cat combos are pairs (a random card) and triples (name a card). The
   five-different-cats combo isn't in.
 - Who may Nope depends on the table. With one human, anyone may, as in the
@@ -369,12 +372,11 @@ Steal or Swap and big payments (never one that would cost it nothing), pays
 with the closest
 bank combination before giving up properties it needs least, and beats a
 random legal player in about 98% of two-seat games; Last Fuse: work out
-the Bomb risk from what's left in the pile (or know it from See the
+the Bomb risk from the cards in the pile it hasn't placed (or know it from See the
 Future), skip or attack away a Bomb it knows is on top, peek when the risk
 climbs and skip when it's high, hunt for a Defuse with Favors and cat
 combos when it has none, Nope Attacks and steals aimed at it when they
-matter, give away its least useful card, and put a defused Bomb on top for
-the next player; it beats a random legal player in about 88% of two-seat
+matter, give away its least useful card, and put a defused Bomb on top when the next player draws next (somewhere random when it still has turns to take); it beats a random legal player in about 88% of two-seat
 games)
 but don't model deeper strategy like deliberately holding back a winning
 play, reading opponents' hands, or (Hearts) angling to shoot the moon

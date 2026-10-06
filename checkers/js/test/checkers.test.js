@@ -105,6 +105,23 @@ const dests = (moves) => moves.map((m) => m.path[m.path.length - 1]).sort((a, b)
   K.play(chain, kc[0]);
   ok("every jumped piece goes", K.count(chain.board, K.WHITE) === 0 && chain.board[sq(2, 1)] === K.BLACK * K.KING && chain.winner === K.BLACK);
 
+  // A king's capture loop ends on the square it left.
+  const loop = position([
+    "........",
+    "..w.w...",
+    ".B......",
+    "..w.w...",
+    "........",
+    "........",
+    "........",
+    "........",
+  ]);
+  const lm = K.legalMoves(loop.board, K.BLACK);
+  ok("a king can jump round and land where it started", lm.length === 2 &&
+    lm.every((mv) => mv.captures.length === 4 && mv.path[mv.path.length - 1] === sq(2, 1)), lm);
+  K.play(loop, lm[0]);
+  ok("...taking all four", K.count(loop.board, K.WHITE) === 0 && loop.board[sq(2, 1)] === K.BLACK * K.KING);
+
   const branch = position([
     "........",
     "........",

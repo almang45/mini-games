@@ -29,7 +29,8 @@ Roll, click a checker, then click where it goes. Destinations include
 moves that carry one checker on with both dice. If two routes reach the same
 point, the shorter one is taken, then the one that hits more. Undo move takes
 back moves within the current turn. Done ends the turn once every die that can
-be used has been. Escape drops the picked checker.
+be used has been. Escape drops the picked checker. Next Game (in the game-over box, or under
+the board after See Board) keeps the match total; New Match starts it again.
 
 ## AI
 

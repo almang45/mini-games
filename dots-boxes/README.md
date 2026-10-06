@@ -25,19 +25,20 @@ Hard plays the chain endgame properly:
   on, or take all but two boxes (four in a loop) and make the opener move
   again. It opens the component that loses least, and opens a 2-chain in the
   middle so it can't be declined.
-- **The double-cross.** With the last two boxes of a chain to take, it hands
-  them over instead when keeping control is worth more. It takes other
-  boxes first so that option stays open.
+- **The double-cross.** With the last two boxes of a chain (or the last
+  four of a loop) to take, it hands them over instead when keeping control
+  is worth more. It takes other boxes first so that option stays open.
 
 The chain model treats a box with three or more open sides (a junction) as
-the edge of the board. That's a standard simplification, and it's where Hard
-can still go wrong on big boards.
+the edge of the board. That's a standard simplification, and where Hard can
+still misjudge an endgame.
 
-| Level  | Against Medium (self-play, both sides) |
-|--------|----------------------------------------|
-| Hard, 3x3 | about 85% wins |
-| Hard, 4x4 and 5x5 | about 65-70% wins |
-| Hard, 6x6 | about 50% wins, 15% draws |
+| Board | Hard against Medium (self-play, 40 games, both sides) |
+|-------|------------------------------------------------------|
+| 3x3 | 35 wins |
+| 4x4 | 28 wins, 4 draws |
+| 5x5 | 32 wins |
+| 6x6 | 34 wins, 2 draws |
 
 Hard takes well under 0.2 s per move.
 
@@ -52,7 +53,8 @@ Hard takes well under 0.2 s per move.
   - chain values for known positions
   - chain and loop detection
   - the middle opening of a 2-chain
-  - the double-cross, both when it pays and when it doesn't
+  - the double-cross on a chain and on a loop, both when it pays and when
+    it doesn't
   - safe openings
   - full games on every size, with Hard beating Medium and Medium beating
     Easy

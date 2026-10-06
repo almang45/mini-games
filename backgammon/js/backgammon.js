@@ -107,7 +107,7 @@
       }
       if (!extended) all.push(seq);
     };
-    walk(p, dice.length === 2 && dice[0] === dice[1] ? [dice[0], dice[0], dice[0], dice[0]] : dice.slice(), []);
+    walk(p, diceFaces(dice), []);
     const most = Math.max(...all.map((t) => t.length));
     if (most === 0) return [];
     let turns = all.filter((t) => t.length === most);
@@ -169,6 +169,9 @@
   }
 
   const sameStep = (a, b) => a.from === b.from && a.to === b.to;
+  // The dice as moves: doubles count four times.
+  const diceFaces = (dice) => (dice[0] === dice[1] ? [dice[0], dice[0], dice[0], dice[0]] : dice.slice());
+  // The legal turns that start with the moves already made this turn.
   const following = (state) => state.turns.filter((t) => state.done.every((st, k) => sameStep(t[k], st)));
 
   // The single checker moves that can be played next.
@@ -185,7 +188,7 @@
   // Dice not yet used this turn.
   function diceLeft(state) {
     if (!state.dice) return [];
-    const left = state.dice[0] === state.dice[1] ? [state.dice[0], state.dice[0], state.dice[0], state.dice[0]] : state.dice.slice();
+    const left = diceFaces(state.dice);
     for (const st of state.done) left.splice(left.indexOf(st.die), 1);
     return left;
   }
@@ -354,7 +357,7 @@
   const api = {
     WHITE, BLACK, CHECKERS, BAR, OFF, LEVELS,
     idx, rel, startPosition, clonePos, countAt, pips, rearmost, target, applyStep, legalTurns, resultOf,
-    createGame, roll, nextSteps, diceLeft, move, undoStep, turnComplete, endTurn,
+    createGame, roll, diceFaces, following, nextSteps, diceLeft, move, undoStep, turnComplete, endTurn,
     hitChance, evaluate, contact, chooseTurn,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;

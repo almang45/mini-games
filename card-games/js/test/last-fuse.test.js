@@ -55,6 +55,16 @@ const humans = (n) => Array(n).fill("human");
   L.insertBomb(d, 0, 0);
   ok("on top, and the turn passes", d.draw[0].kind === "bomb" && d.turn === 1);
   ok("the one who put it there knows", d.known[0][0] === d.draw[0].id && d.known[1].length === 0);
+
+  // Put back deep: remembered by place, with the cards above unknown.
+  const deep = table(humans(2), { draw: [C("bomb"), C("tabby"), C("calico"), C("ginger")], hands: [[C("defuse")], []] });
+  L.drawCard(deep, 0);
+  L.insertBomb(deep, 0, 2);
+  ok("a Bomb put back 3rd is remembered there", deep.known[0].length === 3 && deep.known[0][0] === null &&
+    deep.known[0][2] === deep.draw[2].id && deep.draw[2].kind === "bomb");
+  ok("...and the odds now leave it out: the top two are safe", L.risk(deep, 0) === 0);
+  L.drawCard(deep, 1);
+  ok("draws move it up", deep.known[0].length === 2 && deep.known[0][1] === deep.draw[1].id);
   L.drawCard(d, 1);
   ok("no Defuse: out", !d.alive[1] && d.out.join() === "1" && d.turn === 2);
   ok("its hand is discarded", d.hands[1].length === 0);
@@ -84,6 +94,23 @@ const humans = (n) => Array(n).fill("human");
   ok("Attack while attacked: next owes the 2 left plus 2", a.turn === 2 && a.turnsLeft === 4);
   L.drawCard(a, 2);
   ok("each draw pays one", a.turn === 2 && a.turnsLeft === 3);
+
+  // Attacked, one turn paid, then Attack: the one turn left carries over (1 + 2).
+  const att3 = C("attack"), att4 = C("attack");
+  const b = table(humans(3), { hands: [[att3], [att4], []], draw: [C("tabby"), C("tabby"), C("tabby"), C("tabby"), C("tabby")] });
+  L.playCard(b, 0, att3.id);
+  L.respond(b, 1, false);
+  L.drawCard(b, 1);
+  ok("attacked with one turn left", b.turn === 1 && b.turnsLeft === 1);
+  L.playCard(b, 1, att4.id);
+  L.respond(b, 2, false);
+  ok("...an Attack passes on that turn plus 2", b.turn === 2 && b.turnsLeft === 3);
+  L.drawCard(b, 2); L.drawCard(b, 2); L.drawCard(b, 2);
+  const att5 = C("attack");
+  b.hands[0].push(att5);
+  L.playCard(b, 0, att5.id);
+  L.respond(b, 1, false);
+  ok("once paid off, an ordinary turn's Attack gives just 2", b.turn === 1 && b.turnsLeft === 2);
 
   const fut = C("future"), shuf = C("shuffle");
   const f = table(humans(2), { hands: [[fut, shuf], []], draw: [C("bomb"), C("skip"), C("tabby"), C("calico")] });

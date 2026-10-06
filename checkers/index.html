@@ -210,36 +210,41 @@
   const canPlay = () => !state.gameOver && isHuman(state.turn) && !aiTimer;
   const legal = () => CK.legalMoves(state.board, state.turn);
   // Moves still consistent with what has been clicked.
-  const candidates = () => legal().filter((m) => m.from === pick.from && pick.path.every((p, i) => m.path[i] === p));
+  const candidates = (moves) => moves.filter((m) => m.from === pick.from && pick.path.every((p, i) => m.path[i] === p));
 
   function onSquareClick(i) {
     if (!canPlay()) return;
     const moves = legal();
+    // A landing square first: a king's capture loop can end where it started.
+    if (pick) {
+      const next = candidates(moves).filter((m) => m.path[pick.path.length] === i);
+      if (next.length) {
+        pick.path.push(i);
+        const done = next.find((m) => m.path.length === pick.path.length);
+        if (done) {
+          pick = null;
+          CK.play(state, done);
+          advance();
+        } else {
+          render();
+        }
+        return;
+      }
+    }
     if (CK.side(state.board[i]) === state.turn && moves.some((m) => m.from === i)) {
       // Re-picking the same piece cancels; another piece starts over.
       pick = pick && pick.from === i && !pick.path.length ? null : { from: i, path: [] };
-      render();
-      return;
-    }
-    if (!pick) return;
-    const next = candidates().filter((m) => m.path[pick.path.length] === i);
-    if (!next.length) return;
-    pick.path.push(i);
-    const done = next.find((m) => m.path.length === pick.path.length);
-    if (done) {
-      pick = null;
-      CK.play(state, done);
-      advance();
     } else {
-      render();
+      pick = null;
     }
+    render();
   }
 
   function render() {
     const human = canPlay();
     const moves = human ? legal() : [];
     const movable = new Set(moves.map((m) => m.from));
-    const cand = human && pick ? candidates() : [];
+    const cand = human && pick ? candidates(moves) : [];
     const targets = new Set(cand.map((m) => m.path[pick.path.length]));
     const trail = new Set(pick ? pick.path : []);
     const taken = new Set(cand.length ? cand[0].captures.slice(0, pick.path.length) : []);

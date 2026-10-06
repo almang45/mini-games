@@ -29,8 +29,6 @@
   };
   const COUNT = { attack: 4, skip: 4, favor: 4, shuffle: 4, future: 5, nope: 5 };
   CATS.forEach((c) => { COUNT[c] = 4; });
-  const BOMBS = 4;
-  const DEFUSES = 6;
   const DEAL = 7;
   const SPARE_DEFUSES = 2;
   const PEEK = 3;
@@ -62,9 +60,10 @@
       hands,
       alive: seatTypes.map(() => true),
       out: [],            // seats in the order they exploded
-      known: seatTypes.map(() => []), // ids of the top cards each seat has seen, top first
+      known: seatTypes.map(() => []), // per seat, the pile top first: a card id it knows, or null
       turn: 0,
       turnsLeft: 1,
+      attacked: false,    // whether this turn's player is paying off an Attack
       phase: "play",
       pending: null,
       drawn: null,        // the Bomb waiting to go back, during "insert"
@@ -72,7 +71,7 @@
       winner: null,
       log: [],
     };
-    // Bombs left out of the deal: 4 printed, n - 1 used.
+    // One Bomb fewer than players, so someone always survives.
     say(state, "Each player has " + (DEAL + 1) + " cards, one of them a Defuse. " + (n - 1) + " Bomb" + (n > 2 ? "s are" : " is") + " in the pile.");
     return state;
   }
@@ -85,6 +84,7 @@
     if (i === -1) throw new Error("card not in hand");
     return hand.splice(i, 1)[0];
   };
+  const opponents = (state, seat) => state.seats.map((s, i) => i).filter((i) => i !== seat && state.alive[i]);
   const nextAlive = (state, seat) => {
     const n = state.seats.length;
     for (let k = 1; k <= n; k++) if (state.alive[(seat + k) % n]) return (seat + k) % n;
@@ -98,20 +98,24 @@
 
   // ---------------------------------------------------------------- knowledge
   //
-  // Each seat remembers the top cards it has seen (See the Future, or where it
-  // put a Bomb back). Any shuffle wipes that; drawing takes the top one off.
+  // Each seat remembers cards it has seen in the pile, by position from the
+  // top (null where it doesn't know): See the Future, and where it put a
+  // Bomb back. Any shuffle wipes that; drawing takes the top one off.
 
   function forgetAll(state) { state.known = state.known.map(() => []); }
 
   function afterTopDrawn(state, drawnId) {
-    state.known = state.known.map((k) => (k[0] === drawnId ? k.slice(1) : []));
+    state.known = state.known.map((k) => (k[0] === drawnId || k[0] === null ? k.slice(1) : []));
   }
+
+  // The id this seat knows to be on top, or null.
+  const knownTop = (state, seat) => (state.known[seat].length ? state.known[seat][0] : null);
 
   // --------------------------------------------------------------- playing
 
   // opt: { target, ids (cat combo, including this card), name (triple) }
   function playError(state, seat, c, opt) {
-    const others = state.seats.map((s, i) => i).filter((i) => i !== seat && state.alive[i]);
+    const others = opponents(state, seat);
     if (["bomb", "defuse", "nope"].includes(c.kind)) return NAME[c.kind] + " can't be played on its own";
     if (c.kind === "favor") {
       if (!others.includes(opt.target)) return "pick who gives you a card";
@@ -247,7 +251,8 @@
       return;
     }
     if (a.kind === "future") {
-      state.known[actor] = state.draw.slice(0, PEEK).map((c) => c.id);
+      // The top three, keeping anything known further down.
+      state.known[actor] = state.draw.slice(0, PEEK).map((c) => c.id).concat(state.known[actor].slice(PEEK));
       say(state, nameOf(state, actor) + " looks at the top " + Math.min(PEEK, state.draw.length) + " cards.");
       return;
     }
@@ -290,9 +295,11 @@
   function endTurn(state, attack) {
     const seat = state.turn;
     if (attack) {
-      const owed = state.turnsLeft > 1 ? state.turnsLeft : 0;
+      // Only turns owed to an earlier Attack carry over; an ordinary turn doesn't.
+      const owed = state.attacked ? state.turnsLeft : 0;
       state.turn = nextAlive(state, seat);
       state.turnsLeft = owed + 2;
+      state.attacked = true;
       say(state, nameOf(state, state.turn) + " now has " + state.turnsLeft + " turns.");
       return;
     }
@@ -304,6 +311,7 @@
     if (state.turnsLeft <= 0) {
       state.turn = nextAlive(state, state.turn);
       state.turnsLeft = 1;
+      state.attacked = false;
     }
   }
 
@@ -334,11 +342,13 @@
     if (state.gameOver || state.phase !== "insert" || state.turn !== seat) throw new Error("no Bomb to put back");
     if (!Number.isInteger(position) || position < 0 || position > state.draw.length) throw new Error("not a place in the pile");
     state.draw.splice(position, 0, state.drawn);
-    // Everyone's memory of the pile holds up to that point; the player who
-    // put it there also knows exactly where it is.
+    // It goes back in secret, so nobody else can trust what they saw any
+    // more; the player who put it there knows exactly where it is.
     state.known = state.known.map((k, s) => {
-      if (s !== seat) return k.slice(0, position);
-      return k.length >= position ? k.slice(0, position).concat([state.drawn.id], k.slice(position)) : k;
+      if (s !== seat) return [];
+      const before = k.slice(0, position);
+      while (before.length < position) before.push(null);
+      return before.concat([state.drawn.id], k.slice(position));
     });
     state.drawn = null;
     state.phase = "play";
@@ -362,6 +372,7 @@
     }
     state.turn = nextAlive(state, seat);
     state.turnsLeft = 1;
+    state.attacked = false;
   }
 
   function actingSeat(state) {
@@ -375,9 +386,12 @@
 
   // Chance the next card is a Bomb, from what this seat knows.
   function risk(state, seat) {
-    const k = state.known[seat];
-    if (k.length) return state.draw[0] && state.draw[0].id === k[0] && state.draw[0].kind === "bomb" ? 1 : 0;
-    return state.draw.length ? bombsInPile(state) / state.draw.length : 0;
+    const top = knownTop(state, seat);
+    if (top !== null) return state.draw[0] && state.draw[0].id === top && state.draw[0].kind === "bomb" ? 1 : 0;
+    // Odds over the cards this seat hasn't placed: known cards are taken out of both counts.
+    const ids = new Set(state.known[seat].filter((id) => id !== null));
+    const unseen = state.draw.filter((c) => !ids.has(c.id));
+    return unseen.length ? unseen.filter((c) => c.kind === "bomb").length / unseen.length : 0;
   }
 
   function aiShouldNope(state, seat) {
@@ -412,11 +426,11 @@
     return state.hands[seat].reduce((a, b) => (cardValue(b) < cardValue(a) ? b : a)).id;
   }
 
-  // Where to put a defused Bomb: on top when it will hit the next player now,
-  // otherwise somewhere random.
+  // Where to put a defused Bomb: on top when this was the last turn owed (so
+  // the next player draws it), otherwise somewhere random.
   function aiInsertPosition(state, seat) {
     const rand = state.rng || Math.random;
-    if (state.turnsLeft <= 1 && nextAlive(state, seat) !== seat) return 0;
+    if (state.turnsLeft <= 1) return 0;
     return Math.floor(rand() * (state.draw.length + 1));
   }
 
@@ -424,14 +438,14 @@
   function aiChoosePlay(state, seat) {
     const hand = state.hands[seat];
     const find = (kind) => hand.find((c) => c.kind === kind);
-    const others = state.seats.map((s, i) => i).filter((i) => i !== seat && state.alive[i]);
+    const others = opponents(state, seat);
     const richest = others.reduce((a, b) => (state.hands[b].length > state.hands[a].length ? b : a));
     const r = risk(state, seat);
     if (r === 1) {
       for (const kind of ["attack", "skip", "shuffle"]) if (find(kind)) return { type: "play", id: find(kind).id, opt: {} };
       return { type: "draw" };
     }
-    if (r >= 0.15 && !state.known[seat].length && find("future")) return { type: "play", id: find("future").id, opt: {} };
+    if (r >= 0.15 && knownTop(state, seat) === null && find("future")) return { type: "play", id: find("future").id, opt: {} };
     if (r >= 0.35) {
       for (const kind of ["attack", "skip"]) if (find(kind)) return { type: "play", id: find(kind).id, opt: {} };
     }
@@ -457,8 +471,8 @@
   }
 
   const api = {
-    CATS, NAME, COUNT, BOMBS, DEFUSES, PEEK,
-    card, isCat, createGame, playError, playCard, respond, giveFavor, drawCard, insertBomb, actingSeat,
+    CATS, NAME, COUNT, PEEK,
+    card, isCat, opponents, knownTop, createGame, playError, playCard, respond, giveFavor, drawCard, insertBomb, actingSeat,
     bombsInPile, risk, aiShouldNope, aiChoosePlay, aiChooseFavor, aiInsertPosition, stepAI,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
