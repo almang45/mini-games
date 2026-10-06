@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkers</title>
+<link rel="icon" href="favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<script src="../shared/register-sw.js" defer></script>
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+  header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .controls label { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  select {
+    font: inherit;
+    font-size: 0.85rem;
+    background: #1c4a34;
+    color: var(--ink);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .scoreboard { width: min(520px, 100%); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .score {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px 6px 8px;
+    border-radius: 999px;
+    background: var(--panel);
+    border: 2px solid transparent;
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+  .score.is-turn { border-color: var(--accent); }
+  .score .piece { width: 22px; height: 22px; }
+  .status { flex: 1; margin: 0; text-align: center; font-size: 0.88rem; color: var(--ink-dim); }
+
+  .board {
+    width: min(520px, 100%);
+    aspect-ratio: 1;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    border: clamp(6px, 2vw, 12px) solid #5a3a1c;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+  }
+  .sq { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; position: relative; }
+  .sq.light { background: #e8d3a8; }
+  /* Dark squares are buttons; undo theme.css's button look. */
+  .sq.dark {
+    background: #7b5530;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    cursor: default;
+    transition: none;
+  }
+  .sq.dark:hover, .sq.dark:active { filter: none; transform: none; }
+  .sq.dark.last { background: #8f6a3c; }
+  .sq.dark.movable, .sq.dark.target { cursor: pointer; }
+  .sq.dark.movable:focus-visible, .sq.dark.target:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .sq.dark.selected { background: #a2783f; }
+  .sq.dark.target::after {
+    content: "";
+    width: 30%;
+    height: 30%;
+    border-radius: 50%;
+    background: rgba(255, 209, 102, 0.75);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.2);
+  }
+  .sq.dark.trail::before {
+    content: "";
+    position: absolute;
+    width: 20%;
+    height: 20%;
+    border-radius: 50%;
+    background: rgba(255, 209, 102, 0.5);
+  }
+
+  .piece {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 78%;
+    height: 78%;
+    border-radius: 50%;
+    font-size: clamp(0.9rem, 4.5vw, 1.6rem);
+    line-height: 1;
+    pointer-events: none;
+  }
+  .piece.black { background: radial-gradient(circle at 35% 30%, #4a4a4a, #151515 70%); color: #ffd166; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.5), 0 2px 3px rgba(0, 0, 0, 0.5); }
+  .piece.white { background: radial-gradient(circle at 35% 30%, #fff, #d9cdb4 70%); color: #8a5a00; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.2), 0 2px 3px rgba(0, 0, 0, 0.5); }
+  .sq.movable .piece { box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(255, 209, 102, 0.6); }
+  .sq.selected .piece { box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.3), 0 0 0 3px var(--accent); }
+  .piece.taken { opacity: 0.35; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  .overlay[hidden] { display: none; }
+  .modal {
+    background: #12321f;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 26px 30px;
+    text-align: center;
+    max-width: 340px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .modal h2 { margin: 0 0 8px; color: var(--accent); }
+  .modal p { margin: 4px 0 18px; color: var(--ink-dim); font-size: 0.95rem; }
+  .modal .controls { gap: 8px; }
+
+  footer { color: var(--ink-dim); font-size: 0.75rem; text-align: center; max-width: 520px; line-height: 1.5; }
+
+  @media (max-width: 480px) {
+    .score { font-size: 0.85rem; padding: 4px 10px 4px 6px; }
+    .score .piece { width: 18px; height: 18px; }
+    .status { font-size: 0.78rem; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="back-link" href="../index.html">← All Games</a>
+    <h1>Checkers</h1>
+  </header>
+
+  <div class="controls">
+    <label>Mode
+      <select id="mode">
+        <option value="black">You play Black vs AI</option>
+        <option value="white">You play White vs AI</option>
+        <option value="pvp">Two players</option>
+      </select>
+    </label>
+    <label>AI
+      <select id="level">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </label>
+    <button id="btnNew" type="button">New Game</button>
+    <button id="btnUndo" type="button">Undo</button>
+  </div>
+
+  <div class="scoreboard">
+    <div class="score" id="scoreBlack"><span class="piece black"></span><b id="nameBlack">Black</b> <span id="countBlack"></span></div>
+    <p class="status" id="status" aria-live="polite"></p>
+    <div class="score" id="scoreWhite"><span id="countWhite"></span> <b id="nameWhite">White</b><span class="piece white"></span></div>
+  </div>
+
+  <div class="board" id="board" aria-label="Board"></div>
+
+  <footer>Move diagonally forward onto the dark squares. Jump an enemy piece to capture it, and keep jumping while you can — captures are compulsory. Reach the far row to crown a king, which moves both ways. Take every piece or leave your opponent with no move to win. Black moves first. To make a multi-jump, click each landing square in turn.</footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h2>Game over</h2>
+    <p id="resultText"></p>
+    <div class="controls">
+      <button class="btn-primary" id="modalNew" type="button">New Game</button>
+      <button id="modalClose" type="button">See Board</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/checkers.js"></script>
+<script>
+(function () {
+  "use strict";
+  const CK = window.CHECKERS;
+  const { SIZE, BLACK, WHITE } = CK;
+  const NAME = { [BLACK]: "Black", [WHITE]: "White" };
+  const HUMANS = { black: [BLACK], white: [WHITE], pvp: [BLACK, WHITE] };
+  const AI_DELAY_MS = 350;
+  const CROWN = "♛︎";
+  const $ = (id) => document.getElementById(id);
+
+  let state = null;
+  let aiTimer = null;
+  // The move being built: the piece picked and the squares clicked so far.
+  let pick = null;
+
+  const mode = () => $("mode").value;
+  const isHuman = (player) => HUMANS[mode()].includes(player);
+  // White sits at the bottom when it is the only human side.
+  const flipped = () => mode() === "white";
+
+  const squares = [];
+  for (let k = 0; k < SIZE * SIZE; k++) {
+    const r = Math.floor(k / SIZE), c = k % SIZE;
+    const el = document.createElement(CK.playable(r, c) ? "button" : "div");
+    el.className = "sq " + (CK.playable(r, c) ? "dark" : "light");
+    if (el.tagName === "BUTTON") el.type = "button";
+    $("board").appendChild(el);
+    squares.push(el);
+  }
+  // The grid slot k shows board square view(k), so flipping is a re-map, not a re-build.
+  const view = (k) => (flipped() ? SIZE * SIZE - 1 - k : k);
+  squares.forEach((el, k) => el.addEventListener("click", () => onSquareClick(view(k))));
+
+  const canPlay = () => !state.gameOver && isHuman(state.turn) && !aiTimer;
+  const legal = () => CK.legalMoves(state.board, state.turn);
+  // Moves still consistent with what has been clicked.
+  const candidates = () => legal().filter((m) => m.from === pick.from && pick.path.every((p, i) => m.path[i] === p));
+
+  function onSquareClick(i) {
+    if (!canPlay()) return;
+    const moves = legal();
+    if (CK.side(state.board[i]) === state.turn && moves.some((m) => m.from === i)) {
+      // Re-picking the same piece cancels; another piece starts over.
+      pick = pick && pick.from === i && !pick.path.length ? null : { from: i, path: [] };
+      render();
+      return;
+    }
+    if (!pick) return;
+    const next = candidates().filter((m) => m.path[pick.path.length] === i);
+    if (!next.length) return;
+    pick.path.push(i);
+    const done = next.find((m) => m.path.length === pick.path.length);
+    if (done) {
+      pick = null;
+      CK.play(state, done);
+      advance();
+    } else {
+      render();
+    }
+  }
+
+  function render() {
+    const human = canPlay();
+    const moves = human ? legal() : [];
+    const movable = new Set(moves.map((m) => m.from));
+    const cand = human && pick ? candidates() : [];
+    const targets = new Set(cand.map((m) => m.path[pick.path.length]));
+    const trail = new Set(pick ? pick.path : []);
+    const taken = new Set(cand.length ? cand[0].captures.slice(0, pick.path.length) : []);
+    const last = state.lastMove ? new Set([state.lastMove.from].concat(state.lastMove.path)) : new Set();
+
+    squares.forEach((el, k) => {
+      const i = view(k);
+      const r = Math.floor(i / SIZE), c = i % SIZE;
+      if (!CK.playable(r, c)) return;
+      const v = state.board[i];
+      // A piece mid-jump is drawn where it has got to, not where it started.
+      const at = pick && pick.path.length ? pick.path[pick.path.length - 1] : null;
+      const shown = at === i ? state.board[pick.from] : at != null && i === pick.from ? 0 : v;
+      el.classList.toggle("movable", human && !pick && movable.has(i));
+      el.classList.toggle("selected", !!pick && (at != null ? at === i : pick.from === i));
+      el.classList.toggle("target", targets.has(i));
+      el.classList.toggle("trail", trail.has(i) && at !== i);
+      el.classList.toggle("last", last.has(i));
+      el.replaceChildren();
+      if (shown) {
+        const p = document.createElement("span");
+        p.className = "piece " + NAME[CK.side(shown)].toLowerCase() + (taken.has(i) ? " taken" : "");
+        if (CK.isKing(shown)) p.textContent = CROWN;
+        el.appendChild(p);
+      }
+      const what = shown ? NAME[CK.side(shown)] + (CK.isKing(shown) ? " king" : " man") : "empty";
+      el.setAttribute("aria-label", "Row " + (SIZE - r) + ", column " + (c + 1) + ": " + what);
+      el.setAttribute("aria-disabled", String(!(targets.has(i) || (human && movable.has(i)))));
+    });
+
+    $("nameBlack").textContent = playerLabel(BLACK);
+    $("nameWhite").textContent = playerLabel(WHITE);
+    $("countBlack").textContent = CK.count(state.board, BLACK);
+    $("countWhite").textContent = CK.count(state.board, WHITE);
+    $("scoreBlack").classList.toggle("is-turn", !state.gameOver && state.turn === BLACK);
+    $("scoreWhite").classList.toggle("is-turn", !state.gameOver && state.turn === WHITE);
+    $("status").textContent = statusText(moves);
+    $("btnUndo").disabled = state.history.length === 0;
+  }
+
+  function playerLabel(player) {
+    if (mode() === "pvp") return NAME[player];
+    return isHuman(player) ? "You" : "AI";
+  }
+
+  function statusText(moves) {
+    if (state.gameOver) return resultText();
+    const who = NAME[state.turn];
+    if (!isHuman(state.turn)) return "AI (" + who + ") is thinking…";
+    const prefix = mode() === "pvp" ? who + " to move" : "Your move (" + who + ")";
+    const left = CK.DRAW_PLIES - state.quiet;
+    const drawNote = left <= 20 ? " Draw in " + Math.ceil(left / 2) + " moves without a capture." : "";
+    if (pick && pick.path.length) return prefix + ": keep jumping." + drawNote;
+    if (moves.length && moves[0].captures.length) return prefix + ": you must capture." + drawNote;
+    return prefix + "." + drawNote;
+  }
+
+  function resultText() {
+    if (state.winner === null) return "Draw — 40 moves each without a capture or a man moving.";
+    const loser = -state.winner;
+    const how = CK.count(state.board, loser) ? "is blocked" : "has no pieces left";
+    if (mode() === "pvp") return NAME[state.winner] + " wins — " + NAME[loser] + " " + how + ".";
+    return isHuman(state.winner) ? "You win — the AI " + how + "!" : "The AI wins — you " + (how === "is blocked" ? "are blocked" : "have no pieces left") + ".";
+  }
+
+  function advance() {
+    if (state.gameOver || isHuman(state.turn)) {
+      render();
+      if (state.gameOver) {
+        $("resultText").textContent = resultText();
+        $("overlay").hidden = false;
+      }
+      return;
+    }
+    // Set before rendering so the board renders locked while the AI thinks.
+    aiTimer = setTimeout(() => {
+      aiTimer = null;
+      CK.play(state, CK.chooseMove(state, $("level").value));
+      advance();
+    }, AI_DELAY_MS);
+    render();
+  }
+
+  function cancelAI() {
+    clearTimeout(aiTimer);
+    aiTimer = null;
+  }
+
+  function newGame() {
+    cancelAI();
+    pick = null;
+    $("overlay").hidden = true;
+    state = CK.createGame();
+    advance();
+  }
+
+  // Against the AI, rewind to the last position where it was your turn.
+  function undo() {
+    cancelAI();
+    pick = null;
+    $("overlay").hidden = true;
+    let undone = CK.undo(state);
+    while (undone && mode() !== "pvp" && !isHuman(state.turn)) undone = CK.undo(state);
+    advance();
+  }
+
+  $("btnNew").addEventListener("click", newGame);
+  $("modalNew").addEventListener("click", newGame);
+  $("modalClose").addEventListener("click", () => { $("overlay").hidden = true; });
+  $("btnUndo").addEventListener("click", undo);
+  $("mode").addEventListener("change", newGame);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && pick) { pick = null; render(); }
+  });
+
+  newGame();
+})();
+</script>
+</body>
+</html>
