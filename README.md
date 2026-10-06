@@ -35,6 +35,7 @@ to, both here and in `index.html`.
 | **[Reversi](reversi/)** | Reversi/Othello against a three-level AI, or two players on one device. |
 | **[Connect Four](connect-four/)** | Connect Four against a three-level AI, or two players on one device. |
 | **[Checkers](checkers/)** | English draughts with compulsory captures and multi-jumps, against a three-level AI or two players on one device. |
+| **[Backgammon](backgammon/)** | Backgammon with gammons, backgammons and a running match score (no doubling cube), against a three-level AI or two players on one device. |
 | **[Mancala](mancala/)** | Kalah-rules Mancala against a three-level AI, or two players on one device. |
 | **[Ludo](ludo/)** | Ludo for 2-4 players on the classic cross board, against an AI on two levels or with everyone on one device. |
 | **[Word Grid](word-grid/)** | A two-player crossword tile game on a 15x15 board with the public-domain ENABLE word list, against an AI (Easy or Normal) or a friend. |
