@@ -140,6 +140,11 @@ function lay(s, seat, text, row, col, across) {
   W.exchange(s, 0, before.slice(0, 3));
   ok("three new tiles, bag the same size", s.racks[0].length === 7 && s.bag.length === 86 && s.racks[0].filter((t) => before.includes(t.id)).length === 4);
   ok("turn passes", s.turn === 1);
+  // Review: a bad id used to throw after earlier tiles had left the rack.
+  const keep = s.racks[1].map((t) => t.id).join();
+  assert.throws(() => W.exchange(s, 1, [s.racks[1][0].id, "bogus"]), /isn't on your rack/);
+  assert.throws(() => W.exchange(s, 1, [s.racks[1][0].id, s.racks[1][0].id]), /same tile twice/);
+  ok("a refused exchange changes nothing", s.racks[1].map((t) => t.id).join() === keep && s.bag.length === 86 && s.turn === 1);
   s.bag = s.bag.slice(0, 6);
   assert.throws(() => W.exchange(s, 1, [s.racks[1][0].id]), /at least 7/);
 })();
@@ -154,14 +159,17 @@ function lay(s, seat, text, row, col, across) {
 (function goOutTests() {
   const s = game(["AT", "QZE"], [["CAT", 7, 6, true]]);
   s.bag = [];
-  W.play(s, 0, lay(s, 0, "AT", 8, 8, true));
+  const result = W.play(s, 0, lay(s, 0, "AT", 8, 8, true));
   ok("going out ends it", s.gameOver && s.racks[0].length === 0);
+  ok("and play() still returns the move", result && result.ok && result.score === s.lastMove.score);
   ok("and takes the other rack's value", s.seats[0].score === s.lastMove.score + 21 && s.seats[1].score === -21);
 })();
 
 // ---- move generation against brute force ------------------------------------------------
 
-const keyOf = (pl) => pl.map((p) => p.row + "," + p.col + p.letter).sort().join("|");
+// A blank A and a real A on the same square are different moves.
+const keyOf = (pl, tiles) => pl.map((p) => p.row + "," + p.col + p.letter +
+  (tiles.find((t) => t.id === p.tileId).letter === "?" ? "?" : "")).sort().join("|");
 
 // Every way to lay the rack along any line (blanks as every letter).
 function bruteForce(s, seat) {
@@ -176,7 +184,7 @@ function bruteForce(s, seat) {
     }
     for (let n = 1; n <= empties.length; n++) {
       const assign = (i, used, pl) => {
-        if (i === n) { const res = W.evaluate(s, seat, pl); if (res.ok) found.set(keyOf(pl), res.score); return; }
+        if (i === n) { const res = W.evaluate(s, seat, pl); if (res.ok) found.set(keyOf(pl, tiles), res.score); return; }
         tiles.forEach((t, ti) => {
           if (used.has(ti)) return;
           used.add(ti);
@@ -192,14 +200,22 @@ function bruteForce(s, seat) {
 }
 
 (function generatorTests() {
-  let positions = 0, moves = 0, same = true;
+  let positions = 0, moves = 0, same = true, unique = true;
+  // Rack shapes [letters, blanks] compared against brute force, chosen to
+  // reach long left parts (5 letters) and two blanks while the exhaustive
+  // search stays a few seconds (two blanks with two letters takes ~18 s).
+  const shapesByGame = [[[3, 0], [5, 0], [2, 1], [1, 2], [4, 0], [3, 1]], [[3, 0], [4, 0], [5, 0], [2, 1], [3, 0], [4, 0]]];
   for (let g = 0; g < 2; g++) {
+    const shapes = shapesByGame[g];
     const s = W.createGame(["ai", "ai"], { lexicon: lex, rng: makeRng(300 + g) });
-    for (let turn = 0; turn < 6 && !s.gameOver; turn++) {
+    for (let turn = 0; turn < shapes.length && !s.gameOver; turn++) {
       const seat = s.turn;
       const saved = s.racks[seat];
-      s.racks[seat] = saved.filter((t) => t.letter !== "?").slice(0, 3).concat(turn === 3 ? [W.tile("?")] : []);
-      const gen = new Map(W.generateMoves(s, seat).map((m) => [keyOf(m.placements), m.score]));
+      const [letters, blanks] = shapes[turn];
+      s.racks[seat] = saved.filter((t) => t.letter !== "?").slice(0, letters).concat(Array.from({ length: blanks }, () => W.tile("?")));
+      const list = W.generateMoves(s, seat);
+      const gen = new Map(list.map((m) => [keyOf(m.placements, s.racks[seat]), m.score]));
+      if (gen.size !== list.length) unique = false;
       const ref = bruteForce(s, seat);
       positions++; moves += ref.size;
       if (gen.size !== ref.size || [...ref].some(([k, v]) => gen.get(k) !== v)) same = false;
@@ -208,6 +224,7 @@ function bruteForce(s, seat) {
     }
   }
   ok("the generator finds exactly the legal moves (" + moves + " over " + positions + " positions), with their scores", same);
+  ok("and lists each one once", unique);
 })();
 
 // ---- AI games ------------------------------------------------------------------------------

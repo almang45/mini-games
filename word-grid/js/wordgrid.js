@@ -183,6 +183,23 @@
     return { ok: true, words, score };
   }
 
+  // Words and score for placements already known to be legal.
+  function scorePlacements(board, placements) {
+    const placed = new Map(placements.map((p) => [p.row * SIZE + p.col, { letter: p.letter, blank: p.blank }]));
+    const sameRow = placements.every((p) => p.row === placements[0].row);
+    let across = sameRow && placements.length > 1;
+    if (placements.length === 1) {
+      const p = placements[0];
+      across = !!((inside(p.row, p.col - 1) && board[p.row][p.col - 1]) || (inside(p.row, p.col + 1) && board[p.row][p.col + 1]));
+    }
+    const [dr, dc] = across ? [0, 1] : [1, 0];
+    const words = [];
+    const main = wordThrough(board, placed, placements[0].row, placements[0].col, dr, dc);
+    if (main) words.push(main);
+    placements.forEach((p) => { const cross = wordThrough(board, placed, p.row, p.col, dc, dr); if (cross) words.push(cross); });
+    return { words: words.map((w) => w.word), score: words.reduce((s, w) => s + w.score, 0) + (placements.length === RACK ? BINGO : 0) };
+  }
+
   // ----------------------------------------------------------------- turns
 
   function requireTurn(state, seat) {
@@ -211,8 +228,8 @@
     say(state, state.seats[seat].name + " plays " + result.words.map((w) => w.word).join(", ") + " for " + result.score +
       (placements.length === RACK ? " (all seven tiles: +" + BINGO + ")" : "") + ".");
     refill(state, rack);
-    if (rack.length === 0 && state.bag.length === 0) return finish(state, seat);
-    nextTurn(state);
+    if (rack.length === 0 && state.bag.length === 0) finish(state, seat);
+    else nextTurn(state);
     return result;
   }
 
@@ -221,11 +238,10 @@
     if (state.bag.length < RACK) throw new Error("exchanging needs at least " + RACK + " tiles in the bag");
     if (!tileIds.length) throw new Error("pick tiles to exchange");
     const rack = state.racks[seat];
-    const out = tileIds.map((id) => {
-      const i = rack.findIndex((t) => t.id === id);
-      if (i === -1) throw new Error("that tile isn't on your rack");
-      return rack.splice(i, 1)[0];
-    });
+    // Check every id before touching the rack, so a bad one loses nothing.
+    if (new Set(tileIds).size !== tileIds.length) throw new Error("the same tile twice");
+    if (!tileIds.every((id) => rack.some((t) => t.id === id))) throw new Error("that tile isn't on your rack");
+    const out = tileIds.map((id) => rack.splice(rack.findIndex((t) => t.id === id), 1)[0]);
     refill(state, rack);
     state.bag = shuffle(state.bag.concat(out), state.rng);
     state.scoreless += 1;
@@ -318,61 +334,69 @@
       };
 
       for (let r = 0; r < SIZE; r++) {
-        const placed = []; // [col, letterIndex, blank]
+        // The word being built around the current anchor: `left` holds the
+        // rack letters laid before it (their columns are fixed only when a
+        // move is recorded, as anchor - left.length + k), `right` holds the
+        // letters from the anchor on with their columns.
+        const left = []; // [letterIndex, blank]
+        const right = []; // [col, letterIndex, blank]
+        let anchorCol = 0;
 
         const record = () => {
-          if (!placed.length) return;
-          const placements = placed.map(([c, l, blank]) => {
-            const [br, bc] = toBoard(r, c);
-            return { row: br, col: bc, letter: String.fromCharCode(A + l), blank };
-          });
-          const key = placements.map((p) => p.row + "," + p.col + p.letter + (p.blank ? "?" : "")).sort().join("|");
-          if (seen.has(key)) return;
-          seen.add(key);
+          const n = left.length + right.length;
+          if (!n) return;
+          const placements = new Array(n);
+          for (let k = 0; k < left.length; k++) {
+            const [br, bc] = toBoard(r, anchorCol - left.length + k);
+            placements[k] = { row: br, col: bc, letter: String.fromCharCode(A + left[k][0]), blank: left[k][1] };
+          }
+          for (let k = 0; k < right.length; k++) {
+            const [br, bc] = toBoard(r, right[k][0]);
+            placements[left.length + k] = { row: br, col: bc, letter: String.fromCharCode(A + right[k][1]), blank: right[k][2] };
+          }
+          // Appel-Jacobson finds each move once per direction; only a single
+          // tile can be found both across and down.
+          if (n === 1) {
+            const p = placements[0];
+            const key = p.row * SIZE + p.col + p.letter + (p.blank ? "?" : "");
+            if (seen.has(key)) return;
+            seen.add(key);
+          }
           moves.push({ placements });
         };
 
-        const extendRight = (c, node, anchor) => {
+        const extendRight = (c, node) => {
           if (c >= SIZE || !sq(r, c)) {
-            if (c > anchor && lex.isTerminal(node)) record();
+            if (c > anchorCol && lex.isTerminal(node)) record();
             if (c >= SIZE) return;
             const mask = checks[r][c];
             lex.eachChild(node, (l, ch) => {
               if (!(mask & (1 << l))) return;
               if (counts[l] > 0) {
-                counts[l]--; placed.push([c, l, false]);
-                extendRight(c + 1, ch, anchor);
-                placed.pop(); counts[l]++;
+                counts[l]--; right.push([c, l, false]);
+                extendRight(c + 1, ch);
+                right.pop(); counts[l]++;
               }
               if (counts[26] > 0) {
-                counts[26]--; placed.push([c, l, true]);
-                extendRight(c + 1, ch, anchor);
-                placed.pop(); counts[26]++;
+                counts[26]--; right.push([c, l, true]);
+                extendRight(c + 1, ch);
+                right.pop(); counts[26]++;
               }
             });
           } else {
             const ch = lex.child(node, sq(r, c).letter.charCodeAt(0) - A);
-            if (ch !== -1) extendRight(c + 1, ch, anchor);
+            if (ch !== -1) extendRight(c + 1, ch);
           }
         };
 
         // Left part: a prefix from the rack laid into the free squares just
-        // before the anchor. The trie reads it left to right, so each new
-        // letter goes on the end and the whole prefix shifts one square left.
-        const leftPart = (node, anchor, limit) => {
-          extendRight(anchor, node, anchor);
+        // before the anchor (non-anchor squares, so no cross-checks apply).
+        const leftPart = (node, limit) => {
+          extendRight(anchorCol, node);
           if (limit === 0) return;
-          const reflow = () => { for (let k = 0; k < placed.length; k++) placed[k][0] = anchor - placed.length + k; };
           lex.eachChild(node, (l, ch) => {
-            const tryWith = (isBlank) => {
-              placed.push([0, l, isBlank]);
-              reflow();
-              leftPart(ch, anchor, limit - 1);
-              placed.pop();
-              reflow();
-            };
-            if (counts[l] > 0) { counts[l]--; tryWith(false); counts[l]++; }
-            if (counts[26] > 0) { counts[26]--; tryWith(true); counts[26]++; }
+            if (counts[l] > 0) { counts[l]--; left.push([l, false]); leftPart(ch, limit - 1); left.pop(); counts[l]++; }
+            if (counts[26] > 0) { counts[26]--; left.push([l, true]); leftPart(ch, limit - 1); left.pop(); counts[26]++; }
           });
         };
 
@@ -385,29 +409,32 @@
             let text = "";
             for (let k = start; k < c; k++) text += sq(r, k).letter;
             const node = lex.walk(text);
-            if (node !== -1) extendRight(c, node, c);
+            anchorCol = c;
+            if (node !== -1) extendRight(c, node);
           } else {
             // Free squares to the left that aren't anchors themselves.
             let limit = 0;
             while (c - limit - 1 >= 0 && !sq(r, c - limit - 1) && !isAnchor(r, c - limit - 1)) limit++;
-            leftPart(0, c, limit);
+            anchorCol = c;
+            leftPart(0, limit);
           }
         }
       }
     }
 
-    // Score each candidate with the same rules a player's move goes through.
-    const rackLeft = rackTiles.slice();
+    // Every candidate is legal by construction, so score it directly rather
+    // than re-checking the rules and the word list for each one (that was
+    // most of the time on a busy board). The move the AI picks still goes
+    // through play(), which runs the full check.
     const out = [];
     for (const m of moves) {
-      const pool = rackLeft.slice();
+      const pool = rackTiles.slice();
       const placements = m.placements.map((p) => {
-        const i = pool.findIndex((t) => (p.blank ? t.letter === BLANK : t.letter === p.letter));
-        const t = pool.splice(i, 1)[0];
+        const t = pool.splice(pool.findIndex((x) => (p.blank ? x.letter === BLANK : x.letter === p.letter)), 1)[0];
         return { row: p.row, col: p.col, tileId: t.id, letter: p.letter, blank: p.blank };
       });
-      const result = evaluate(state, seat, placements);
-      if (result.ok) out.push({ placements, score: result.score, words: result.words.map((w) => w.word) });
+      const scored = scorePlacements(state.board, placements);
+      out.push({ placements, score: scored.score, words: scored.words });
     }
     return out;
   }
@@ -449,8 +476,13 @@
     }
     const rack = state.racks[seat];
     const endgame = state.bag.length === 0;
-    const rate = (m) => m.score + (endgame ? 0 : leaveValue(leaveAfter(rack, m.placements)));
-    return moves.reduce((best, m) => (rate(m) > rate(best) ? m : best));
+    let best = null;
+    let bestRate = -Infinity;
+    for (const m of moves) {
+      const rate = m.score + (endgame ? 0 : leaveValue(leaveAfter(rack, m.placements)));
+      if (rate > bestRate) { best = m; bestRate = rate; }
+    }
+    return best;
   }
 
   // Throws back the tiles that hurt the rack most.
@@ -468,6 +500,8 @@
 
   function stepAI(state, seat, level) {
     const move = chooseMove(state, seat, level);
+    // play() runs the full rules check, so a generator bug can't slip a bad
+    // move through; it would throw here instead.
     if (move) return play(state, seat, move.placements);
     if (state.bag.length >= RACK) return exchange(state, seat, chooseExchange(state, seat).map((t) => t.id));
     return pass(state, seat);
@@ -476,7 +510,7 @@
   const api = {
     SIZE, CENTRE, RACK, BINGO, BLANK, TILES,
     value, premium, tile, buildBag, createGame, evaluate, play, exchange, pass, rackValue,
-    generateMoves, leaveValue, chooseMove, chooseExchange, stepAI,
+    generateMoves, scorePlacements, leaveValue, chooseMove, chooseExchange, stepAI,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.WORD_GRID = api;

@@ -65,7 +65,9 @@ when the bag is too low.
 - `js/test/wordgrid.test.js`: Node tests for the lexicon, tiles, the premium
   layout's symmetry, placement rules, scoring by hand-worked examples
   (premiums, blanks, parallel plays, the 50 bonus), exchanging, passing,
-  going out, the move generator against brute force, and full Normal vs
+  going out, the move generator against brute force (racks of 3-5 letters,
+  one blank and two blanks; every move found, each once, with its score), and
+  full Normal vs
   Easy games that check all 100 tiles are kept.
 
 ## Tests
