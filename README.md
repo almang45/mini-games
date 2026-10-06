@@ -23,7 +23,7 @@ to, both here and in `index.html`.
 
 | | |
 |---|---|
-| **[Card Table](card-games/)** | Fifteen card games in one shared table shell — Hearts, Spades, Oh Hell, Euchre, Crazy Eights, Color Clash, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, Blackjack, Bust Seven, Property Deal. |
+| **[Card Table](card-games/)** | Fifteen card games in one shared table shell — Hearts, Spades, Oh Hell, Euchre, Crazy Eights, Color Clash, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, Blackjack, Bust Seven, Property Deal. Any mix of human and AI seats, or everyone on one device. |
 | **[Klondike Solitaire](klondike-solitaire/)** | Classic single-player card game — build runs, fill the four foundations. |
 | **[FreeCell](freecell/)** | Classic FreeCell solitaire with Microsoft-numbered, shareable deals and a solver-backed hint. |
 | **[Spider Solitaire](spider-solitaire/)** | Two-deck Spider with 1, 2 or 4 suits. |
@@ -37,6 +37,16 @@ to, both here and in `index.html`.
 | **[Mancala](mancala/)** | Kalah-rules Mancala against a three-level AI, or two players on one device. |
 | **[Ludo](ludo/)** | Ludo for 2-4 players on the classic cross board, against an AI on two levels or with everyone on one device. |
 | **[Word Grid](word-grid/)** | A two-player crossword tile game on a 15x15 board with the public-domain ENABLE word list, against an AI (Easy or Normal) or a friend. |
+
+Four games play the rules of well-known commercial games under generic
+names, and reuse none of their names, card text or artwork:
+
+| Here | Rules of |
+|---|---|
+| Bust Seven | Flip 7 |
+| Color Clash | Uno |
+| Property Deal | Monopoly Deal (cards renamed too: Set Grab, Block, Steal, Swap, Bonus Draw, Station) |
+| Word Grid | Scrabble (own premium-square layout; public-domain word list) |
 
 Each game folder is self-contained (its own README and CSS/JS) and can be
 opened directly via its own `index.html` without the others. Mahjong
@@ -61,6 +71,11 @@ CC BY-SA 4.0 (not this repo's own MIT code license) — see
 [shared/assets/tiles/CREDITS.md](shared/assets/tiles/CREDITS.md) for the
 source and required attribution.
 
+Word Grid's word list is ENABLE, which its authors placed in the public
+domain (not a licensed tournament list); see
+[word-grid/CREDITS.md](word-grid/CREDITS.md) for the source, its checksum,
+and how to rebuild `word-grid/js/words.js`.
+
 ## Local development
 
 No build step. Open any game's `index.html` directly in a browser, or serve
@@ -79,7 +94,7 @@ go unnoticed.
 for f in */js/test/*.test.js; do node "$f" || exit 1; done
 ```
 
-The same loop runs in GitHub Actions (`.github/workflows/test.yml`) on every
+The same loop runs in GitHub Actions (`.github/workflows/tests.yml`) on every
 pull request and on pushes to `main`. A new game's tests are picked up
 automatically as long as they live in `<game>/js/test/`.
 
@@ -91,7 +106,9 @@ latest deploy. Each file that loads is also copied into the browser's cache,
 so any page you have opened once still works with no connection. Tile faces
 are the exception to "only what loaded": the first tile fetched caches the
 whole `shared/assets/tiles/` set, which `shared/js/test/sw.test.js` keeps in
-step with the list in `sw.js`.
+step with the list in `sw.js`. Word Grid's word list (`word-grid/js/words.js`,
+about 1.8 MB, ~450 KB compressed) is an ordinary script, so it is cached the
+first time the game is opened like any other file.
 `manifest.webmanifest` (icons in `shared/icon-*.png`, rendered from
 `shared/icon.svg`) lets browsers install the site as an app. Service workers
 only run over http(s), so opening files straight from disk works as before,
