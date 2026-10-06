@@ -67,11 +67,11 @@
 
   function centerNode(state) {
     const top = state.discard[state.discard.length - 1];
-    const piles = DOM.el("div", "b7-piles", [
-      DOM.el("div", "b7-pile", [DOM.cardEl(null, { faceDown: true }), DOM.el("div", "b7-pile-label", "Deck " + state.deck.length)]),
-      DOM.el("div", "b7-pile", [
+    const piles = DOM.el("div", "pile-row", [
+      DOM.el("div", "pile-col", [DOM.cardEl(null, { faceDown: true }), DOM.el("div", "pile-caption", "Deck " + state.deck.length)]),
+      DOM.el("div", "pile-col", [
         top ? DOM.cardEl(top, { renderFace }) : DOM.el("div", "card card-slot"),
-        DOM.el("div", "b7-pile-label", "Discards " + state.discard.length),
+        DOM.el("div", "pile-caption", "Discards " + state.discard.length),
       ]),
     ]);
     const children = [DOM.el("div", "center-label", "Round " + state.round + " · first to " + B7.TARGET), piles];
@@ -82,7 +82,7 @@
         DOM.el("span", null, state.seats[p.seat].name + " picks who gets " + B7.cardLabel(p.card)),
       ]));
     }
-    return DOM.el("div", "b7-center", children);
+    return DOM.el("div", "deck-center", children);
   }
 
   function statusLine(state) {

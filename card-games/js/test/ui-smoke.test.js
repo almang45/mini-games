@@ -344,8 +344,12 @@ function propertyDealScripted() {
   app.clickAction("Rent: Red $3M");
   ok("scripted: an any-colour rent then asks who pays", buttons(rentState).includes("Charge Seat 2"));
   app.clickAction("Charge Seat 2");
-  ok("scripted: the payer is asked, behind a handoff", rentState.phase === "pay" && app.isInterstitialShowing());
+  ok("scripted: the target is asked first, behind a handoff", rentState.phase === "respond" && app.isInterstitialShowing());
   app.confirmInterstitial();
+  const respondButtons = app.getCurrentGame().actionButtons(rentState, 1);
+  ok("scripted: without a Block the button is there but disabled", respondButtons[0].label === "Block" && respondButtons[0].disabled);
+  app.clickAction("Let it happen");
+  ok("scripted: then it pays, no second handoff", rentState.phase === "pay" && !app.isInterstitialShowing());
   const chips = findAll(wrap, (n) => n.dataset && n.dataset.id === five.id);
   ok("scripted: the payer's table shows a chip per card", chips.length === 1);
   ok("scripted: Pay waits for enough", app.getCurrentGame().actionButtons(rentState, 1)[0].disabled);
@@ -360,7 +364,18 @@ function propertyDealScripted() {
   if (app.isInterstitialShowing()) app.confirmInterstitial();
   ok("scripted: the target may Block", buttons(blockState).join() === "Block,Let it happen");
   app.clickAction("Block");
+  ok("scripted: the player gets to answer the Block", blockState.phase === "respond" && PD.actingSeat(blockState) === 0);
+  if (app.isInterstitialShowing()) app.confirmInterstitial();
+  app.clickAction("Let it happen");
   ok("scripted: Blocked, nothing paid", PD.bankTotal(blockState.tables[1]) === 10 && blockState.phase === "play");
+
+  const anyWild = PD.prop(PD.COLORS.slice(), 0);
+  const wildState = setup([[], []], [[], []], { red: [PD.prop(["red"], 3), anyWild] });
+  ok("scripted: wild moves wait behind one button", buttons(wildState).join() === "End Turn,Move a wild…");
+  app.clickAction("Move a wild…");
+  ok("scripted: then list every colour", buttons(wildState).length === 10 && buttons(wildState).includes("Red wild → Dark Blue"));
+  app.clickAction("Red wild → Green");
+  ok("scripted: and the wild moves", wildState.tables[0].sets.green.cards[0] === anyWild && buttons(wildState)[0] === "End Turn");
 }
 
 async function run() {

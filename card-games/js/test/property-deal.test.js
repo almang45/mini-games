@@ -28,6 +28,12 @@ function table(seatCount, { hands, sets, banks, drawPile } = {}) {
   return state;
 }
 
+// Every target is asked whether to Block, Block or not. Decline each ask
+// until the action needs a payment or is done.
+function settle(state) {
+  while (state.phase === "respond") P.respond(state, P.actingSeat(state), false);
+}
+
 function cardCount(state) {
   let n = state.drawPile.length + state.discard.length + state.hands.reduce((a, h) => a + h.length, 0);
   state.tables.forEach((t) => {
@@ -135,6 +141,7 @@ function cardCount(state) {
   });
   assert.throws(() => P.playCard(state, 0, pair.id, { as: "rent", color: "yellow" }), /no yellow/);
   P.playCard(state, 0, pair.id, { as: "rent", color: "red", double: true });
+  settle(state);
   ok("Double Rent uses a second play", state.plays === 2);
   ok("seat 2 has less than the $6M owed and pays everything", P.bankTotal(state.tables[1]) === 0);
   ok("seat 3 has more, so it chooses", state.phase === "pay" && P.actingSeat(state) === 2);
@@ -146,6 +153,7 @@ function cardCount(state) {
   const one = table(3, { hands: [[wildRent]], sets: [{ red: [prop("red", 3)] }], banks: [null, [P.money(2)], [P.money(2)]] });
   assert.throws(() => P.playCard(one, 0, wildRent.id, { as: "rent", color: "red" }), /who pays/);
   P.playCard(one, 0, wildRent.id, { as: "rent", color: "red", target: 2 });
+  settle(one);
   ok("an any-colour rent charges one seat", P.bankTotal(one.tables[1]) === 2 && P.bankTotal(one.tables[2]) === 0);
 })();
 
@@ -156,6 +164,7 @@ function cardCount(state) {
   const state = table(2, { hands: [[debt]], sets: [{}, { green, brown: [any] }], banks: [null, [P.money(1)]] });
   state.tables[1].sets.green.house = act("house");
   P.playCard(state, 0, debt.id, { as: "action", target: 1 });
+  settle(state);
   ok("properties count toward paying", state.phase === "pay");
   assert.throws(() => P.pay(state, 1, [any.id]), /can't pay with/);
   P.pay(state, 1, [green[0].id, state.tables[1].bank[0].id]);
@@ -167,6 +176,7 @@ function cardCount(state) {
   const bday = act("birthday");
   const state = table(4, { hands: [[bday]], banks: [null, [P.money(1)], [P.money(2)], [P.money(5)]] });
   P.playCard(state, 0, bday.id, { as: "action" });
+  settle(state);
   ok("everyone else owes $2M, the short and exact pay without asking", state.phase === "pay" && P.actingSeat(state) === 3);
   P.pay(state, 3, [state.tables[3].bank[0].id]);
   ok("all collected", P.bankTotal(state.tables[0]) === 8 && state.phase === "play");
@@ -183,6 +193,8 @@ function cardCount(state) {
   P.respond(state, 1, true);
   ok("then the player may Block back", P.actingSeat(state) === 0);
   P.respond(state, 0, true);
+  ok("the target is asked again, Block or not", P.actingSeat(state) === 1);
+  P.respond(state, 1, false);
   ok("two Blocks: the Steal goes through", state.tables[0].sets.red.cards.length === 1 && state.phase === "play");
   ok("Blocks don't use plays", state.plays === 1);
 
@@ -190,13 +202,69 @@ function cardCount(state) {
   const s2 = once.hands[0][0];
   P.playCard(once, 0, s2.id, { as: "action", target: 1, theirId: once.tables[1].sets.red.cards[0].id });
   P.respond(once, 1, true);
-  ok("one Block and nobody to answer it: cancelled", once.tables[1].sets.red.cards.length === 1 && once.phase === "play");
+  ok("the player is asked even without a Block, so hands stay hidden", once.phase === "respond" && P.actingSeat(once) === 0);
+  assert.throws(() => P.respond(once, 0, true), /no Block/);
+  P.respond(once, 0, false);
+  ok("one Block, not answered: cancelled", once.tables[1].sets.red.cards.length === 1 && once.phase === "play");
 
   const accept = table(2, { hands: [[act("debt")], [act("block")]], banks: [null, [P.money(5)]] });
   P.playCard(accept, 0, accept.hands[0][0].id, { as: "action", target: 1 });
   assert.throws(() => P.respond(accept, 0, false), /response/);
   P.respond(accept, 1, false);
   ok("declining to Block pays up", P.bankTotal(accept.tables[0]) === 5);
+})();
+
+(function hiddenBlockTests() {
+  // Review: stopping only for Block holders told everyone who held one.
+  const debt = P.action("debt");
+  const state = table(2, { hands: [[debt], []], banks: [null, [P.money(1)]] });
+  P.playCard(state, 0, debt.id, { as: "action", target: 1 });
+  ok("a target without a Block is still asked", state.phase === "respond" && P.actingSeat(state) === 1);
+  ok("and the AI declines without one", !P.aiShouldBlock(state, 1));
+  P.respond(state, 1, false);
+  ok("then pays what it has", P.bankTotal(state.tables[0]) === 1);
+})();
+
+(function winMidActionTests() {
+  // Review: the win waited for every target, and went to the lowest seat.
+  const bday = act("birthday");
+  const state = table(4, {
+    hands: [[bday], [act("block")], [act("block")], [act("block")]],
+    sets: [{ green: [prop("green"), prop("green"), prop("green")], darkblue: [prop("darkblue"), prop("darkblue")], red: [prop("red"), prop("red")] }],
+  });
+  state.tables[1].sets.red.cards.push(prop("red", 3));
+  P.playCard(state, 0, bday.id, { as: "action" });
+  P.respond(state, 1, false);
+  ok("seat 2 has to pay, and can only pay with its red", state.phase === "pay");
+  P.pay(state, 1, [state.tables[1].sets.red.cards[0].id]);
+  ok("the red completes a third set: the game ends at once", state.gameOver && state.winner === 0);
+  ok("the other targets are never asked", state.hands[2].length === 1 && state.hands[3].length === 1);
+
+  const both = table(2, {
+    hands: [[], [act("swap")]],
+    sets: [
+      { green: [prop("green"), prop("green"), prop("green")], darkblue: [prop("darkblue"), prop("darkblue")], red: [prop("red"), prop("red")], brown: [prop("brown", 1)] },
+      { utility: [prop("utility"), prop("utility")], station: [prop("station"), prop("station"), prop("station"), prop("station")], brown: [prop("brown", 1)], red: [prop("red", 3)] },
+    ],
+  });
+  both.turn = 1;
+  P.playCard(both, 1, both.hands[1][0].id, { as: "action", target: 0, theirId: both.tables[0].sets.brown.cards[0].id, myId: both.tables[1].sets.red.cards[0].id });
+  settle(both);
+  ok("a Swap that completes three sets for both: the mover wins", both.gameOver && both.winner === 1);
+})();
+
+(function anyWildAloneTests() {
+  // Review: two any-colour wilds made a "full" Dark Blue set.
+  const anyA = P.prop(P.COLORS.slice(), 0), anyB = P.prop(P.COLORS.slice(), 0);
+  const t = P.emptyTable();
+  t.sets.darkblue.cards.push(anyA, anyB);
+  ok("any-colour wilds alone are not a full set", !P.isFull(t, "darkblue"));
+  ok("and charge no rent", P.rentFor(t, "darkblue") === 0);
+  t.sets.darkblue.cards.push(prop("darkblue", 4));
+  ok("with a real card beside them they count", P.isFull(t, "darkblue") && P.rentFor(t, "darkblue") === 8);
+  const two = P.emptyTable();
+  two.sets.red.cards.push(P.prop(["red", "yellow"], 3), P.prop(["red", "yellow"], 3), P.prop(["red", "yellow"], 3));
+  ok("two-colour wilds are real cards", P.isFull(two, "red"));
 })();
 
 // ---- Steal, Swap, Set Grab, buildings ---------------------------------------------------
@@ -208,6 +276,7 @@ function cardCount(state) {
   const state = table(2, { hands: [[steal, act("swap"), act("setgrab")]], sets: [{ brown: [prop("brown", 1)] }, { red: reds, darkblue: [blue] }] });
   assert.throws(() => P.playCard(state, 0, steal.id, { as: "action", target: 1, theirId: reds[0].id }), /can't be stolen/);
   P.playCard(state, 0, steal.id, { as: "action", target: 1, theirId: blue.id });
+  settle(state);
   ok("Steal takes a loose property", state.tables[0].sets.darkblue.cards.length === 1 && state.tables[1].sets.darkblue.cards.length === 0);
 
   const swap = state.hands[0].find((c) => c.type === "swap");
@@ -216,11 +285,13 @@ function cardCount(state) {
   state.tables[1].sets.red.house = act("house");
   const grab = state.hands[0].find((c) => c.type === "setgrab");
   P.playCard(state, 0, grab.id, { as: "action", target: 1, color: "red" });
+  settle(state);
   ok("Set Grab takes the whole set and its house", state.tables[0].sets.red.cards.length === 3 && state.tables[0].sets.red.house);
   ok("leaving nothing behind", state.tables[1].sets.red.cards.length === 0 && !state.tables[1].sets.red.house);
 
   const sw = table(2, { hands: [[act("swap")]], sets: [{ brown: [prop("brown", 1)] }, { green: [prop("green", 4)] }] });
   P.playCard(sw, 0, sw.hands[0][0].id, { as: "action", target: 1, theirId: sw.tables[1].sets.green.cards[0].id, myId: sw.tables[0].sets.brown.cards[0].id });
+  settle(sw);
   ok("Swap trades one each way", sw.tables[0].sets.green.cards.length === 1 && sw.tables[1].sets.brown.cards.length === 1);
 })();
 
@@ -263,6 +334,7 @@ function cardCount(state) {
     sets: [{ green: [prop("green"), prop("green"), prop("green")], darkblue: [prop("darkblue"), prop("darkblue")], red: [prop("red"), prop("red")] }, { red: [red] }],
   });
   P.playCard(state, 0, steal.id, { as: "action", target: 1, theirId: red.id });
+  settle(state);
   ok("a stolen card can win", state.gameOver && state.winner === 0);
 })();
 
@@ -282,6 +354,7 @@ function cardCount(state) {
   const pay = table(2, { hands: [[act("debt")]], banks: [null, [P.money(1), P.money(2), P.money(3), P.money(10)]] });
   pay.tables[1].sets.red.cards.push(prop("red", 3));
   P.playCard(pay, 0, pay.hands[0][0].id, { as: "action", target: 1 });
+  settle(pay);
   const ids = P.aiChoosePayment(pay, 1);
   const total = ids.reduce((s, id) => s + P.locate(pay.tables[1], id).card.value, 0);
   ok("pays the $5M debt exactly from the bank", total === 5 && ids.every((id) => P.locate(pay.tables[1], id).where === "bank"));
@@ -321,7 +394,7 @@ function allPlays(state, seat) {
 // A legal but random player: plays, Blocks, payments, wild moves, discards.
 function randomStep(state, seat, rng) {
   const pick = (list) => list[Math.floor(rng() * list.length)];
-  if (state.phase === "respond") return P.respond(state, seat, rng() < 0.5);
+  if (state.phase === "respond") return P.respond(state, seat, P.holdsBlock(state, seat) && rng() < 0.5);
   if (state.phase === "pay") {
     const ids = [];
     let total = 0;

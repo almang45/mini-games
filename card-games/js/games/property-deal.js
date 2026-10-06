@@ -82,13 +82,16 @@
   }
 
   const setSize = (color) => RENT[color].length;
-  const isFull = (table, color) => table.sets[color].cards.length >= setSize(color);
+  // As in the published rules, any-colour wilds alone are no set: a colour
+  // needs at least one other card to count toward a full set or charge rent.
+  const anchored = (set) => set.cards.some((c) => !isAnyColor(c));
+  const isFull = (table, color) => anchored(table.sets[color]) && table.sets[color].cards.length >= setSize(color);
   const fullColors = (table) => COLORS.filter((c) => isFull(table, c));
 
   function rentFor(table, color) {
     const set = table.sets[color];
     const n = Math.min(set.cards.length, setSize(color));
-    if (n === 0) return 0;
+    if (n === 0 || !anchored(set)) return 0;
     return RENT[color][n - 1] + (isFull(table, color) ? (set.house ? HOUSE_RENT : 0) + (set.hotel ? HOTEL_RENT : 0) : 0);
   }
 
@@ -159,6 +162,10 @@
   const nameOf = (state, seat) => state.seats[seat].name;
   const others = (state, seat) => state.seats.map((s, i) => i).filter((i) => i !== seat);
 
+  // Most full sets, then the most on the table: the turn-limit winner and
+  // the order of the final standings.
+  const rank = (state, seat) => fullColors(state.tables[seat]).length * 1000 + payableTotal(state.tables[seat]);
+
   function createGame(seatTypes, opts) {
     if (seatTypes.length < 2 || seatTypes.length > 4) throw new Error("Property Deal supports 2-4 seats");
     const state = {
@@ -205,9 +212,13 @@
     say(state, nameOf(state, seat) + " draws " + count + ".");
   }
 
-  function checkWin(state) {
-    const winner = state.tables.findIndex((t) => fullColors(t).length >= SETS_TO_WIN);
-    if (winner === -1) return false;
+  // Checked after every change to a table. If one move completes three sets
+  // for two seats (a Swap can), the seat that made the move wins.
+  function checkWin(state, mover) {
+    const n = state.seats.length;
+    const order = Array.from({ length: n }, (_, k) => (mover + k) % n);
+    const winner = order.find((i) => fullColors(state.tables[i]).length >= SETS_TO_WIN);
+    if (winner === undefined) return false;
     state.gameOver = true;
     state.winner = winner;
     state.phase = "over";
@@ -304,7 +315,7 @@
     if (opt.as === "prop") {
       mine.sets[opt.color].cards.push(card);
       say(state, who + " plays " + cardLabel(card) + " as " + COLOR_NAME[opt.color] + ".");
-      checkWin(state);
+      checkWin(state, seat);
       return;
     }
     state.discard.push(card);
@@ -363,13 +374,16 @@
     takeFromTable(table, id);
     table.sets[color].cards.push(found.card);
     say(state, nameOf(state, seat) + " moves a wild to " + COLOR_NAME[color] + ".");
-    checkWin(state);
+    checkWin(state, seat);
   }
 
   // ------------------------------------------------- actions with targets
   //
   // pending = { from, effect, targets, idx, blocks, responder }. Each target
   // in turn may Block (and be Blocked back), then pays or loses the card.
+  // Every target gets the chance to respond, Block or not, and so does the
+  // player after a Block: stopping only for seats that hold one would show
+  // everyone what's in a hidden hand.
 
   const holdsBlock = (state, seat) => state.hands[seat].some((c) => c.type === "block");
 
@@ -380,35 +394,28 @@
 
   function nextTarget(state) {
     const p = state.pending;
+    // A payment or take can finish a third set before the last target.
+    if (checkWin(state, p.from)) return;
     if (p.idx >= p.targets.length) {
       state.pending = null;
-      if (!checkWin(state)) state.phase = "play";
+      state.phase = "play";
       return;
     }
     p.blocks = 0;
-    const target = p.targets[p.idx];
-    if (holdsBlock(state, target)) {
-      p.responder = target;
-      state.phase = "respond";
-      return;
-    }
-    resolveTarget(state);
+    p.responder = p.targets[p.idx];
+    state.phase = "respond";
   }
 
   function respond(state, seat, useBlock) {
     const p = state.pending;
     if (state.gameOver || state.phase !== "respond" || p.responder !== seat) throw new Error("not this seat's response");
     if (!useBlock) return resolveTarget(state);
+    if (!holdsBlock(state, seat)) throw new Error("no Block in hand");
     state.discard.push(takeFromHand(state, seat, state.hands[seat].find((c) => c.type === "block").id));
     p.blocks += 1;
     say(state, nameOf(state, seat) + " plays Block.");
     const target = p.targets[p.idx];
-    const other = seat === target ? p.from : target;
-    if (holdsBlock(state, other)) {
-      p.responder = other;
-      return;
-    }
-    resolveTarget(state);
+    p.responder = seat === target ? p.from : target;
   }
 
   function resolveTarget(state) {
@@ -509,10 +516,9 @@
     startTurn(state);
   }
 
-  // Most full sets, then the most on the table.
+  // The turn limit ends a stalemate: the best rank wins.
   function endByTurnLimit(state) {
-    const rank = (i) => fullColors(state.tables[i]).length * 1000 + payableTotal(state.tables[i]);
-    state.winner = state.seats.map((s, i) => i).reduce((a, b) => (rank(b) > rank(a) ? b : a));
+    state.winner = state.seats.map((s, i) => i).reduce((a, b) => (rank(state, b) > rank(state, a) ? b : a));
     state.gameOver = true;
     state.phase = "over";
     say(state, "Turn limit reached - " + nameOf(state, state.winner) + " wins on sets and value.");
@@ -625,6 +631,7 @@
   // Block what hurts: a Set Grab, a Steal or Swap of a set-building card, or
   // a payment that's big or most of what this seat has.
   function aiShouldBlock(state, seat) {
+    if (!holdsBlock(state, seat)) return false;
     const p = state.pending;
     const e = p.effect;
     const target = p.targets[p.idx];
@@ -684,7 +691,7 @@
   const api = {
     COLORS, COLOR_NAME, RENT, ACTION_NAME, PLAYS_PER_TURN, HAND_LIMIT, MAX_TURNS,
     money, prop, rent, action, buildDeck, cardLabel, isWild, isAnyColor,
-    emptyTable, setSize, isFull, fullColors, rentFor, bankTotal, payable, payableTotal, locate, loosePropertyIds,
+    emptyTable, setSize, isFull, fullColors, rentFor, rank, others, holdsBlock, bankTotal, payable, payableTotal, locate, loosePropertyIds,
     createGame, playError, playCard, moveWild, respond, pay, endTurn, discardCard, actingSeat,
     aiChoosePlay, aiShouldBlock, aiChoosePayment, stepAI,
   };

@@ -91,7 +91,7 @@
       const full = PD.isFull(t, color);
       const text = Math.min(set.cards.length, PD.setSize(color)) + "/" + PD.setSize(color) +
         (set.cards.length > PD.setSize(color) ? "+" + (set.cards.length - PD.setSize(color)) : "") +
-        (set.house ? " H" : "") + (set.hotel ? "H" : "");
+        (set.hotel ? " · Hotel" : set.house ? " · House" : "");
       const chip = DOM.el("span", "pd-chip pd-set" + (full ? " is-full" : ""), [DOM.el("i", "pd-swatch pd-c-" + color), text]);
       chip.title = PD.COLOR_NAME[color] + ": " + set.cards.map(PD.cardLabel).join(", ") + " - rent $" + PD.rentFor(t, color) + "M";
       wrap.appendChild(chip);
@@ -106,6 +106,7 @@
     if (state.phase === "discard") return PD.discardCard(state, seat, card.id);
     if (state.phase !== "play" || state.plays >= PD.PLAYS_PER_TURN) return;
     const u = ui(state);
+    u.moving = false;
     u.draft = u.draft && u.draft.id === card.id ? null : { id: card.id };
   }
 
@@ -121,19 +122,28 @@
 
   const name = (state, seat) => state.seats[seat].name;
 
+  // Two identical cards give identical labels; number them so each button
+  // (found by its label) is distinct.
+  function dedupeLabels(list) {
+    const seen = {};
+    list.forEach((c) => { seen[c.label] = (seen[c.label] || 0) + 1; if (seen[c.label] > 1) c.label += " (" + seen[c.label] + ")"; });
+    return list;
+  }
+
   // Every way to play the drafted card at its current step. Each choice is
   // either final (opt: play it) or a step (step: fields to add to the draft).
   function choices(state, seat, card, draft) {
-    const others = state.seats.map((s, i) => i).filter((i) => i !== seat);
+    const others = PD.others(state, seat);
     const out = [];
     const final = (label, opt) => { if (!PD.playError(state, seat, card, opt)) out.push({ label, opt }); };
-    if (card.kind !== "prop" && card.value > 0 && !draft.target && !draft.color) final("Bank $" + card.value + "M", { as: "bank" });
+    const firstStep = Object.keys(draft).length === 1; // only the card id so far
+    if (card.kind !== "prop" && card.value > 0 && firstStep) final("Bank $" + card.value + "M", { as: "bank" });
 
     if (card.kind === "prop") {
       card.colors.forEach((color) => final(card.colors.length > 1 ? "Play as " + PD.COLOR_NAME[color] : "Play to table", { as: "prop", color }));
     } else if (card.kind === "rent") {
       const canDouble = state.hands[seat].some((c) => c.type === "double") && state.plays + 2 <= PD.PLAYS_PER_TURN;
-      if (!draft.color) {
+      if (draft.color == null) {
         card.colors.forEach((color) => {
           const amount = PD.rentFor(state.tables[seat], color);
           if (!amount) return;
@@ -158,7 +168,7 @@
             final("Steal " + name(state, t) + "'s " + PD.COLOR_NAME[where] + (PD.isWild(c) ? " wild" : ""), { as: "action", target: t, theirId: c.id })));
           break;
         case "swap":
-          if (!draft.theirId) {
+          if (draft.theirId == null) {
             others.forEach((t) => loose(t).forEach(({ card: c, where }) => {
               if (PD.loosePropertyIds(state.tables[seat]).length) out.push({ label: "Take " + name(state, t) + "'s " + PD.COLOR_NAME[where] + (PD.isWild(c) ? " wild" : ""), step: { target: t, theirId: c.id } });
             }));
@@ -177,10 +187,7 @@
         default: break; // Block and Double Rent can only be banked here
       }
     }
-    // Two identical cards give identical labels; number them so each button is distinct.
-    const seen = {};
-    out.forEach((c) => { seen[c.label] = (seen[c.label] || 0) + 1; if (seen[c.label] > 1) c.label += " (" + seen[c.label] + ")"; });
-    return out;
+    return dedupeLabels(out);
   }
 
   function actionButtons(state, seat) {
@@ -188,7 +195,7 @@
     const u = ui(state);
     if (state.phase === "respond") {
       return [
-        { label: "Block", primary: true, onClick: () => PD.respond(state, seat, true) },
+        { label: "Block", primary: true, disabled: !PD.holdsBlock(state, seat), onClick: () => PD.respond(state, seat, true) },
         { label: "Let it happen", onClick: () => PD.respond(state, seat, false) },
       ];
     }
@@ -217,17 +224,18 @@
         },
       })).concat([{ label: "Cancel", onClick: () => { u.draft = null; } }]);
     }
-    const buttons = [{ label: "End Turn", primary: state.plays >= PD.PLAYS_PER_TURN, onClick: () => PD.endTurn(state, seat) }];
     const t = state.tables[seat];
+    const moves = [];
     PD.COLORS.forEach((from) => {
       if (t.sets[from].house) return;
       t.sets[from].cards.filter(PD.isWild).forEach((c) => c.colors.forEach((to) => {
-        if (to !== from) buttons.push({ label: "Move wild " + PD.COLOR_NAME[from] + " → " + PD.COLOR_NAME[to], onClick: () => PD.moveWild(state, seat, c.id, to) });
+        if (to !== from) moves.push({ label: PD.COLOR_NAME[from] + " wild → " + PD.COLOR_NAME[to], onClick: () => { u.moving = false; PD.moveWild(state, seat, c.id, to); } });
       }));
     });
-    // Dedupe identical wild-move labels.
-    const seen = {};
-    buttons.forEach((b) => { seen[b.label] = (seen[b.label] || 0) + 1; if (seen[b.label] > 1) b.label += " (" + seen[b.label] + ")"; });
+    // An any-colour wild can go to nine colours, so the moves wait behind one button.
+    if (u.moving && moves.length) return dedupeLabels(moves).concat([{ label: "Cancel", onClick: () => { u.moving = false; } }]);
+    const buttons = [{ label: "End Turn", primary: state.plays >= PD.PLAYS_PER_TURN, onClick: () => PD.endTurn(state, seat) }];
+    if (moves.length) buttons.push({ label: "Move a wild…", onClick: () => { u.moving = true; } });
     return buttons;
   }
 
@@ -237,13 +245,13 @@
     const top = state.discard[state.discard.length - 1];
     const children = [
       DOM.el("div", "center-label", "Three full sets win"),
-      DOM.el("div", "pd-piles", [
-        DOM.el("div", "pd-pile", [DOM.cardEl(null, { faceDown: true }), DOM.el("div", "pd-pile-label", "Draw " + state.drawPile.length)]),
-        DOM.el("div", "pd-pile", [top ? DOM.cardEl(top, { renderFace }) : DOM.el("div", "card card-slot"), DOM.el("div", "pd-pile-label", "Discards")]),
+      DOM.el("div", "pile-row", [
+        DOM.el("div", "pile-col", [DOM.cardEl(null, { faceDown: true }), DOM.el("div", "pile-caption", "Draw " + state.drawPile.length)]),
+        DOM.el("div", "pile-col", [top ? DOM.cardEl(top, { renderFace }) : DOM.el("div", "card card-slot"), DOM.el("div", "pile-caption", "Discards")]),
       ]),
     ];
     if (!state.gameOver && state.phase === "play") {
-      children.push(DOM.el("div", "pd-pile-label", "Plays left: " + (PD.PLAYS_PER_TURN - state.plays)));
+      children.push(DOM.el("div", "pile-caption", "Plays left: " + (PD.PLAYS_PER_TURN - state.plays)));
     }
     if (state.pending) {
       const p = state.pending;
@@ -252,7 +260,7 @@
       children.push(DOM.el("div", "pd-prompt", name(state, p.from) + " → " + name(state, p.targets[p.idx]) + ": " + what +
         (p.blocks ? " (Blocked " + p.blocks + "×)" : "")));
     }
-    return DOM.el("div", "pd-center", children);
+    return DOM.el("div", "deck-center", children);
   }
 
   function statusLine(state) {
@@ -272,9 +280,8 @@
   }
 
   function standings(state) {
-    const rank = (i) => PD.fullColors(state.tables[i]).length * 1000 + PD.payableTotal(state.tables[i]);
     return state.seats
-      .map((s, i) => ({ name: s.name, detail: PD.fullColors(state.tables[i]).length + " full sets, $" + PD.payableTotal(state.tables[i]) + "M on the table", score: -rank(i) - (i === state.winner ? 1e6 : 0) }))
+      .map((s, i) => ({ name: s.name, detail: PD.fullColors(state.tables[i]).length + " full sets, $" + PD.payableTotal(state.tables[i]) + "M on the table", score: -PD.rank(state, i) - (i === state.winner ? 1e6 : 0) }))
       .sort((a, b) => a.score - b.score);
   }
 
