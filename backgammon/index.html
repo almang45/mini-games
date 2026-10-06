@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backgammon</title>
+<link rel="icon" href="favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<script src="../shared/register-sw.js" defer></script>
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+  header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .controls label { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  select {
+    font: inherit;
+    font-size: 0.85rem;
+    background: #1c4a34;
+    color: var(--ink);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .scoreboard { width: min(640px, 100%); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .score {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px 6px 8px;
+    border-radius: 999px;
+    background: var(--panel);
+    border: 2px solid transparent;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+  .score.is-turn { border-color: var(--accent); }
+  .score small { color: var(--ink-dim); }
+  .score .chk { width: 20px; height: 20px; flex: none; }
+  .status { flex: 1; margin: 0; text-align: center; font-size: 0.85rem; color: var(--ink-dim); }
+
+  .board {
+    --point-a: #b5462f;
+    --point-b: #e8d3a8;
+    width: min(640px, 100%);
+    aspect-ratio: 15 / 11;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr) 1.1fr repeat(6, 1fr) 1.2fr;
+    grid-template-rows: 1fr 0.35fr 1fr;
+    background: #2f6b47;
+    border: clamp(5px, 1.6vw, 10px) solid #5a3a1c;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+  }
+  /* Points, bar halves and trays are buttons; undo theme.css's button look. */
+  .board button {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    min-width: 0;
+    min-height: 0;
+    cursor: default;
+    transition: none;
+  }
+  .board button:hover, .board button:active { filter: none; transform: none; }
+  .board button.src, .board button.dst { cursor: pointer; }
+  .board button:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+
+  .point { position: relative; display: flex; flex-direction: column; align-items: center; }
+  .point.bottom { flex-direction: column-reverse; }
+  .point::before {
+    content: "";
+    position: absolute;
+    inset: 0 6%;
+    background: var(--point-a);
+    clip-path: polygon(0 0, 100% 0, 50% 92%);
+    z-index: 0;
+  }
+  .point.bottom::before { clip-path: polygon(0 100%, 100% 100%, 50% 8%); }
+  .point.alt::before { background: var(--point-b); }
+  .point.dst::before { background: var(--accent); }
+  .point.sel::after, .bar.sel::after, .tray.sel::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 3px var(--accent); }
+  .point .num {
+    position: absolute;
+    font-size: 0.55rem;
+    color: rgba(255, 255, 255, 0.55);
+    z-index: 1;
+  }
+  .point.top .num { bottom: 1px; }
+  .point.bottom .num { top: 1px; }
+
+  .board .bar { grid-column: 7; background: #5a3a1c; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+  .bar.top { grid-row: 1; justify-content: flex-start; }
+  .bar.bottom { grid-row: 3; }
+  .bar.mid { grid-row: 2; }
+  .gap { grid-row: 2; }
+  .board .tray { grid-column: 14; background: #24543a; position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 3px 0; border-left: 2px solid #5a3a1c; }
+  .tray.top { grid-row: 1; }
+  .tray.bottom { grid-row: 3; flex-direction: column-reverse; }
+  .tray.mid { grid-row: 2; }
+  .board .tray.dst { background: rgba(255, 209, 102, 0.45); }
+  .tray .slab { width: 80%; height: 5%; border-radius: 2px; flex: none; }
+
+  .chk {
+    position: relative;
+    z-index: 1;
+    width: 88%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(0.55rem, 2vw, 0.8rem);
+    font-weight: 700;
+  }
+  .chk.white, .slab.white { background: radial-gradient(circle at 35% 30%, #fff, #d9cdb4 70%); color: #3a2a10; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.55); }
+  .chk.black, .slab.black { background: radial-gradient(circle at 35% 30%, #4a4a4a, #151515 70%); color: #ffd166; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+  .chk.moved { box-shadow: 0 0 0 2px rgba(255, 209, 102, 0.8); }
+
+  .dice { grid-column: 8 / span 6; grid-row: 2; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .die {
+    width: clamp(22px, 6vw, 34px);
+    aspect-ratio: 1;
+    border-radius: 6px;
+    background: #fbf6ea;
+    color: #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: clamp(0.8rem, 3vw, 1.1rem);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  .die.black { background: #222; color: #ffd166; }
+  .die.used { opacity: 0.3; }
+  .info { grid-column: 1 / span 6; grid-row: 2; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; color: rgba(255, 255, 255, 0.75); padding: 0 4px; text-align: center; }
+
+  .actions { display: flex; gap: 10px; justify-content: center; min-height: 40px; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  .overlay[hidden] { display: none; }
+  .modal {
+    background: #12321f;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 26px 30px;
+    text-align: center;
+    max-width: 340px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .modal h2 { margin: 0 0 8px; color: var(--accent); }
+  .modal p { margin: 4px 0 18px; color: var(--ink-dim); font-size: 0.95rem; }
+  .modal .controls { gap: 8px; }
+
+  footer { color: var(--ink-dim); font-size: 0.75rem; text-align: center; max-width: 640px; line-height: 1.5; }
+
+  @media (max-width: 480px) {
+    .score { font-size: 0.8rem; padding: 4px 8px 4px 6px; }
+    .score .chk { width: 16px; height: 16px; }
+    .status { font-size: 0.75rem; }
+    .point .num { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="back-link" href="../index.html">← All Games</a>
+    <h1>Backgammon</h1>
+  </header>
+
+  <div class="controls">
+    <label>Mode
+      <select id="mode">
+        <option value="white">You play White vs AI</option>
+        <option value="black">You play Black vs AI</option>
+        <option value="pvp">Two players</option>
+      </select>
+    </label>
+    <label>AI
+      <select id="level">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </label>
+    <button id="btnNew" type="button">New Match</button>
+  </div>
+
+  <div class="scoreboard">
+    <div class="score" id="scoreTop"></div>
+    <p class="status" id="status" aria-live="polite"></p>
+    <div class="score" id="scoreBottom"></div>
+  </div>
+
+  <div class="board" id="board" aria-label="Board"></div>
+
+  <div class="actions">
+    <button class="btn-primary" id="btnRoll" type="button">Roll</button>
+    <button id="btnUndo" type="button">Undo move</button>
+    <button class="btn-primary" id="btnDone" type="button">Done</button>
+    <button class="btn-primary" id="btnNext" type="button" hidden>Next Game</button>
+  </div>
+
+  <footer>Move all fifteen checkers round the board into your home board (bottom right), then bear them off; the first to bear off all fifteen wins. Each die moves one checker that many points; doubles move four times. You can't land on a point held by two or more enemy checkers. Land on a single one to hit it to the bar — a checker on the bar must come back in before anything else moves. Use both dice if you can. Click a checker, then where it goes. A gammon (the loser bore off none) scores 2, a backgammon (and still has a checker on the bar or in the winner's home board) scores 3.</footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h2>Game over</h2>
+    <p id="resultText"></p>
+    <div class="controls">
+      <button class="btn-primary" id="modalNew" type="button">Next Game</button>
+      <button id="modalClose" type="button">See Board</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/backgammon.js"></script>
+<script>
+(function () {
+  "use strict";
+  const BG = window.BACKGAMMON;
+  const { WHITE, BLACK, BAR, OFF } = BG;
+  const NAME = { [WHITE]: "White", [BLACK]: "Black" };
+  const CLS = { [WHITE]: "white", [BLACK]: "black" };
+  const HUMANS = { white: [WHITE], black: [BLACK], pvp: [WHITE, BLACK] };
+  const AI_STEP_MS = 450;
+  const MAX_SHOWN = 5;
+  const $ = (id) => document.getElementById(id);
+
+  let state = null;
+  let timer = null;
+  let picked = null; // the relative point (or BAR) of the checker picked, for the side to move
+  const match = { [WHITE]: 0, [BLACK]: 0 };
+
+  const mode = () => $("mode").value;
+  const isHuman = (s) => HUMANS[mode()].includes(s);
+  // The bottom of the board belongs to this side.
+  const viewer = () => (mode() === "black" ? BLACK : WHITE);
+  const humanToMove = () => !state.gameOver && isHuman(state.turn) && !timer;
+
+  // ------------------------------------------------------------- moves
+
+  // Where the checker on `from` can get to this turn, each with the steps to
+  // play: single dice, and the same checker carried on with the next die.
+  // When two routes reach the same point, the shorter wins, then the one hitting more.
+  function destinations(from) {
+    const out = new Map();
+    const k = state.done.length;
+    for (const t of BG.following(state)) {
+      if (!t[k] || t[k].from !== from) continue;
+      const steps = [];
+      for (let m = k; m < t.length; m++) {
+        if (m > k && (t[m].from !== steps[steps.length - 1].to || steps[steps.length - 1].to === OFF)) break;
+        steps.push(t[m]);
+        const to = t[m].to;
+        const hits = steps.filter((st) => st.hit).length;
+        const prev = out.get(to);
+        if (!prev || steps.length < prev.steps.length || (steps.length === prev.steps.length && hits > prev.hits)) {
+          out.set(to, { steps: steps.slice(), hits });
+        }
+      }
+    }
+    return out;
+  }
+
+  const sources = () => new Set(BG.nextSteps(state).map((st) => st.from));
+
+  function onSlot(kind, r) {
+    if (!humanToMove() || state.phase !== "move") return;
+    if (picked != null) {
+      const dest = kind === "tray" ? OFF : kind === "point" ? r : null;
+      const route = dest != null && destinations(picked).get(dest);
+      if (route) {
+        picked = null;
+        for (const st of route.steps) if (!state.gameOver) BG.move(state, st.from, st.to);
+        afterHumanStep();
+        return;
+      }
+    }
+    const from = kind === "bar" ? BAR : kind === "point" ? r : null;
+    if (from != null && sources().has(from)) picked = picked === from ? null : from;
+    else picked = null;
+    render();
+  }
+
+  function afterHumanStep() {
+    if (state.gameOver) return gameOver();
+    // A lone remaining source is picked for you (the bar, or the last checker that can move).
+    const src = sources();
+    if (src.size === 1) picked = [...src][0];
+    render();
+  }
+
+  // ------------------------------------------------------------- turn flow
+
+  function advance() {
+    picked = null;
+    if (state.gameOver) return gameOver();
+    if (isHuman(state.turn)) {
+      if (state.phase === "move") {
+        const src = sources();
+        if (src.size === 1) picked = [...src][0];
+      }
+      render();
+      return;
+    }
+    aiTurn();
+  }
+
+  function later(fn) {
+    timer = setTimeout(() => { timer = null; fn(); }, AI_STEP_MS);
+  }
+
+  function aiTurn() {
+    if (state.phase === "roll") {
+      later(() => { BG.roll(state); aiTurn(); });
+      render();
+      return;
+    }
+    const steps = BG.chooseTurn(state, $("level").value);
+    const playNext = () => {
+      if (state.gameOver) { render(); return gameOver(); }
+      if (!steps.length) {
+        BG.endTurn(state);
+        advance();
+        return;
+      }
+      const st = steps.shift();
+      BG.move(state, st.from, st.to);
+      later(playNext);
+      render();
+    };
+    later(playNext);
+    render();
+  }
+
+  function roll() {
+    if (!humanToMove() || state.phase !== "roll") return;
+    BG.roll(state);
+    advance();
+  }
+
+  function done() {
+    if (!humanToMove() || !BG.turnComplete(state)) return;
+    BG.endTurn(state);
+    advance();
+  }
+
+  function undoStep() {
+    if (!humanToMove()) return;
+    picked = null;
+    BG.undoStep(state);
+    afterHumanStep();
+  }
+
+  function gameOver() {
+    match[state.winner] += state.result.points;
+    render();
+    $("resultText").textContent = resultText();
+    $("overlay").hidden = false;
+  }
+
+  function newGame() {
+    clearTimeout(timer);
+    timer = null;
+    picked = null;
+    $("overlay").hidden = true;
+    state = BG.createGame();
+    advance();
+  }
+
+  // ------------------------------------------------------------- rendering
+
+  const label = (s) => (mode() === "pvp" ? NAME[s] : isHuman(s) ? "You" : "AI");
+  const fmtPoint = (r) => (r === BAR ? "bar" : r === OFF ? "off" : String(r));
+  const fmtTurn = (t) => (t.moves.length ? t.moves.map((m) => fmtPoint(m.from) + "/" + fmtPoint(m.to) + (m.hit ? "*" : "")).join(" ") : "no move");
+
+  function resultText() {
+    const kind = state.result.kind === "single" ? "" : " with a " + state.result.kind;
+    const pts = state.result.points + (state.result.points === 1 ? " point" : " points");
+    const who = mode() === "pvp" ? NAME[state.winner] + " wins" : isHuman(state.winner) ? "You win" : "The AI wins";
+    return who + kind + " (" + pts + "). Match: " + label(viewer()) + " " + match[viewer()] + " – " + match[-viewer()] + " " + label(-viewer()) + ".";
+  }
+
+  function statusText() {
+    if (state.gameOver) return resultText();
+    const who = mode() === "pvp" ? NAME[state.turn] : isHuman(state.turn) ? "You" : "AI";
+    if (!isHuman(state.turn)) return "AI (" + NAME[state.turn] + ") " + (state.phase === "roll" ? "is rolling…" : "is moving…");
+    if (state.phase === "roll") {
+      const last = state.lastTurn && !isHuman(state.lastTurn.player) ? "AI played " + fmtTurn(state.lastTurn) + ". " : "";
+      return last + (mode() === "pvp" ? who + " to roll." : "Your roll.");
+    }
+    if (!state.turns.length) return who + (who === "You" ? " have" : " has") + " no legal move — press Done.";
+    if (BG.turnComplete(state)) return "Done? Or undo a move.";
+    if (state.bar[state.turn]) return "Bring your checker in from the bar first.";
+    return picked != null ? "Now click where it goes." : "Click a checker to move.";
+  }
+
+  function checker(s, extra) {
+    const c = document.createElement("span");
+    c.className = "chk " + CLS[s] + (extra ? " " + extra : "");
+    return c;
+  }
+
+  function stack(el, s, n, movedHere) {
+    const shown = Math.min(n, MAX_SHOWN);
+    for (let k = 0; k < shown; k++) {
+      const c = checker(s, k === shown - 1 && movedHere ? "moved" : "");
+      if (k === shown - 1 && n > MAX_SHOWN) c.textContent = String(n);
+      el.appendChild(c);
+    }
+  }
+
+  function render() {
+    const v = viewer();
+    const s = state.turn;
+    const live = humanToMove() && state.phase === "move";
+    const src = live ? sources() : new Set();
+    const dst = live && picked != null ? destinations(picked) : new Map();
+    // Landing points of this turn's moves so far, as board indices.
+    const moved = new Set(state.done.filter((m) => m.to !== OFF).map((m) => BG.idx(s, m.to)));
+
+    const board = $("board");
+    board.replaceChildren();
+    const add = (el, col, row) => { el.style.gridColumn = String(col); el.style.gridRow = String(row); board.appendChild(el); };
+
+    // Points, numbered for the viewer: top row 13..24 left to right, bottom 12..1.
+    for (let q = 1; q <= 24; q++) {
+      const top = q >= 13;
+      const pos = top ? q - 13 : 12 - q; // 0..11 from the left
+      const col = pos < 6 ? pos + 1 : pos + 2;
+      const i = BG.idx(v, q);
+      const r = BG.rel(s, i); // the point in the mover's terms
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "point " + (top ? "top" : "bottom") + (q % 2 ? "" : " alt");
+      const n = Math.abs(state.board[i]);
+      const owner = Math.sign(state.board[i]);
+      if (n) stack(btn, owner, n, moved.has(i));
+      const num = document.createElement("span");
+      num.className = "num";
+      num.textContent = String(q);
+      btn.appendChild(num);
+      if (src.has(r)) btn.classList.add("src");
+      if (picked === r) btn.classList.add("sel");
+      if (dst.has(r)) btn.classList.add("dst");
+      btn.setAttribute("aria-label", "Point " + q + ": " + (n ? n + " " + NAME[owner] : "empty"));
+      btn.addEventListener("click", () => onSlot("point", r));
+      add(btn, col, top ? 1 : 3);
+    }
+
+    // The bar: the viewer's checkers on the bottom half.
+    for (const [side, row] of [[-v, 1], [v, 3]]) {
+      const bar = document.createElement("button");
+      bar.type = "button";
+      bar.className = "bar " + (row === 1 ? "top" : "bottom");
+      stack(bar, side, state.bar[side], false);
+      if (side === s && src.has(BAR)) bar.classList.add("src");
+      if (side === s && picked === BAR) bar.classList.add("sel");
+      bar.setAttribute("aria-label", NAME[side] + " on the bar: " + state.bar[side]);
+      bar.addEventListener("click", () => { if (side === s) onSlot("bar"); });
+      add(bar, 7, row);
+
+      const tray = document.createElement("button");
+      tray.type = "button";
+      tray.className = "tray " + (row === 1 ? "top" : "bottom");
+      for (let k = 0; k < state.off[side]; k++) {
+        const slab = document.createElement("span");
+        slab.className = "slab " + CLS[side];
+        tray.appendChild(slab);
+      }
+      if (side === s && dst.has(OFF)) tray.classList.add("dst");
+      tray.setAttribute("aria-label", NAME[side] + " borne off: " + state.off[side]);
+      tray.addEventListener("click", () => { if (side === s) onSlot("tray"); });
+      add(tray, 14, row);
+    }
+    const midBar = document.createElement("div");
+    midBar.className = "bar mid";
+    board.appendChild(midBar);
+    const midTray = document.createElement("div");
+    midTray.className = "tray mid";
+    board.appendChild(midTray);
+
+    const info = document.createElement("div");
+    info.className = "info";
+    info.textContent = "Pips: " + label(v) + " " + BG.pips(state, v) + " · " + label(-v) + " " + BG.pips(state, -v);
+    board.appendChild(info);
+
+    const dice = document.createElement("div");
+    dice.className = "dice";
+    if (state.dice) {
+      const left = BG.diceLeft(state);
+      BG.diceFaces(state.dice).forEach((d) => {
+        const k = left.indexOf(d);
+        const el = document.createElement("span");
+        el.className = "die " + CLS[s] + (k < 0 ? " used" : "");
+        if (k >= 0) left.splice(k, 1);
+        el.textContent = String(d);
+        dice.appendChild(el);
+      });
+    }
+    board.appendChild(dice);
+
+    for (const [id, side] of [["scoreTop", -v], ["scoreBottom", v]]) {
+      const el = $(id);
+      el.replaceChildren(checker(side), document.createTextNode(" " + label(side) + " "), Object.assign(document.createElement("small"), { textContent: match[side] + " pts" }));
+      el.classList.toggle("is-turn", !state.gameOver && s === side);
+    }
+    $("status").textContent = statusText();
+
+    const human = humanToMove();
+    $("btnRoll").hidden = !(human && state.phase === "roll");
+    $("btnUndo").hidden = !(human && state.phase === "move");
+    $("btnUndo").disabled = !state.done.length;
+    $("btnDone").hidden = !(human && state.phase === "move");
+    $("btnDone").disabled = !BG.turnComplete(state);
+    // After "See Board", the match carries on from here.
+    $("btnNext").hidden = !state.gameOver;
+  }
+
+  $("btnNew").addEventListener("click", () => {
+    match[WHITE] = 0;
+    match[BLACK] = 0;
+    newGame();
+  });
+  $("modalNew").addEventListener("click", newGame);
+  $("btnNext").addEventListener("click", newGame);
+  $("modalClose").addEventListener("click", () => { $("overlay").hidden = true; });
+  $("btnRoll").addEventListener("click", roll);
+  $("btnUndo").addEventListener("click", undoStep);
+  $("btnDone").addEventListener("click", done);
+  $("mode").addEventListener("change", () => {
+    match[WHITE] = 0;
+    match[BLACK] = 0;
+    newGame();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && picked != null) { picked = null; render(); }
+  });
+
+  newGame();
+})();
+</script>
+</body>
+</html>

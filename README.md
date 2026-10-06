@@ -23,7 +23,7 @@ to, both here and in `index.html`.
 
 | | |
 |---|---|
-| **[Card Table](card-games/)** | Fifteen card games in one shared table shell — Hearts, Spades, Oh Hell, Euchre, Crazy Eights, Color Clash, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, Blackjack, Bust Seven, Property Deal. Any mix of human and AI seats, or everyone on one device. |
+| **[Card Table](card-games/)** | Sixteen card games in one shared table shell — Hearts, Spades, Oh Hell, Euchre, Crazy Eights, Color Clash, President, Big Two, Gin Rummy, Cribbage, Chinese Poker, Texas Hold'em, Blackjack, Bust Seven, Property Deal, Last Fuse. Any mix of human and AI seats, or everyone on one device. |
 | **[Klondike Solitaire](klondike-solitaire/)** | Classic single-player card game — build runs, fill the four foundations. |
 | **[FreeCell](freecell/)** | Classic FreeCell solitaire with Microsoft-numbered, shareable deals and a solver-backed hint. |
 | **[Spider Solitaire](spider-solitaire/)** | Two-deck Spider with 1, 2 or 4 suits. |
@@ -34,17 +34,21 @@ to, both here and in `index.html`.
 |---|---|
 | **[Reversi](reversi/)** | Reversi/Othello against a three-level AI, or two players on one device. |
 | **[Connect Four](connect-four/)** | Connect Four against a three-level AI, or two players on one device. |
+| **[Checkers](checkers/)** | English draughts with compulsory captures and multi-jumps, against a three-level AI or two players on one device. |
+| **[Backgammon](backgammon/)** | Backgammon with gammons, backgammons and a running match score (no doubling cube), against a three-level AI or two players on one device. |
+| **[Dots and Boxes](dots-boxes/)** | Dots and Boxes on 3x3 to 6x6 boards, against a three-level AI (Hard plays chain control and the double-cross) or two players on one device. |
 | **[Mancala](mancala/)** | Kalah-rules Mancala against a three-level AI, or two players on one device. |
 | **[Ludo](ludo/)** | Ludo for 2-4 players on the classic cross board, against an AI on two levels or with everyone on one device. |
 | **[Word Grid](word-grid/)** | A two-player crossword tile game on a 15x15 board with the public-domain ENABLE word list, against an AI (Easy or Normal) or a friend. |
 
-Four games play the rules of well-known commercial games under generic
+Five games play the rules of well-known commercial games under generic
 names, and reuse none of their names, card text or artwork:
 
 | Here | Rules of |
 |---|---|
 | Bust Seven | Flip 7 |
 | Color Clash | Uno |
+| Last Fuse | Exploding Kittens |
 | Property Deal | Monopoly Deal (cards renamed too: Set Grab, Block, Steal, Swap, Bonus Draw, Station) |
 | Word Grid | Scrabble (own premium-square layout; public-domain word list) |
 

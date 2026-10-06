@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dots and Boxes</title>
+<link rel="icon" href="favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<script src="../shared/register-sw.js" defer></script>
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+  header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .controls label { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  select {
+    font: inherit;
+    font-size: 0.85rem;
+    background: #1c4a34;
+    color: var(--ink);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .scoreboard { width: min(520px, 100%); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .score {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px 6px 8px;
+    border-radius: 999px;
+    background: var(--panel);
+    border: 2px solid transparent;
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+  .score.is-turn { border-color: var(--accent); }
+  .score .swatch { width: 16px; height: 16px; border-radius: 4px; }
+  .score b { font-variant-numeric: tabular-nums; }
+  .status { flex: 1; margin: 0; text-align: center; font-size: 0.88rem; color: var(--ink-dim); }
+
+  .board-wrap {
+    width: min(520px, 100%);
+    background: #f3ead9;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    padding: 4px;
+  }
+  svg { display: block; width: 100%; height: auto; touch-action: manipulation; }
+  .p1 { --c: #d9483f; }
+  .p2 { --c: #2f7fd1; }
+  .swatch { background: var(--c); }
+  .box { fill: var(--c); opacity: 0.28; }
+  .box-mark { fill: var(--c); font-weight: 700; text-anchor: middle; dominant-baseline: central; font-family: inherit; }
+  .seg .ink { stroke: rgba(0, 0, 0, 0.08); stroke-width: 7; stroke-linecap: round; }
+  .seg .hit { fill: transparent; }
+  .seg.free.live { cursor: pointer; }
+  .seg.free.live:hover .ink, .seg.free.live:focus-visible .ink { stroke: rgba(0, 0, 0, 0.3); }
+  .seg:focus { outline: none; }
+  .seg.drawn .ink { stroke: var(--c); stroke-width: 8; }
+  .seg.last .ink { stroke-width: 11; }
+  .dot { fill: #2a2a2a; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  .overlay[hidden] { display: none; }
+  .modal {
+    background: #12321f;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 26px 30px;
+    text-align: center;
+    max-width: 340px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .modal h2 { margin: 0 0 8px; color: var(--accent); }
+  .modal p { margin: 4px 0 18px; color: var(--ink-dim); font-size: 0.95rem; }
+  .modal .controls { gap: 8px; }
+
+  footer { color: var(--ink-dim); font-size: 0.75rem; text-align: center; max-width: 520px; line-height: 1.5; }
+
+  @media (max-width: 480px) {
+    .score { font-size: 0.85rem; padding: 4px 10px 4px 6px; }
+    .status { font-size: 0.78rem; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="back-link" href="../index.html">← All Games</a>
+    <h1>Dots and Boxes</h1>
+  </header>
+
+  <div class="controls">
+    <label>Mode
+      <select id="mode">
+        <option value="first">You go first vs AI</option>
+        <option value="second">AI goes first</option>
+        <option value="pvp">Two players</option>
+      </select>
+    </label>
+    <label>Board
+      <select id="size">
+        <option value="3x3">3 × 3</option>
+        <option value="4x4" selected>4 × 4</option>
+        <option value="5x5">5 × 5</option>
+        <option value="6x6">6 × 6</option>
+      </select>
+    </label>
+    <label>AI
+      <select id="level">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </label>
+    <button id="btnNew" type="button">New Game</button>
+    <button id="btnUndo" type="button">Undo</button>
+  </div>
+
+  <div class="scoreboard">
+    <div class="score p1" id="score1"><span class="swatch"></span><span id="name1">Red</span> <b id="pts1">0</b></div>
+    <p class="status" id="status" aria-live="polite"></p>
+    <div class="score p2" id="score2"><b id="pts2">0</b> <span id="name2">Blue</span><span class="swatch"></span></div>
+  </div>
+
+  <div class="board-wrap"><svg id="board" role="group" aria-label="Board"></svg></div>
+
+  <footer>Take turns drawing a line between two neighbouring dots. Draw the fourth side of a box and it's yours — and you must draw another line. When every line is drawn, most boxes wins. Careful with the third side of a box: it hands the box (and often a whole chain of them) to your opponent.</footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h2>Game over</h2>
+    <p id="resultText"></p>
+    <div class="controls">
+      <button class="btn-primary" id="modalNew" type="button">New Game</button>
+      <button id="modalClose" type="button">See Board</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/dots-boxes.js"></script>
+<script>
+(function () {
+  "use strict";
+  const DB = window.DOTS_BOXES;
+  const { P1, P2 } = DB;
+  const NAME = { [P1]: "Red", [P2]: "Blue" };
+  const CLS = { [P1]: "p1", [P2]: "p2" };
+  const HUMANS = { first: [P1], second: [P2], pvp: [P1, P2] };
+  const AI_DELAY_MS = 380;
+  const CELL = 100;
+  const PAD = 18;
+  const SVG = "http://www.w3.org/2000/svg";
+  const $ = (id) => document.getElementById(id);
+
+  let state = null;
+  let g = null;
+  let aiTimer = null;
+  let segs = [];
+  let boxEls = [];
+
+  const mode = () => $("mode").value;
+  const isHuman = (p) => HUMANS[mode()].includes(p);
+  const canPlay = () => !state.gameOver && isHuman(state.turn) && !aiTimer;
+
+  function svgEl(tag, attrs, parent) {
+    const el = document.createElementNS(SVG, tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+    if (parent) parent.appendChild(el);
+    return el;
+  }
+
+  // Builds the SVG for the current size: boxes, then lines, then dots on top.
+  function build() {
+    const svg = $("board");
+    svg.replaceChildren();
+    svg.setAttribute("viewBox", "0 0 " + (state.w * CELL + 2 * PAD) + " " + (state.h * CELL + 2 * PAD));
+    const x = (c) => PAD + c * CELL;
+    const y = (r) => PAD + r * CELL;
+    boxEls = [];
+    for (let r = 0; r < state.h; r++) {
+      for (let c = 0; c < state.w; c++) {
+        const grp = svgEl("g", {}, svg);
+        svgEl("rect", { class: "box", x: x(c) + 4, y: y(r) + 4, width: CELL - 8, height: CELL - 8, rx: 6 }, grp);
+        const mark = svgEl("text", { class: "box-mark", x: x(c) + CELL / 2, y: y(r) + CELL / 2, "font-size": 36 }, grp);
+        boxEls.push({ grp, mark });
+      }
+    }
+    segs = [];
+    for (let l = 0; l < g.lineCount; l++) {
+      const { dir, r, c } = g.info(l);
+      const [x1, y1, x2, y2] = dir === "h" ? [x(c), y(r), x(c + 1), y(r)] : [x(c), y(r), x(c), y(r + 1)];
+      const grp = svgEl("g", { class: "seg", tabindex: 0, role: "button" }, svg);
+      // A fat invisible hit area, so a line is easy to tap on a phone.
+      const half = 22;
+      if (dir === "h") svgEl("rect", { class: "hit", x: x1 + 10, y: y1 - half, width: CELL - 20, height: 2 * half }, grp);
+      else svgEl("rect", { class: "hit", x: x1 - half, y: y1 + 10, width: 2 * half, height: CELL - 20 }, grp);
+      svgEl("line", { class: "ink", x1, y1, x2, y2 }, grp);
+      const label = (dir === "h" ? "Line across, row " : "Line down, row ") + (r + 1) + ", column " + (c + 1);
+      grp.setAttribute("aria-label", label);
+      grp.addEventListener("click", () => onLine(l));
+      grp.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onLine(l); }
+      });
+      segs.push(grp);
+    }
+    for (let r = 0; r <= state.h; r++) for (let c = 0; c <= state.w; c++) svgEl("circle", { class: "dot", cx: x(c), cy: y(r), r: 7 }, svg);
+  }
+
+  function render() {
+    const live = canPlay();
+    segs.forEach((el, l) => {
+      const who = state.lines[l];
+      el.setAttribute("class", "seg " + (who ? "drawn " + CLS[who] : "free") + (live && !who ? " live" : "") + (state.lastLine === l ? " last" : ""));
+      el.setAttribute("aria-disabled", String(!(live && !who)));
+    });
+    boxEls.forEach(({ grp, mark }, b) => {
+      const who = state.boxes[b];
+      grp.setAttribute("class", who ? CLS[who] : "");
+      grp.style.visibility = who ? "visible" : "hidden";
+      mark.textContent = who ? NAME[who][0] : "";
+    });
+    for (const p of [P1, P2]) {
+      $("name" + p).textContent = label(p);
+      $("pts" + p).textContent = String(state.score[p]);
+      $("score" + p).classList.toggle("is-turn", !state.gameOver && state.turn === p);
+    }
+    $("status").textContent = statusText();
+    $("btnUndo").disabled = !state.history.some((h) => isHuman(h.turn));
+  }
+
+  const label = (p) => (mode() === "pvp" ? NAME[p] : isHuman(p) ? "You" : "AI");
+
+  function statusText() {
+    if (state.gameOver) return resultText();
+    const again = state.history.length && state.history[state.history.length - 1].turn === state.turn ? " again" : "";
+    if (!isHuman(state.turn)) return "AI (" + NAME[state.turn] + ") is thinking…";
+    return (mode() === "pvp" ? NAME[state.turn] + " to move" : "Your move") + again + ".";
+  }
+
+  function resultText() {
+    const a = state.score[P1], b = state.score[P2];
+    const line = " (" + Math.max(a, b) + "–" + Math.min(a, b) + ")";
+    if (state.winner === null) return "A draw, " + a + "–" + b + ".";
+    if (mode() === "pvp") return NAME[state.winner] + " wins" + line + ".";
+    return (isHuman(state.winner) ? "You win" : "The AI wins") + line + ".";
+  }
+
+  function onLine(l) {
+    if (!canPlay() || state.lines[l]) return;
+    DB.play(state, l);
+    advance();
+  }
+
+  function advance() {
+    if (state.gameOver || isHuman(state.turn)) {
+      render();
+      if (state.gameOver) {
+        $("resultText").textContent = resultText();
+        $("overlay").hidden = false;
+      }
+      return;
+    }
+    // Set before rendering so the board renders locked while the AI thinks.
+    aiTimer = setTimeout(() => {
+      aiTimer = null;
+      DB.play(state, DB.chooseMove(state, $("level").value));
+      advance();
+    }, AI_DELAY_MS);
+    render();
+  }
+
+  function cancelAI() {
+    clearTimeout(aiTimer);
+    aiTimer = null;
+  }
+
+  function newGame() {
+    cancelAI();
+    $("overlay").hidden = true;
+    const [w, h] = $("size").value.split("x").map(Number);
+    state = DB.createGame(w, h);
+    g = DB.geometry(w, h);
+    build();
+    advance();
+  }
+
+  // Against the AI, rewind past its lines to your last line, so you can play it again.
+  function undo() {
+    cancelAI();
+    $("overlay").hidden = true;
+    if (mode() === "pvp") DB.undo(state);
+    else {
+      while (state.history.length && !isHuman(state.history[state.history.length - 1].turn)) DB.undo(state);
+      DB.undo(state);
+    }
+    advance();
+  }
+
+  $("btnNew").addEventListener("click", newGame);
+  $("modalNew").addEventListener("click", newGame);
+  $("modalClose").addEventListener("click", () => { $("overlay").hidden = true; });
+  $("btnUndo").addEventListener("click", undo);
+  $("mode").addEventListener("change", newGame);
+  $("size").addEventListener("change", newGame);
+
+  newGame();
+})();
+</script>
+</body>
+</html>
