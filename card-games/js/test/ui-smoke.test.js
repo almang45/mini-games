@@ -421,6 +421,9 @@ async function run() {
   // Every seat is human in hot-seat mode, so every single card play (not just
   // the AI-chain's pauses) costs a driver step - Hearts in particular can run
   // many rounds before someone crosses 100, so it gets a much larger budget.
+  // The budgets only catch a game that never ends: Spades to 500 usually
+  // takes under 2,500 steps but ran past 4,000 in 1 of 200 runs, so it gets
+  // plenty of room.
   const hotseatConfigs = [
     ["hearts", ["human", "human", "human", "human"], 6000],
     ["crazy-eights", ["human", "human", "off", "off"], 1500],
@@ -428,7 +431,7 @@ async function run() {
     ["big-two", ["human", "human", "human", "human"], 1500],
     ["chinese-poker", ["human", "human", "human", "human"], 1500],
     ["blackjack", ["human", "human", "human", "human"], 1500],
-    ["spades", ["human", "human", "human", "human"], 4000],
+    ["spades", ["human", "human", "human", "human"], 20000],
     ["gin-rummy", ["human", "human", "off", "off"], 3000],
     ["oh-hell", ["human", "human", "human", "human"], 1500],
     ["euchre", ["human", "human", "human", "human"], 3000],
