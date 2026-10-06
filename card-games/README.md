@@ -273,6 +273,11 @@ disabled, tag) stays the same across every game.
   Steal (Sly Deal), Swap (Forced Deal), Bonus Draw (Pass Go), Station
   (Railroad). Properties are colours only, with no street names.
 - 2-4 seats (the printed game plays up to 5).
+- Any-colour wilds alone are no set: a colour needs at least one other card
+  before it counts toward a full set or charges rent (the published rule).
+- Every target of an action is asked whether to Block, and so is the player
+  after a Block, whether or not they hold one, so the prompt gives nothing
+  away about a hidden hand.
 - One stack per colour: a fifth Station or a fourth Red joins the same
   stack instead of starting a second set, and rent stops at a full set.
 - A set that stops being full (paid away, stolen from, a wild moved out)
