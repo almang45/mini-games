@@ -41,6 +41,12 @@ to, both here and in `index.html`.
 | **[Ludo](ludo/)** | Ludo for 2-4 players on the classic cross board, against an AI on two levels or with everyone on one device. |
 | **[Word Grid](word-grid/)** | A two-player crossword tile game on a 15x15 board with the public-domain ENABLE word list, against an AI (Easy or Normal) or a friend. |
 
+### Kids
+
+| | |
+|---|---|
+| **[Color Fusion](color-fusion/)** | Paint-mixing toy for young kids — pour primaries, white and black into a bowl, hear the color named in Indonesian or English, fill a book of 27 colors. |
+
 Five games play the rules of well-known commercial games under generic
 names, and reuse none of their names, card text or artwork:
 
