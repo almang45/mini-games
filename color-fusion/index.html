@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Color Fusion</title>
+<link rel="icon" href="favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<script src="../shared/register-sw.js" defer></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <a class="back-link" href="../index.html" data-i18n="back">← Semua Game</a>
+    <h1>Color Fusion</h1>
+    <div class="toggles">
+      <div class="lang" role="group" data-i18n-label="language">
+        <button type="button" class="lang-btn" data-lang="id" aria-pressed="true">ID</button>
+        <button type="button" class="lang-btn" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <button type="button" class="icon-btn" id="btnSound" aria-pressed="true" data-i18n-label="sound">
+        <span aria-hidden="true" id="soundIcon">🔊</span>
+      </button>
+    </div>
+  </header>
+
+  <nav class="modes" role="tablist" data-i18n-label="modes">
+    <button type="button" role="tab" class="mode" data-mode="free" aria-selected="true" aria-controls="screenPlay">
+      <span aria-hidden="true">🎨</span> <span data-i18n="modeFree">Bebas</span>
+    </button>
+    <button type="button" role="tab" class="mode" data-mode="challenge" aria-selected="false" aria-controls="screenPlay">
+      <span aria-hidden="true">🎯</span> <span data-i18n="modeChallenge">Tantangan</span>
+    </button>
+    <button type="button" role="tab" class="mode" data-mode="book" aria-selected="false" aria-controls="screenBook">
+      <span aria-hidden="true">📖</span> <span data-i18n="modeBook">Buku Warna</span>
+    </button>
+  </nav>
+
+  <main class="screens">
+    <section class="play" id="screenPlay" role="tabpanel">
+      <div class="levels" id="levels" hidden></div>
+
+      <div class="stage">
+        <div class="target" id="target" hidden>
+          <div class="target-swatch" id="targetSwatch"></div>
+          <p class="target-label" data-i18n="makeThis">Buat warna ini</p>
+          <p class="target-name" id="targetName"></p>
+          <div class="dots dots--hint" id="hintDots" hidden></div>
+        </div>
+
+        <div class="bowl" id="bowl">
+          <div class="paint" id="paint"></div>
+        </div>
+      </div>
+
+      <div class="readout">
+        <p class="mix-name" id="mixName" aria-live="polite"></p>
+        <div class="dots" id="drops" role="img"></div>
+
+        <div class="actions">
+          <button type="button" class="action" id="btnUndo">
+            <span aria-hidden="true">↶</span> <span data-i18n="undo">Ups</span>
+          </button>
+          <button type="button" class="action" id="btnEmpty" data-i18n="empty">Kosongkan</button>
+          <button type="button" class="action" id="btnHint" hidden>
+            <span aria-hidden="true">💡</span> <span data-i18n="hint">Petunjuk</span>
+          </button>
+          <button type="button" class="action action--go" id="btnNext" hidden data-i18n="next">Lanjut</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="book" id="screenBook" role="tabpanel" hidden>
+      <p class="book-count" id="bookCount"></p>
+      <div class="book-grid" id="bookGrid"></div>
+      <button type="button" class="reset" id="btnReset" data-i18n="reset">Mulai dari awal</button>
+    </section>
+  </main>
+
+  <div class="shelf" id="shelf"></div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="js/mix.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
