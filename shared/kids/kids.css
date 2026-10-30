@@ -178,13 +178,15 @@ h1 {
 .action--go { background: var(--go); color: var(--ceramic); padding-inline: 28px; }
 .action.is-nudging { animation: nudge 1.4s ease-in-out infinite; }
 
-/* A short strip of steps (levels, letters) that scrolls sideways when it doesn't fit. */
+/* A short strip of steps (levels, letters) that scrolls sideways when it doesn't fit. The
+   padding leaves room for the current step's ring, which the scroll box would otherwise clip. */
 .steps {
+  align-self: center;
   display: flex;
   gap: 8px;
   overflow-x: auto;
   max-width: 100%;
-  padding: 4px 4px 8px;
+  padding: 8px 8px 10px;
   scrollbar-width: thin;
 }
 
