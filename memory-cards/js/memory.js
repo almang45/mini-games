@@ -5,14 +5,8 @@
 
   const SIZES = [4, 6, 8, 12, 16];
 
-  function shuffle(list, rng) {
-    const out = list.slice();
-    for (let i = out.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [out[i], out[j]] = [out[j], out[i]];
-    }
-    return out;
-  }
+  // Shared with the other Kids games: required in Node, a script tag in the browser.
+  const { shuffle } = typeof module !== "undefined" && module.exports ? require("../../shared/kids/random.js") : root.KIDS_RANDOM;
 
   // `faces` is the theme's pool; a random `count / 2` of them become pairs. Each pair has a
   // side 0 and a side 1 card, so a theme can draw the two halves differently (a numeral and

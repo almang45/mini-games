@@ -31,14 +31,8 @@
     return list[Math.floor(rng() * list.length)];
   }
 
-  function shuffle(list, rng) {
-    const out = list.slice();
-    for (let i = out.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [out[i], out[j]] = [out[j], out[i]];
-    }
-    return out;
-  }
+  // Shared with the other Kids games: required in Node, a script tag in the browser.
+  const { shuffle } = typeof module !== "undefined" && module.exports ? require("../../shared/kids/random.js") : root.KIDS_RANDOM;
 
   const tooClose = (a, b) => CLOSE_PAIRS.some(([x, y]) => (a === x && b === y) || (a === y && b === x));
 

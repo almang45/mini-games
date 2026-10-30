@@ -14,9 +14,6 @@
 
   const STRINGS = {
     id: {
-      back: "← Semua Game",
-      language: "Bahasa",
-      sound: "Suara",
       title: "Kartu Memori",
       themes: "Jenis kartu",
       themeColors: "Warna",
@@ -35,9 +32,6 @@
       again: "Main lagi",
     },
     en: {
-      back: "← All Games",
-      language: "Language",
-      sound: "Sound",
       title: "Memory Cards",
       themes: "Card set",
       themeColors: "Colors",
@@ -157,6 +151,7 @@
 
   let game = null;
   let missTimer = null;
+  let winTimer = null;
   let cardEls = [];
 
   const boardEl = $("board");
@@ -172,6 +167,7 @@
 
   function newGame() {
     clearTimeout(missTimer);
+    clearTimeout(winTimer);
     game = M.createGame(theme().faces, save.size);
     buildCards();
     renderControls();
@@ -202,7 +198,7 @@
     } else {
       KIDS.sfx.chime();
       KIDS.speak(name + "! " + t("pair"), 0);
-      if (M.isWon(game)) setTimeout(win, 450);
+      if (M.isWon(game)) winTimer = setTimeout(win, 450);
     }
   }
 

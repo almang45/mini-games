@@ -16,9 +16,6 @@
 
   const STRINGS = {
     id: {
-      back: "← Semua Game",
-      language: "Bahasa",
-      sound: "Suara",
       title: "Lanjutkan Pola",
       levels: "Tingkat",
       level: "Tingkat {n}",
@@ -39,9 +36,6 @@
       heart: "hati",
     },
     en: {
-      back: "← All Games",
-      language: "Language",
-      sound: "Sound",
       title: "What Comes Next?",
       levels: "Levels",
       level: "Level {n}",
@@ -84,6 +78,8 @@
   let misses = 0;
   let busy = false;
   let pendingTimer = null;
+  let roundId = 0;
+  let flight = null;
 
   const stringEl = $("string");
   const trayEl = $("tray");
@@ -110,7 +106,6 @@
 
   // ---- beads ------------------------------------------------------------------------
 
-  const SVG_NS = "http://www.w3.org/2000/svg";
   // Drawn in a 40×40 box; `shine` is where the light catches each shape.
   const SHAPES = {
     circle: { tag: "circle", attrs: { cx: 20, cy: 20, r: 17 }, shine: [13, 12] },
@@ -123,11 +118,7 @@
     },
   };
 
-  function svgEl(tag, attrs) {
-    const el = document.createElementNS(SVG_NS, tag);
-    for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, String(value));
-    return el;
-  }
+  const svgEl = KIDS.svgEl;
 
   function beadSvg(bead) {
     const shape = SHAPES[bead.shape];
@@ -159,10 +150,12 @@
       { transform: "translate(" + dx * 0.5 + "px, " + (dy * 0.5 - 60) + "px) scale(" + (1 + scale) / 2 + ")", offset: 0.5 },
       { transform: "translate(" + dx + "px, " + dy + "px) scale(" + scale + ")" },
     ], { duration: FLIGHT_MS, easing: "cubic-bezier(.4,0,.6,1)" });
+    flight = anim;
     let finished = false;
     const finish = () => {
       if (finished) return;
       finished = true;
+      if (flight === anim) flight = null;
       ghost.remove();
       done();
     };
@@ -190,6 +183,9 @@
 
   function newRound() {
     clearTimeout(pendingTimer);
+    // A bead still in the air belongs to the round being left; its landing must not count here.
+    roundId++;
+    if (flight) flight.cancel();
     round = P.makeRound(level());
     slot = 0;
     misses = 0;
@@ -205,12 +201,14 @@
       KIDS.sfx.boop();
       KIDS.flashClass(btn, "is-wrong");
       KIDS.speak(t("tryAgain"), 0);
-      if (misses >= HINT_AFTER_MISSES) renderTray();
+      if (misses >= HINT_AFTER_MISSES) markHint();
       return;
     }
     busy = true;
     const target = stringEl.querySelector(".slot.is-current");
+    const id = roundId;
     fly(btn.firstElementChild, target, bead, () => {
+      if (id !== roundId) return;
       slot++;
       misses = 0;
       KIDS.sfx.pop();
@@ -321,6 +319,12 @@
       btn.addEventListener("click", () => choose(bead, btn));
       return btn;
     }));
+  }
+
+  // Marks the right bead in place, so the bead just tapped keeps its wobble.
+  function markHint() {
+    const want = P.expected(round, slot);
+    trayEl.querySelectorAll(".choice").forEach((btn, i) => btn.classList.toggle("is-hinted", P.sameBead(round.choices[i], want)));
   }
 
   function render(justFilled) {

@@ -11,7 +11,6 @@
   const $ = (id) => document.getElementById(id);
 
   const STORE_KEY = "tracing.v1";
-  const SVG_NS = "http://www.w3.org/2000/svg";
   const MODES = { letters: GLYPHS.LETTERS, numbers: GLYPHS.NUMBERS };
   const INKS = ["red", "orange", "green", "blue", "indigo", "purple", "pink"];
   const DEMO_SPEED = 70; // box units per second, about a kid's careful pace
@@ -44,9 +43,6 @@
 
   const STRINGS = {
     id: {
-      back: "← Semua Game",
-      language: "Bahasa",
-      sound: "Suara",
       title: "Jejak Huruf dan Angka",
       modes: "Huruf atau angka",
       letters: "Huruf",
@@ -67,9 +63,6 @@
       sayLetter: "{name}. {word}",
     },
     en: {
-      back: "← All Games",
-      language: "Language",
-      sound: "Sound",
       title: "Trace Letters and Numbers",
       modes: "Letters or numbers",
       letters: "Letters",
@@ -125,12 +118,7 @@
   const board = $("board");
   const paper = $("paper");
 
-  function svgEl(tag, attrs, parent) {
-    const el = document.createElementNS(SVG_NS, tag);
-    for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, String(value));
-    if (parent) parent.append(el);
-    return el;
-  }
+  const svgEl = KIDS.svgEl;
 
   const toPoints = (pts) => pts.map((p) => p[0] + "," + p[1]).join(" ");
 
@@ -138,6 +126,8 @@
   let demoLayer = null;
 
   function renderBoard() {
+    // A redraw replaces the demo layer, so a running demo would keep drawing off-screen.
+    stopDemo();
     const g = glyph();
     board.replaceChildren();
     board.classList.toggle("is-done", trace.done);
@@ -438,15 +428,6 @@
   $("btnWatch").addEventListener("click", watch);
   $("btnNext").addEventListener("click", () => choose((saved.index[saved.mode] + 1) % glyphs().length));
 
-  function fitBoard() {
-    const style = getComputedStyle(paper);
-    const w = paper.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-    const h = paper.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
-    board.style.setProperty("--size", Math.max(0, Math.floor(Math.min(w, h))) + "px");
-  }
-  if (typeof ResizeObserver === "function") new ResizeObserver(fitBoard).observe(paper);
-  else window.addEventListener("resize", fitBoard);
-
   KIDS.bindHeader();
   KIDS.onPrefs(() => {
     KIDS.applyText(t);
@@ -454,5 +435,5 @@
   });
   KIDS.applyText(t);
   renderAll();
-  fitBoard();
+  KIDS.fitSquare(paper, board, "--size");
 })();

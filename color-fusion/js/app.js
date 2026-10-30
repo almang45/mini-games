@@ -13,9 +13,6 @@
 
   const STRINGS = {
     id: {
-      back: "← Semua Game",
-      language: "Bahasa",
-      sound: "Suara",
       modes: "Mode permainan",
       modeFree: "Bebas",
       modeChallenge: "Tantangan",
@@ -44,9 +41,6 @@
       and: " dan ",
     },
     en: {
-      back: "← All Games",
-      language: "Language",
-      sound: "Sound",
       modes: "Game mode",
       modeFree: "Free play",
       modeChallenge: "Challenges",

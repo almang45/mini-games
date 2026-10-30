@@ -11,7 +11,6 @@
   const $ = (id) => document.getElementById(id);
 
   const STORE_KEY = "coloring-book.v1";
-  const SVG_NS = "http://www.w3.org/2000/svg";
   const INK = "#22324b";
   const BLANK = "#ffffff";
   const EXPORT_PX = 1200;
@@ -20,9 +19,6 @@
 
   const STRINGS = {
     id: {
-      back: "← Semua Game",
-      language: "Bahasa",
-      sound: "Suara",
       title: "Buku Mewarnai",
       pictures: "Gambar",
       crayons: "Krayon",
@@ -39,9 +35,6 @@
       file: "buku-mewarnai",
     },
     en: {
-      back: "← All Games",
-      language: "Language",
-      sound: "Sound",
       title: "Coloring Book",
       pictures: "Pictures",
       crayons: "Crayons",
@@ -95,11 +88,7 @@
 
   // ---- drawing --------------------------------------------------------------------
 
-  function svgEl(tag, attrs) {
-    const el = document.createElementNS(SVG_NS, tag);
-    for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, String(value));
-    return el;
-  }
+  const svgEl = KIDS.svgEl;
 
   let renderCount = 0;
 
@@ -213,14 +202,17 @@
   // ---- saving a PNG --------------------------------------------------------------------
 
   function savePng() {
+    // Named now: the PNG is drawn asynchronously and the kid may have moved on by then.
+    const pic = picture();
+    const fileName = t("file") + "-" + pic.name[KIDS.prefs.lang].toLowerCase().replace(/\s+/g, "-") + ".png";
     // XMLSerializer adds the namespace itself; setting xmlns as an attribute can duplicate it.
     const copy = svgEl("svg", { width: EXPORT_PX, height: EXPORT_PX });
-    drawPicture(copy, picture(), state().fills, false);
+    drawPicture(copy, pic, state().fills, false);
     const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(copy)], { type: "image/svg+xml" }));
     const img = new Image();
     const fail = (err) => {
       URL.revokeObjectURL(url);
-      console.warn("Buku Mewarnai: couldn't save the picture", err);
+      KIDS.logWarn("coloring-book.save-failed", err, { picture: pic.id });
       KIDS.toast(t("saveFailed"));
     };
     img.onerror = fail;
@@ -236,7 +228,7 @@
         if (!blob) { fail(new Error("empty PNG")); return; }
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = t("file") + "-" + picture().name[KIDS.prefs.lang].toLowerCase().replace(/\s+/g, "-") + ".png";
+        link.download = fileName;
         document.body.append(link);
         link.click();
         link.remove();
@@ -300,13 +292,6 @@
     $("btnClear").disabled = Object.keys(state().fills).length === 0;
   }
 
-  function fitPage() {
-    const style = getComputedStyle(easelEl);
-    const w = easelEl.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-    const h = easelEl.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
-    pictureEl.style.setProperty("--page", Math.max(0, Math.floor(Math.min(w, h))) + "px");
-  }
-
   function renderAll() {
     drawPicture(pictureEl, picture(), state().fills, true);
     renderPages();
@@ -325,9 +310,6 @@
   $("btnClear").addEventListener("click", clearPage);
   $("btnSave").addEventListener("click", savePng);
 
-  if (typeof ResizeObserver === "function") new ResizeObserver(fitPage).observe(easelEl);
-  else window.addEventListener("resize", fitPage);
-
   KIDS.bindHeader();
   KIDS.onPrefs(() => {
     KIDS.applyText(t);
@@ -335,5 +317,5 @@
   });
   KIDS.applyText(t);
   renderAll();
-  fitPage();
+  KIDS.fitSquare(easelEl, pictureEl, "--page");
 })();

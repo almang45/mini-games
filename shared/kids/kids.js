@@ -8,6 +8,15 @@
   const SPEAK_DELAY_MS = 450;
   const TOAST_MS = 2200;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  // One JSON object per line, so a collector (or a person grepping the console) can group
+  // failures by event.
+  function logWarn(event, err, detail) {
+    const entry = Object.assign({ level: "warn", app: "kids-games", event }, detail);
+    if (err) entry.error = err && err.message ? err.message : String(err);
+    console.warn(JSON.stringify(entry));
+  }
 
   // ---- storage ----------------------------------------------------------------------
 
@@ -16,14 +25,14 @@
     try {
       raw = window.localStorage.getItem(key);
     } catch (err) {
-      console.warn("Kids games: saved data is unavailable, starting fresh", err);
+      logWarn("storage.unavailable", err, { key });
       return null;
     }
     if (!raw) return null;
     try {
       return JSON.parse(raw);
     } catch (err) {
-      console.warn("Kids games: saved " + key + " is unreadable, starting fresh", err);
+      logWarn("storage.unreadable", err, { key });
       return null;
     }
   }
@@ -32,7 +41,7 @@
     try {
       window.localStorage.setItem(key, JSON.stringify(value));
     } catch (err) {
-      console.warn("Kids games: couldn't save " + key, err);
+      logWarn("storage.save-failed", err, { key });
     }
   }
 
@@ -63,7 +72,17 @@
 
   // ---- text ---------------------------------------------------------------------------
 
-  function translator(strings) {
+  // The top bar is the same in every Kids game, so its words live here.
+  const HEADER_TEXT = {
+    id: { back: "← Semua Game", language: "Bahasa", sound: "Suara" },
+    en: { back: "← All Games", language: "Language", sound: "Sound" },
+  };
+
+  function translator(gameStrings) {
+    const strings = {
+      id: Object.assign({}, HEADER_TEXT.id, gameStrings.id),
+      en: Object.assign({}, HEADER_TEXT.en, gameStrings.en),
+    };
     return function t(key, vars) {
       const text = strings[prefs.lang][key];
       if (text === undefined) throw new Error("Kids games: no '" + key + "' text in " + prefs.lang);
@@ -106,7 +125,13 @@
       });
     });
     const soundBtn = document.getElementById("btnSound");
-    if (soundBtn) soundBtn.addEventListener("click", () => setPrefs({ sound: !prefs.sound }));
+    if (soundBtn) {
+      soundBtn.addEventListener("click", () => {
+        setPrefs({ sound: !prefs.sound });
+        // Turning sound on is a gesture too; unlock now so the next spoken word plays.
+        unlockMedia();
+      });
+    }
     renderHeader();
   }
 
@@ -124,13 +149,13 @@
       try {
         audioCtx = new Ctx();
       } catch (err) {
-        console.warn("Kids games: sound effects are unavailable", err);
+        logWarn("audio.unavailable", err);
         audioBroken = true;
         return null;
       }
     }
     if (audioCtx.state === "suspended") {
-      audioCtx.resume().catch((err) => console.warn("Kids games: couldn't resume audio", err));
+      audioCtx.resume().catch((err) => logWarn("audio.resume-failed", err));
     }
     return audioCtx;
   }
@@ -200,13 +225,19 @@
   }
 
   // iOS only lets audio and speech start from inside a user gesture; once they've been
-  // started there, later delayed calls (like a debounced color name) are allowed.
+  // started there, later delayed calls (like a debounced color name) are allowed. With sound
+  // off nothing can start, so keep listening until a gesture happens with sound on.
+  let mediaUnlocked = false;
   function unlockMedia() {
+    if (mediaUnlocked || !prefs.sound) return;
+    mediaUnlocked = true;
+    document.removeEventListener("pointerdown", unlockMedia, true);
+    document.removeEventListener("keydown", unlockMedia, true);
     audio();
-    if (canSpeak && prefs.sound) window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+    if (canSpeak) window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
   }
-  document.addEventListener("pointerdown", unlockMedia, { once: true, capture: true });
-  document.addEventListener("keydown", unlockMedia, { once: true, capture: true });
+  document.addEventListener("pointerdown", unlockMedia, true);
+  document.addEventListener("keydown", unlockMedia, true);
 
   // ---- effects ------------------------------------------------------------------------------
 
@@ -243,6 +274,29 @@
     el.addEventListener("animationend", () => el.classList.remove(cls), { once: true });
   }
 
+  function svgEl(tag, attrs, parent) {
+    const el = document.createElementNS(SVG_NS, tag);
+    for (const [name, value] of Object.entries(attrs || {})) el.setAttribute(name, String(value));
+    if (parent) parent.append(el);
+    return el;
+  }
+
+  // Keeps `target` square and as big as `container`'s content box allows, through the CSS
+  // property `prop` (the stylesheet sets width and height from it). Returns the fit function
+  // so a game can refit after changing what surrounds the container.
+  function fitSquare(container, target, prop) {
+    const fit = () => {
+      const style = getComputedStyle(container);
+      const w = container.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const h = container.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+      target.style.setProperty(prop, Math.max(0, Math.floor(Math.min(w, h))) + "px");
+    };
+    if (typeof ResizeObserver === "function") new ResizeObserver(fit).observe(container);
+    else window.addEventListener("resize", fit);
+    fit();
+    return fit;
+  }
+
   let toastTimer = null;
   function toast(text) {
     const el = document.getElementById("toast");
@@ -274,5 +328,8 @@
     burst,
     flashClass,
     toast,
+    svgEl,
+    fitSquare,
+    logWarn,
   };
 })();

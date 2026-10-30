@@ -20,9 +20,6 @@
 
   const STRINGS = {
     id: {
-      back: "← Semua Game",
-      language: "Bahasa",
-      sound: "Suara",
       title: "Kolintang Warna",
       modes: "Mode permainan",
       modeFree: "Bebas",
@@ -46,9 +43,6 @@
       restart: "Ulangi",
     },
     en: {
-      back: "← All Games",
-      language: "Language",
-      sound: "Sound",
       title: "Color Kolintang",
       modes: "Game mode",
       modeFree: "Free play",
@@ -220,6 +214,9 @@
   }
 
   function followSong(index) {
+    // The timed reset after a finished song can be cancelled (Dengar stops every timer), so
+    // a tap on a finished song starts it again.
+    if (songPos >= song.notes.length) songPos = 0;
     const step = K.follow(song, songPos, index);
     if (!step.correct) return;
     songPos = step.position;
@@ -245,6 +242,7 @@
   }
 
   function listenToSong() {
+    if (songPos >= song.notes.length) songPos = 0;
     $("songStatus").textContent = t("listening");
     barEls.forEach((el) => el.classList.remove("is-next"));
     playSequence(K.timeline(song.notes, SONG_BPM), () => {
