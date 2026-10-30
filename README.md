@@ -46,6 +46,7 @@ to, both here and in `index.html`.
 | | |
 |---|---|
 | **[Color Fusion](color-fusion/)** | Paint-mixing toy for young kids — pour primaries, white and black into a bowl, hear the color named in Indonesian or English, fill a book of 28 colors. |
+| **[Kartu Memori](memory-cards/)** | Memory game — find the pairs among colors, animals or numerals and dots, on boards from 4 to 16 cards, with every card named aloud. |
 | **[Lanjutkan Pola](patterns/)** | Pattern game — thread the bead that comes next onto a string, twelve levels from AB to ABAC in colors and shapes, read aloud in Indonesian or English. |
 
 Five games play the rules of well-known commercial games under generic
