@@ -1,0 +1,135 @@
+/* Jejak Huruf dan Angka: a sheet from an Indonesian handwriting book (buku tulis halus) is the
+   hero, with its blue cap line and baseline and a pink dashed middle line. The table, top bar,
+   mode tabs, letter strip, buttons and toast come from shared/kids/kids.css. */
+
+:root {
+  --rule: #9fcfe0;
+  --rule-mid: #f1a5b7;
+  --track: #e3eaef;
+  --dots: #8293a7;
+}
+
+/* ---- the sheet --------------------------------------------------------------------- */
+
+.desk {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+
+/* flex-basis 0 so the paper is exactly the space left over; app.js sizes the board to it. */
+.paper {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.board {
+  display: block;
+  width: var(--size, 0px);
+  height: var(--size, 0px);
+  overflow: visible;
+  filter: drop-shadow(0 12px 16px rgba(34, 50, 75, 0.25));
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sheet { fill: var(--ceramic); }
+.rule { stroke: var(--rule); stroke-width: 0.7; }
+.rule--mid { stroke: var(--rule-mid); stroke-dasharray: 2.5 2; }
+
+.track { fill: none; stroke: var(--track); stroke-width: 13; stroke-linecap: round; stroke-linejoin: round; }
+.dots { fill: none; stroke: var(--dots); stroke-width: 1.8; stroke-linecap: round; stroke-dasharray: 0 4.5; }
+
+.ink path,
+.ink polyline,
+.demo polyline {
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.demo polyline { opacity: 0.45; }
+.pen { fill: var(--ink); }
+.board.is-done .ink { transform-box: fill-box; transform-origin: center; animation: pop 0.5s ease; }
+
+/* The green dot: where the finger goes next, numbered with the stroke, arrow pointing the way. */
+.start .dot circle {
+  fill: var(--go);
+  stroke: var(--ceramic);
+  stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: beckon 1.6s ease-in-out infinite;
+}
+.start text {
+  fill: var(--ceramic);
+  font-family: var(--font);
+  font-size: 7.5px;
+  font-weight: 800;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.start .arrow { fill: var(--go); }
+.start.is-wobbling { animation: wobble 0.45s ease; }
+.board.is-drawing .start,
+.board.is-watching .start { opacity: 0; }
+
+@keyframes beckon {
+  50% { transform: scale(1.22); }
+}
+
+/* ---- caption and buttons -------------------------------------------------------------- */
+
+.side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.caption {
+  margin: 0;
+  min-height: 3.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 12px;
+  text-align: center;
+}
+.caption.is-done { animation: pop 0.5s ease; }
+.caption-prompt { font-size: clamp(1.1rem, 4.6vw, 1.5rem); font-weight: 800; }
+.caption-char { font-size: 2.6rem; font-weight: 900; line-height: 1; }
+.caption-emoji { font-size: 2.3rem; line-height: 1; }
+.caption-word { font-size: 1.7rem; font-weight: 800; }
+.caption-things { flex-basis: 100%; font-size: 1.35rem; letter-spacing: 2px; line-height: 1.2; }
+
+/* Landscape phones: tabs join the top row, the letter strip runs under it, and the caption
+   and buttons stand beside the sheet. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .app {
+    display: grid;
+    /* minmax(0, …) so the board, which app.js sizes from the paper, can't push its own track. */
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: "back modes toggles" "steps steps steps" "desk desk desk";
+    gap: 2px 12px;
+    height: 100vh;
+    height: 100dvh;
+  }
+  .topbar { display: contents; }
+  .back-link { grid-area: back; }
+  h1 { display: none; }
+  .modes { grid-area: modes; justify-self: center; }
+  .toggles { grid-area: toggles; }
+  .steps { grid-area: steps; padding-block: 6px 8px; }
+  .desk { grid-area: desk; flex-direction: row; gap: 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .side { flex: 0 0 clamp(180px, 34vw, 300px); justify-content: center; }
+  .caption-things { font-size: 1.1rem; }
+}
