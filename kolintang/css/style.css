@@ -1,0 +1,233 @@
+/* Kolintang Warna: the instrument is the hero and sits along the bottom, nearest the hands;
+   the song picker and copy-me score sit above it. The table, top bar, tabs, buttons and toast
+   come from shared/kids/kids.css. */
+
+:root {
+  --wood: #8a5a32;
+  --wood-dark: #5e3a1d;
+  --cord: #e9d8b8;
+  --bar-max: clamp(150px, min(44vh, 64vw), 400px);
+}
+
+@supports (height: 1dvh) {
+  :root { --bar-max: clamp(150px, min(44dvh, 64vw), 400px); }
+}
+
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+/* ---- free play readout ---------------------------------------------------------- */
+
+.readout {
+  margin: 0;
+  min-height: 4.6rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12px;
+}
+.read-num { font-size: clamp(2.6rem, 11vw, 4rem); font-weight: 800; line-height: 1; color: var(--note, var(--ink)); }
+.read-sol { font-size: clamp(1.4rem, 6vw, 2rem); font-weight: 800; }
+.read-color { font-size: 1rem; font-weight: 700; color: var(--ink-soft); }
+
+/* ---- songs and copy-me ------------------------------------------------------------ */
+
+/* One line that scrolls sideways. Auto margins centre a short list but fall to zero once it
+   overflows, so it still scrolls from the first song. */
+.songs {
+  display: flex;
+  gap: 8px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: thin;
+}
+.song:first-child { margin-left: auto; }
+.song:last-child { margin-right: auto; }
+
+.song {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: var(--ceramic);
+  box-shadow: 0 2px 0 rgba(34, 50, 75, 0.12);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.song[aria-pressed="true"] { background: var(--ink); color: var(--ceramic); }
+.song-star { margin-left: 4px; }
+
+.score {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  max-width: min(100%, 620px);
+  min-height: 12px;
+}
+
+.note-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--note);
+  opacity: 0.22;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.note-dot.is-played { opacity: 1; }
+.note-dot.is-next { opacity: 1; transform: scale(1.35); box-shadow: 0 0 0 2px var(--table), 0 0 0 4px var(--ink); }
+
+.score--echo { gap: 10px; }
+.score--echo .note-dot { width: 20px; height: 20px; background: var(--ink); opacity: 0.15; }
+.score--echo .note-dot.is-played { background: var(--note); opacity: 1; }
+
+.status {
+  margin: 0;
+  min-height: 1.4em;
+  font-size: clamp(1.05rem, 4.4vw, 1.4rem);
+  font-weight: 800;
+  text-align: center;
+}
+
+.best { margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--ink-soft); }
+
+/* ---- the kolintang ------------------------------------------------------------------ */
+
+/* A wooden resonator box with two cords across it. Bars get shorter from low do on the
+   left to high do on the right, centred on the cords like the real instrument. */
+.kolintang {
+  position: relative;
+  align-self: center;
+  width: min(100%, 860px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 1.4vw, 12px);
+  margin-bottom: calc(14px + env(safe-area-inset-bottom));
+  padding: clamp(12px, 3vw, 22px) clamp(10px, 3vw, 26px);
+  border-radius: 22px;
+  background:
+    repeating-linear-gradient(92deg, rgba(255, 255, 255, 0.05) 0 3px, transparent 3px 11px),
+    linear-gradient(180deg, var(--wood), var(--wood-dark));
+  box-shadow: 0 14px 22px -14px rgba(34, 50, 75, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.18);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.kolintang::before,
+.kolintang::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--cord);
+  opacity: 0.8;
+  pointer-events: none;
+}
+.kolintang::before { top: 30%; }
+.kolintang::after { bottom: 30%; }
+
+.bar {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  max-width: 84px;
+  height: calc(var(--bar-max) * var(--len));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  padding: 0 0 clamp(8px, 2vh, 16px);
+  border: 0;
+  border-radius: 12px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.28), transparent 32%, transparent 70%, rgba(0, 0, 0, 0.14)),
+    var(--bar);
+  color: var(--on);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.28), inset 0 -3px 0 rgba(0, 0, 0, 0.12);
+  touch-action: none;
+  transition: filter 0.15s ease;
+}
+
+.bar-num {
+  font-size: clamp(1.1rem, 4.4vw, 1.9rem);
+  font-weight: 800;
+  line-height: 1;
+}
+.is-high { position: relative; }
+.is-high::before {
+  content: "";
+  position: absolute;
+  top: -0.2em;
+  left: 50%;
+  width: 0.18em;
+  height: 0.18em;
+  margin-left: -0.09em;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.bar-sol { font-size: clamp(0.7rem, 2.6vw, 0.95rem); font-weight: 700; opacity: 0.85; }
+
+.bar.is-struck { animation: strike 0.32s ease; }
+.bar.is-lit { filter: brightness(1.25) saturate(1.1); box-shadow: 0 0 0 4px var(--ceramic), 0 0 22px 6px var(--bar); }
+.bar.is-next::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 16px;
+  border: 4px solid var(--ceramic);
+  animation: nudge 1.1s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes strike {
+  30% { transform: translateY(4px) scaleY(0.98); filter: brightness(1.3); }
+}
+
+/* Landscape phones are short: the tabs join the top row and the bars give up some height. */
+@media (orientation: landscape) and (max-height: 520px) {
+  :root { --bar-max: clamp(110px, calc(100vh - 236px), 300px); }
+  .app {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas: "back modes toggles" "stage stage stage" "kolintang kolintang kolintang";
+    gap: 6px 12px;
+  }
+  .topbar { display: contents; }
+  .back-link { grid-area: back; }
+  h1 { display: none; }
+  .toggles { grid-area: toggles; }
+  .modes { grid-area: modes; justify-self: center; }
+  .mode { padding: 6px 12px; font-size: 0.85rem; }
+  .stage { grid-area: stage; gap: 4px; min-height: 0; }
+  .panel { gap: 4px; }
+  .song { padding: 5px 11px; font-size: 0.8rem; }
+  .note-dot { width: 9px; height: 9px; }
+  .status { font-size: 1rem; }
+  .action { padding: 6px 14px; font-size: 0.9rem; }
+  .readout { min-height: 2.6rem; }
+  .read-num { font-size: 2.2rem; }
+  .kolintang { grid-area: kolintang; margin-bottom: calc(8px + env(safe-area-inset-bottom)); padding-block: 10px; }
+}
