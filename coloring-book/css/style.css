@@ -1,0 +1,122 @@
+/* Buku Mewarnai: the page being colored is the hero; the crayon box sits along the bottom,
+   nearest the hands. The table, top bar, buttons and toast come from shared/kids/kids.css. */
+
+:root {
+  --crayon-w: clamp(30px, 10.5vw, 46px);
+}
+
+/* ---- picture strip -------------------------------------------------------------- */
+
+.pages {
+  align-self: center;
+  display: flex;
+  gap: 10px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 6px 6px 8px;
+  scrollbar-width: thin;
+}
+
+.page-thumb {
+  flex: 0 0 auto;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: var(--ceramic);
+  box-shadow: 0 2px 0 rgba(34, 50, 75, 0.15);
+  overflow: hidden;
+}
+.page-thumb svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+.page-thumb[aria-current="true"] { box-shadow: 0 0 0 3px var(--table), 0 0 0 6px var(--ink); }
+
+/* ---- the page ---------------------------------------------------------------------- */
+
+/* flex-basis 0 so the easel is exactly the space left over; app.js sizes the page to it. */
+.easel {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.picture {
+  display: block;
+  width: var(--page, 0px);
+  height: var(--page, 0px);
+  filter: drop-shadow(0 12px 16px rgba(34, 50, 75, 0.28));
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.picture [data-region] { cursor: pointer; transition: fill 0.25s ease; }
+
+/* ---- crayon box ---------------------------------------------------------------------- */
+
+.crayons {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(7, var(--crayon-w));
+  justify-content: center;
+  gap: 8px clamp(6px, 2.4vw, 14px);
+  margin: 0 -16px;
+  padding: 14px 16px calc(10px + env(safe-area-inset-bottom));
+  background: var(--shelf);
+  border-radius: 28px 28px 0 0;
+}
+
+.crayon {
+  width: var(--crayon-w);
+  height: calc(var(--crayon-w) * 1.7);
+  padding: 0;
+  border: 0;
+  background: none;
+  transition: transform 0.15s ease;
+}
+.crayon svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 3px 2px rgba(34, 50, 75, 0.25)); }
+.crayon[aria-checked="true"] { transform: translateY(-10px); }
+
+/* One row of fourteen: 32px of padding plus thirteen 10px gaps leaves the rest for crayons. */
+@media (min-width: 700px) {
+  :root { --crayon-w: clamp(30px, calc((100vw - 162px) / 14), 46px); }
+  .crayons { grid-template-columns: repeat(14, var(--crayon-w)); column-gap: 10px; }
+}
+
+/* Landscape phones: the picture strip joins the top row, the buttons stack on the left and
+   the crayon box stands on the right, three crayons across. */
+@media (orientation: landscape) and (max-height: 520px) {
+  :root { --crayon-w: clamp(22px, calc((100vh - 96px) / 9), 40px); }
+  .app {
+    display: grid;
+    /* minmax(0, …) so the page, which app.js sizes from the easel, can't push its own track wider. */
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100vh;
+    height: 100dvh;
+    grid-template-areas: "back pages toggles" "actions easel crayons";
+    gap: 6px 14px;
+    padding-right: 0;
+  }
+  .topbar { display: contents; }
+  .back-link { grid-area: back; }
+  h1 { display: none; }
+  .toggles { grid-area: toggles; padding-right: 16px; }
+  .pages { grid-area: pages; min-width: 0; padding-block: 4px; }
+  .page-thumb { width: 42px; height: 42px; }
+  .easel { grid-area: easel; padding-bottom: 12px; }
+  .actions { grid-area: actions; flex-direction: column; justify-content: center; }
+  .action { padding: 8px 14px; font-size: 0.9rem; }
+  .crayons {
+    grid-area: crayons;
+    position: static;
+    grid-template-columns: repeat(3, var(--crayon-w));
+    align-content: center;
+    gap: 6px 10px;
+    margin: 0;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom)) 16px;
+    border-radius: 24px 0 0 24px;
+  }
+  .crayon[aria-checked="true"] { transform: translateY(-6px); }
+}

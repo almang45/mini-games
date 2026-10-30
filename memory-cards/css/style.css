@@ -1,0 +1,139 @@
+/* Kartu Memori: the grid of cards is the hero and grows to fill whatever the screen has left.
+   The table, top bar, tabs, size strip, buttons and toast come from shared/kids/kids.css. */
+
+:root {
+  --nila: #3e3b8f;
+  --gap: clamp(6px, 1.6vw, 14px);
+  /* Kawung, the four-petal Javanese batik motif, in pale lines on the Nila card backs. */
+  --kawung: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.28' stroke-width='1.6'%3E%3Cellipse cx='10' cy='10' rx='10' ry='5.5' transform='rotate(45 10 10)'/%3E%3Cellipse cx='30' cy='10' rx='10' ry='5.5' transform='rotate(-45 30 10)'/%3E%3Cellipse cx='10' cy='30' rx='10' ry='5.5' transform='rotate(-45 10 30)'/%3E%3Cellipse cx='30' cy='30' rx='10' ry='5.5' transform='rotate(45 30 30)'/%3E%3C/g%3E%3Cg fill='%23ffffff' fill-opacity='.35'%3E%3Ccircle cx='20' cy='20' r='2'/%3E%3Ccircle cx='0' cy='0' r='2'/%3E%3Ccircle cx='40' cy='0' r='2'/%3E%3Ccircle cx='0' cy='40' r='2'/%3E%3Ccircle cx='40' cy='40' r='2'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px 14px;
+}
+
+.sizes .step { min-width: 40px; }
+
+/* flex-basis 0 so the board is exactly the space left over; app.js sizes the cards to it. */
+.board {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), var(--card-w, 0px));
+  grid-auto-rows: var(--card-h, 0px);
+  gap: var(--gap);
+}
+
+.card {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  padding: 0;
+  border: 0;
+  background: none;
+  perspective: 900px;
+}
+
+.card-inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.38s ease;
+}
+.card.is-up .card-inner { transform: rotateY(180deg); }
+
+.card-back,
+.card-front {
+  position: absolute;
+  inset: 0;
+  border-radius: clamp(8px, calc(var(--card-w) * 0.12), 18px);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 4px 0 rgba(34, 50, 75, 0.18);
+}
+
+.card-back {
+  background: var(--kawung) center / 30px 30px, var(--nila);
+  border: 3px solid var(--ceramic);
+}
+
+.card-front {
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6%;
+  padding: 8%;
+  background: var(--ceramic);
+}
+
+.card.is-matched .card-front { box-shadow: inset 0 0 0 3px var(--go), 0 4px 0 rgba(34, 50, 75, 0.18); }
+.card.is-matched .card-inner { animation: pop 0.5s ease; }
+.card.is-matched { cursor: default; }
+
+.face-name {
+  font-size: clamp(0.62rem, calc(var(--card-w) * 0.14), 1.05rem);
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.face-blob { width: 78%; flex: 0 1 auto; min-height: 0; }
+.face-emoji { font-size: calc(var(--card-w) * 0.5); line-height: 1; }
+.face-digit {
+  font-size: calc(var(--card-w) * 0.62);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.face-dots {
+  width: 82%;
+  aspect-ratio: 1;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  place-items: center;
+}
+.face-dots span {
+  width: 72%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--nila);
+}
+
+/* ---- status bar --------------------------------------------------------------- */
+
+.status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  /* Tall enough for the play-again button, so the board doesn't shrink when it appears. */
+  min-height: 58px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+}
+
+.found {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .app { gap: 6px; }
+  .controls { flex-wrap: nowrap; }
+  .mode { padding: 6px 12px; font-size: 0.85rem; }
+  .sizes { padding-block: 4px; }
+  .status { min-height: 48px; padding-bottom: calc(4px + env(safe-area-inset-bottom)); }
+}

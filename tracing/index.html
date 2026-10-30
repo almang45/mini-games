@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Jejak Huruf dan Angka</title>
+<link rel="icon" href="favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<script src="../shared/register-sw.js" defer></script>
+<link rel="stylesheet" href="../shared/kids/kids.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <a class="back-link" href="../index.html" data-i18n="back">← Semua Game</a>
+    <h1 data-i18n="title">Jejak Huruf dan Angka</h1>
+    <div class="toggles">
+      <div class="lang" role="group" data-i18n-label="language">
+        <button type="button" class="lang-btn" data-lang="id" aria-pressed="true">ID</button>
+        <button type="button" class="lang-btn" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <button type="button" class="icon-btn" id="btnSound" aria-pressed="true" data-i18n-label="sound">
+        <span aria-hidden="true" id="soundIcon">🔊</span>
+      </button>
+    </div>
+  </header>
+
+  <nav class="modes" role="tablist" data-i18n-label="modes">
+    <button type="button" role="tab" class="mode" data-mode="letters" aria-selected="true" aria-controls="board">
+      <span aria-hidden="true">🔤</span> <span data-i18n="letters">Huruf</span>
+    </button>
+    <button type="button" role="tab" class="mode" data-mode="numbers" aria-selected="false" aria-controls="board">
+      <span aria-hidden="true">🔢</span> <span data-i18n="numbers">Angka</span>
+    </button>
+  </nav>
+
+  <nav class="steps" id="steps"></nav>
+
+  <div class="desk">
+    <main class="paper" id="paper">
+      <svg class="board" id="board" viewBox="-4 -4 108 108" role="img"></svg>
+    </main>
+
+    <div class="side">
+      <p class="caption" id="caption" aria-live="polite"></p>
+      <div class="actions">
+        <button type="button" class="action" id="btnWatch" data-i18n-label="watchLabel">
+          <span aria-hidden="true">👀</span> <span data-i18n="watch">Lihat</span>
+        </button>
+        <button type="button" class="action" id="btnAgain" data-i18n-label="againLabel">
+          <span aria-hidden="true">↺</span> <span data-i18n="again">Ulangi</span>
+        </button>
+        <button type="button" class="action action--go" id="btnNext" hidden>
+          <span data-i18n="next">Lanjut</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="../shared/kids/kids.js"></script>
+<script src="../color-fusion/js/mix.js"></script>
+<script src="js/glyphs.js"></script>
+<script src="js/trace.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

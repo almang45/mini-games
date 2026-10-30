@@ -1,22 +1,18 @@
 // Color Fusion controller: wires the pure mixing model (js/mix.js) to the bowl, the paint
-// pots, the three modes, speech, sound effects and saved progress in index.html.
+// pots, the three modes and saved progress in index.html. Speech, sound effects, the header
+// toggles and confetti come from shared/kids/kids.js.
 (function () {
   "use strict";
   const MIX = window.MIX;
+  const KIDS = window.KIDS;
   const $ = (id) => document.getElementById(id);
 
   const STORE_KEY = "color-fusion.v1";
-  const SPEAK_DELAY_MS = 450;
   const FLIGHT_MS = 420;
   const DRAG_START_PX = 10;
-  const TOAST_MS = 2200;
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   const STRINGS = {
     id: {
-      back: "← Semua Game",
-      language: "Bahasa",
-      sound: "Suara",
       modes: "Mode permainan",
       modeFree: "Bebas",
       modeChallenge: "Tantangan",
@@ -45,9 +41,6 @@
       and: " dan ",
     },
     en: {
-      back: "← All Games",
-      language: "Language",
-      sound: "Sound",
       modes: "Game mode",
       modeFree: "Free play",
       modeChallenge: "Challenges",
@@ -76,53 +69,26 @@
       and: " and ",
     },
   };
-
-  const NUMBER_WORDS = {
-    id: ["nol", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas", "dua belas"],
-    en: ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"],
-  };
+  const t = KIDS.translator(STRINGS);
 
   // ---- saved progress ----------------------------------------------------------
 
-  function defaultLang() {
-    const langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""];
-    return langs.some((l) => /^id\b/i.test(l)) ? "id" : "en";
-  }
-
   function loadSave() {
-    const fresh = { lang: defaultLang(), sound: true, discovered: [], cleared: [] };
-    let raw = null;
-    try {
-      raw = window.localStorage.getItem(STORE_KEY);
-    } catch (err) {
-      console.warn("Color Fusion: saved progress is unavailable, starting fresh", err);
-      return fresh;
+    const data = KIDS.load(STORE_KEY);
+    if (!data) return { discovered: [], cleared: [] };
+    // Saves from before the shared Kids preferences carried their own language and sound.
+    if (!KIDS.hasSavedPrefs && (data.lang === "id" || data.lang === "en")) {
+      KIDS.setPrefs({ lang: data.lang, sound: data.sound !== false });
     }
-    if (!raw) return fresh;
-    try {
-      const data = JSON.parse(raw);
-      const levelTargets = new Set(MIX.LEVELS.map((l) => l.target.id));
-      return {
-        lang: data.lang === "en" || data.lang === "id" ? data.lang : fresh.lang,
-        sound: data.sound !== false,
-        discovered: Array.isArray(data.discovered) ? data.discovered.filter((id) => MIX.NAMED_BY_ID[id]) : [],
-        cleared: Array.isArray(data.cleared) ? data.cleared.filter((id) => levelTargets.has(id)) : [],
-      };
-    } catch (err) {
-      console.warn("Color Fusion: saved progress is unreadable, starting fresh", err);
-      return fresh;
-    }
-  }
-
-  function persist() {
-    try {
-      window.localStorage.setItem(STORE_KEY, JSON.stringify(save));
-    } catch (err) {
-      console.warn("Color Fusion: couldn't save progress", err);
-    }
+    const levelTargets = new Set(MIX.LEVELS.map((l) => l.target.id));
+    return {
+      discovered: Array.isArray(data.discovered) ? data.discovered.filter((id) => MIX.NAMED_BY_ID[id]) : [],
+      cleared: Array.isArray(data.cleared) ? data.cleared.filter((id) => levelTargets.has(id)) : [],
+    };
   }
 
   const save = loadSave();
+  const persist = () => KIDS.save(STORE_KEY, save);
 
   // ---- state ----------------------------------------------------------------------
 
@@ -137,8 +103,6 @@
   let matched = false;
   let hintShown = false;
   let inFlight = 0;
-  let speakTimer = null;
-  let toastTimer = null;
   let suppressClickUntil = 0;
 
   const bowlEl = $("bowl");
@@ -157,117 +121,14 @@
   const isCleared = (i) => save.cleared.includes(MIX.LEVELS[i].target.id);
   const isUnlocked = (i) => i === 0 || isCleared(i) || isCleared(i - 1);
   const hex = (rgb) => MIX.toHex(rgb);
-  const colorName = (named) => named.name[save.lang];
+  const colorName = (named) => named.name[KIDS.prefs.lang];
 
   function firstOpenLevel() {
     const i = MIX.LEVELS.findIndex((l) => !save.cleared.includes(l.target.id));
     return i === -1 ? 0 : i;
   }
 
-  function t(key, vars) {
-    const text = STRINGS[save.lang][key];
-    return vars ? text.replace(/\{(\w+)\}/g, (_, name) => String(vars[name])) : text;
-  }
-
-  // ---- sound and speech -------------------------------------------------------------
-
-  let audioCtx = null;
-  let audioBroken = false;
-  let voices = [];
-
-  function audio() {
-    if (audioBroken) return null;
-    if (!audioCtx) {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) { audioBroken = true; return null; }
-      try {
-        audioCtx = new Ctx();
-      } catch (err) {
-        console.warn("Color Fusion: sound effects are unavailable", err);
-        audioBroken = true;
-        return null;
-      }
-    }
-    if (audioCtx.state === "suspended") {
-      audioCtx.resume().catch((err) => console.warn("Color Fusion: couldn't resume audio", err));
-    }
-    return audioCtx;
-  }
-
-  function tone(freq, endFreq, startIn, duration, type, volume) {
-    const ctx = save.sound && audio();
-    if (!ctx) return;
-    const start = ctx.currentTime + startIn;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, start);
-    osc.frequency.exponentialRampToValueAtTime(endFreq, start + duration);
-    gain.gain.setValueAtTime(volume, start);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(start);
-    osc.stop(start + duration + 0.02);
-  }
-
-  const playPlop = () => tone(560 + Math.random() * 120, 170, 0, 0.14, "sine", 0.25);
-  const playFull = () => tone(190, 120, 0, 0.22, "square", 0.06);
-  function playChime() {
-    [659, 880, 1319].forEach((f, i) => tone(f, f, i * 0.1, 0.35, "triangle", 0.18));
-  }
-
-  function refreshVoices() {
-    voices = window.speechSynthesis.getVoices();
-  }
-
-  if ("speechSynthesis" in window) {
-    refreshVoices();
-    if (typeof window.speechSynthesis.addEventListener === "function") {
-      window.speechSynthesis.addEventListener("voiceschanged", refreshVoices);
-    }
-  }
-
-  function speakNow(text) {
-    if (!save.sound || !("speechSynthesis" in window)) return;
-    const tag = save.lang === "id" ? "id-id" : "en-us";
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = tag;
-    const norm = (v) => v.lang.replace("_", "-").toLowerCase();
-    const voice = voices.find((v) => norm(v) === tag) || voices.find((v) => norm(v).startsWith(save.lang));
-    if (voice) utter.voice = voice;
-    utter.rate = 0.9;
-    utter.pitch = 1.15;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utter);
-  }
-
-  function speak(text, delay) {
-    clearTimeout(speakTimer);
-    speakTimer = setTimeout(() => speakNow(text), delay === undefined ? SPEAK_DELAY_MS : delay);
-  }
-
-  function stopSpeech() {
-    clearTimeout(speakTimer);
-    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-  }
-
-  // iOS only lets audio and speech start from inside a user gesture; once they've been
-  // started there, later delayed calls (like the debounced color name) are allowed.
-  function unlockMedia() {
-    audio();
-    if ("speechSynthesis" in window && save.sound) {
-      window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
-    }
-  }
-  document.addEventListener("pointerdown", unlockMedia, { once: true, capture: true });
-  document.addEventListener("keydown", unlockMedia, { once: true, capture: true });
-
   // ---- effects ------------------------------------------------------------------------
-
-  function centerOf(el) {
-    const r = el.getBoundingClientRect();
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-  }
 
   function makeDroplet(pigment) {
     const drop = document.createElement("div");
@@ -283,9 +144,9 @@
   }
 
   function flyToBowl(pigment, fromEl, done) {
-    if (reducedMotion.matches) { done(); return; }
-    const from = centerOf(fromEl);
-    const to = centerOf(bowlEl);
+    if (KIDS.reducedMotion.matches) { done(); return; }
+    const from = KIDS.centerOf(fromEl);
+    const to = KIDS.centerOf(bowlEl);
     const drop = makeDroplet(pigment);
     placeDroplet(drop, from.x, from.y);
     if (typeof drop.animate !== "function") { drop.remove(); done(); return; }
@@ -308,7 +169,7 @@
   }
 
   function splash(pigment) {
-    if (reducedMotion.matches) return;
+    if (KIDS.reducedMotion.matches) return;
     const blob = document.createElement("div");
     blob.className = "splash";
     blob.style.background = hex(MIX.PIGMENT_RGB[pigment]);
@@ -330,42 +191,7 @@
     paintEl.querySelectorAll(".splash").forEach((blob) => blob.remove());
   }
 
-  function burst(colors, count) {
-    if (reducedMotion.matches) return;
-    const c = centerOf(bowlEl);
-    for (let i = 0; i < count; i++) {
-      const bit = document.createElement("div");
-      bit.className = "confetti";
-      bit.style.background = colors[i % colors.length];
-      bit.style.left = c.x + "px";
-      bit.style.top = c.y + "px";
-      document.body.appendChild(bit);
-      if (typeof bit.animate !== "function") { bit.remove(); continue; }
-      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
-      const dist = 120 + Math.random() * 110;
-      const anim = bit.animate([
-        { transform: "translate(0, 0) scale(0.4)", opacity: 1 },
-        { transform: "translate(" + Math.cos(angle) * dist + "px, " + (Math.sin(angle) * dist + 40) + "px) scale(1)", opacity: 0 },
-      ], { duration: 900 + Math.random() * 300, easing: "cubic-bezier(.2,.7,.4,1)" });
-      anim.addEventListener("finish", () => bit.remove());
-      anim.addEventListener("cancel", () => bit.remove());
-    }
-  }
-
-  function flashClass(el, cls) {
-    el.classList.remove(cls);
-    void el.offsetWidth; // restart the animation if it's still running
-    el.classList.add(cls);
-    el.addEventListener("animationend", () => el.classList.remove(cls), { once: true });
-  }
-
-  function toast(text) {
-    const el = $("toast");
-    el.textContent = text;
-    el.hidden = false;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { el.hidden = true; }, TOAST_MS);
-  }
+  const burstFromBowl = (colors, count) => KIDS.burst(KIDS.centerOf(bowlEl), colors, count);
 
   // ---- mixing ---------------------------------------------------------------------------
 
@@ -374,10 +200,10 @@
   }
 
   function bowlFull() {
-    playFull();
-    flashClass(bowlEl, "is-full");
-    toast(t("full"));
-    speak(t("full"), 0);
+    KIDS.sfx.boop();
+    KIDS.flashClass(bowlEl, "is-full");
+    KIDS.toast(t("full"));
+    KIDS.speak(t("full"), 0);
   }
 
   function pourFromPot(pigment, potEl) {
@@ -396,7 +222,7 @@
     if (MIX.dropCount(b.recipe) >= MIX.MAX_DROPS) { bowlFull(); return; }
     b.recipe[pigment]++;
     b.history.push(pigment);
-    playPlop();
+    KIDS.sfx.pop();
     splash(pigment);
     afterMixChange();
   }
@@ -413,7 +239,7 @@
     const b = bowl();
     b.recipe = MIX.emptyRecipe();
     b.history = [];
-    stopSpeech();
+    KIDS.stopSpeech();
     clearSplashes();
     renderBowl();
     if (mode === "challenge" && !matched) nudgeHint();
@@ -430,19 +256,19 @@
   function afterMixChange() {
     const rgb = MIX.mixRecipe(bowl().recipe);
     const info = renderBowl();
-    if (!rgb) { stopSpeech(); return; }
+    if (!rgb) { KIDS.stopSpeech(); return; }
 
     if (mode === "challenge" && !matched && MIX.distance(rgb, level().target.rgb) <= MIX.MATCH_DISTANCE) {
       completeLevel();
       return;
     }
     if (info.named && discover(info.named)) {
-      toast("⭐ " + t("newColor", { name: colorName(info.named) }));
-      burst([hex(info.named.rgb)], 12);
-      speak(t("newColor", { name: colorName(info.named) }), 150);
+      KIDS.toast("⭐ " + t("newColor", { name: colorName(info.named) }));
+      burstFromBowl([hex(info.named.rgb)], 12);
+      KIDS.speak(t("newColor", { name: colorName(info.named) }), 150);
       return;
     }
-    speak(info.text);
+    KIDS.speak(info.text);
   }
 
   function discover(named) {
@@ -462,11 +288,11 @@
       save.cleared.push(target.id);
       persist();
     }
-    playChime();
-    flashClass(bowlEl, "is-matched");
+    KIDS.sfx.chime();
+    KIDS.flashClass(bowlEl, "is-matched");
     const used = MIX.PIGMENTS.filter((p) => bowl().recipe[p] > 0).map((p) => hex(MIX.PIGMENT_RGB[p]));
-    burst([hex(target.rgb)].concat(used), 26);
-    speak(t("great", { name: colorName(target) }), 150);
+    burstFromBowl([hex(target.rgb)].concat(used), 26);
+    KIDS.speak(t("great", { name: colorName(target) }), 150);
     renderChallenge();
   }
 
@@ -477,7 +303,7 @@
     bowls.challenge = { recipe: MIX.emptyRecipe(), history: [] };
     clearSplashes();
     renderPlay();
-    speak(t("letsMake", { name: colorName(level().target) }), 200);
+    KIDS.speak(t("letsMake", { name: colorName(level().target) }), 200);
   }
 
   function nextLevel() {
@@ -485,13 +311,13 @@
       startLevel(levelIndex + 1);
       return;
     }
-    toast("🎉 " + t("allDone"));
-    speak(t("allDone"), 0);
+    KIDS.toast("🎉 " + t("allDone"));
+    KIDS.speak(t("allDone"), 0);
   }
 
   function recipeSpeech(recipe) {
     const parts = MIX.PIGMENTS.filter((p) => recipe[p] > 0)
-      .map((p) => NUMBER_WORDS[save.lang][recipe[p]] + " " + colorName(MIX.NAMED_BY_ID[p]).toLowerCase());
+      .map((p) => KIDS.numberWord(recipe[p]) + " " + colorName(MIX.NAMED_BY_ID[p]).toLowerCase());
     return parts.join(t("and"));
   }
 
@@ -499,7 +325,7 @@
     hintShown = true;
     btnHint.classList.remove("is-nudging");
     renderChallenge();
-    speak(recipeSpeech(level().target.recipe), 0);
+    KIDS.speak(recipeSpeech(level().target.recipe), 0);
   }
 
   function nudgeHint() {
@@ -611,11 +437,11 @@
       chip.className = "chip" + (found ? "" : " chip--locked") + (named.id === "white" ? " chip--white" : "");
       const swatch = document.createElement("div");
       swatch.className = "chip-swatch";
-      const name = document.createElement("span");
-      name.className = "chip-name";
       if (found) {
         chip.type = "button";
         swatch.style.background = hex(named.rgb);
+        const name = document.createElement("span");
+        name.className = "chip-name";
         name.textContent = colorName(named);
         const dots = document.createElement("div");
         dots.className = "dots";
@@ -623,7 +449,7 @@
         chip.append(swatch, name, dots);
         chip.addEventListener("click", () => {
           const isPrimary = MIX.dropCount(named.recipe) === 1;
-          speak(isPrimary ? colorName(named) : colorName(named) + ". " + recipeSpeech(named.recipe), 0);
+          KIDS.speak(isPrimary ? colorName(named) : colorName(named) + ". " + recipeSpeech(named.recipe), 0);
         });
       } else {
         swatch.textContent = "?";
@@ -636,22 +462,12 @@
   }
 
   function applyLanguage() {
-    document.documentElement.lang = save.lang;
-    document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
-    document.querySelectorAll("[data-i18n-label]").forEach((el) => { el.setAttribute("aria-label", t(el.dataset.i18nLabel)); });
-    document.querySelectorAll(".lang-btn").forEach((btn) => {
-      btn.setAttribute("aria-pressed", String(btn.dataset.lang === save.lang));
-    });
+    KIDS.applyText(t);
     btnUndo.setAttribute("aria-label", t("undoLabel"));
     for (const p of MIX.PIGMENTS) {
       potButtons[p].querySelector(".pot-name").textContent = colorName(MIX.NAMED_BY_ID[p]);
     }
     renderMode();
-  }
-
-  function renderSound() {
-    $("btnSound").setAttribute("aria-pressed", String(save.sound));
-    $("soundIcon").textContent = save.sound ? "🔊" : "🔇";
   }
 
   function renderMode() {
@@ -671,18 +487,18 @@
   function setMode(next) {
     if (next === mode) return;
     mode = next;
-    stopSpeech();
+    KIDS.stopSpeech();
     clearSplashes();
     renderMode();
     if (mode === "challenge" && MIX.dropCount(bowl().recipe) === 0) {
-      speak(t("letsMake", { name: colorName(level().target) }), 200);
+      KIDS.speak(t("letsMake", { name: colorName(level().target) }), 200);
     }
   }
 
   // ---- paint pots: tap to pour, or drag a drop onto the bowl ------------------------------------
 
   function overBowl(x, y) {
-    const c = centerOf(bowlEl);
+    const c = KIDS.centerOf(bowlEl);
     return Math.hypot(x - c.x, y - c.y) <= bowlEl.getBoundingClientRect().width / 2;
   }
 
@@ -749,21 +565,6 @@
   document.querySelectorAll(".mode").forEach((tab) => {
     tab.addEventListener("click", () => setMode(tab.dataset.mode));
   });
-  document.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (save.lang === btn.dataset.lang) return;
-      save.lang = btn.dataset.lang;
-      persist();
-      stopSpeech();
-      applyLanguage();
-    });
-  });
-  $("btnSound").addEventListener("click", () => {
-    save.sound = !save.sound;
-    persist();
-    if (!save.sound) stopSpeech();
-    renderSound();
-  });
   btnUndo.addEventListener("click", undoDrop);
   btnEmpty.addEventListener("click", emptyBowl);
   btnHint.addEventListener("click", showHint);
@@ -781,6 +582,7 @@
     renderMode();
   });
 
-  renderSound();
+  KIDS.bindHeader();
+  KIDS.onPrefs(applyLanguage);
   applyLanguage();
 })();
