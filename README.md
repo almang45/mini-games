@@ -45,7 +45,7 @@ to, both here and in `index.html`.
 
 | | |
 |---|---|
-| **[Color Fusion](color-fusion/)** | Paint-mixing toy for young kids — pour primaries, white and black into a bowl, hear the color named in Indonesian or English, fill a book of 27 colors. |
+| **[Color Fusion](color-fusion/)** | Paint-mixing toy for young kids — pour primaries, white and black into a bowl, hear the color named in Indonesian or English, fill a book of 28 colors. |
 
 Five games play the rules of well-known commercial games under generic
 names, and reuse none of their names, card text or artwork:

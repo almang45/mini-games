@@ -137,7 +137,8 @@
     { id: "turquoise", recipe: { yellow: 1, blue: 2, white: 1 }, name: { id: "Toska", en: "Turquoise" } },
     { id: "gray", recipe: { white: 1, black: 1 }, name: { id: "Abu-abu", en: "Gray" } },
     { id: "maroon", recipe: { red: 2, black: 1 }, name: { id: "Merah marun", en: "Maroon" } },
-    { id: "navy", recipe: { blue: 2, black: 1 }, name: { id: "Biru tua", en: "Navy" } },
+    { id: "navy", recipe: { blue: 1, black: 1 }, name: { id: "Biru tua", en: "Navy" } },
+    { id: "indigo", recipe: { red: 1, blue: 2, black: 1 }, name: { id: "Nila", en: "Indigo" } },
     { id: "dark-green", recipe: { yellow: 1, blue: 1, black: 1 }, name: { id: "Hijau tua", en: "Dark green" } },
     { id: "brown", recipe: { red: 1, yellow: 1, blue: 1 }, name: { id: "Cokelat", en: "Brown" } },
     { id: "milk-chocolate", recipe: { red: 1, yellow: 1, blue: 1, white: 1 }, name: { id: "Cokelat susu", en: "Milk chocolate" } },
@@ -162,7 +163,7 @@
     { id: "secondary", pots: ["red", "yellow", "blue"], targets: ["orange", "green", "purple"] },
     { id: "light-dark", pots: ["red", "blue", "white", "black"], targets: ["pink", "light-blue", "gray", "navy"] },
     { id: "ratios", pots: ["red", "yellow", "blue"], targets: ["red-orange", "yellow-orange", "yellow-green", "blue-green", "blue-violet", "red-violet"] },
-    { id: "expert", pots: PIGMENTS, targets: ["brown", "dark-green", "lavender", "turquoise", "peach", "maroon", "milk-chocolate"] },
+    { id: "expert", pots: PIGMENTS, targets: ["brown", "dark-green", "lavender", "turquoise", "peach", "maroon", "indigo", "milk-chocolate"] },
   ];
   const LEVELS = STAGES.flatMap((stage) =>
     stage.targets.map((target) => Object.freeze({ stage: stage.id, pots: stage.pots, target: NAMED_BY_ID[target] })));

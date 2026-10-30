@@ -9,9 +9,9 @@ The game says the color's name aloud, in Indonesian or English, so kids who
 can't read yet can play too. **Ups** removes the last drop and **Kosongkan**
 empties the bowl. The bowl holds at most 12 drops.
 
-- **Bebas (free play):** mix anything. A mix that lands on one of the 27
+- **Bebas (free play):** mix anything. A mix that lands on one of the 28
   named colors is added to the color book.
-- **Tantangan (challenges):** 20 levels in four stages: secondary colors,
+- **Tantangan (challenges):** 21 levels in four stages: secondary colors,
   tints and shades, 2:1 ratios, then three or more pigments. Each stage
   puts only the pots it needs on the shelf. **Petunjuk** (hint) shows the
   recipe as colored dots, makes those pots bounce, and reads the recipe
@@ -19,8 +19,9 @@ empties the bowl. The bowl holds at most 12 drops.
 - **Buku Warna (color book):** every named color found so far, with its
   recipe. Tap a color to hear its name and recipe.
 
-The language toggle, sound toggle, found colors and cleared levels are saved
-in `localStorage`. If storage is blocked, the game still works but forgets
+Found colors and cleared levels are saved in `localStorage`. The language and
+sound toggles are shared by every Kids game (`shared/kids/`), so switching to
+English here switches the other Kids games too. If storage is blocked, the game still works but forgets
 everything on reload. **Mulai dari awal** in the color book clears saved
 progress (useful for siblings).
 
@@ -49,12 +50,17 @@ different colors.
 
 ```
 index.html          page shell: top bar, mode tabs, bowl, color book, pot shelf
-css/style.css       all styling, including the landscape-phone layout
+css/style.css       game styling, including the landscape-phone layout
 favicon.svg         three overlapping primaries with their mixes
 js/mix.js           pure mixing model, named colors and levels (no DOM)
-js/app.js           controller: pots (tap and drag), modes, speech, sound, saving
+js/app.js           controller: pots (tap and drag), modes, saving
 js/test/mix.test.js plain Node test script
 ```
+
+The table, top bar, toggles, tabs, buttons, toast, speech and sound effects
+come from `../shared/kids/kids.css` and `../shared/kids/kids.js`, shared with
+the other Kids games. Several of them load `js/mix.js` too, so a color has
+the same name and shade everywhere.
 
 `js/mix.js` uses the same small UMD pattern as `card-games/js/core/*.js`:
 `module.exports` under Node and `window.MIX` in the browser.
