@@ -11,7 +11,7 @@
   const $ = (id) => document.getElementById(id);
 
   const STORE_KEY = "tracing.v1";
-  const MODES = { letters: GLYPHS.LETTERS, numbers: GLYPHS.NUMBERS };
+  const MODES = { letters: GLYPHS.LETTERS, lower: GLYPHS.SMALL, numbers: GLYPHS.NUMBERS };
   const INKS = ["red", "orange", "green", "blue", "indigo", "purple", "pink"];
   const DEMO_SPEED = 70; // box units per second, about a kid's careful pace
   const DEMO_PAUSE = 350;
@@ -35,6 +35,7 @@
     },
   };
   // How the letters are said in Indonesian; an id-ID voice reading "B" alone can say "bi".
+  // Keyed by capital, like WORDS: a small letter has the same name and word.
   const LETTER_NAMES_ID = {
     A: "a", B: "be", C: "ce", D: "de", E: "e", F: "ef", G: "ge", H: "ha", I: "i", J: "je", K: "ka", L: "el", M: "em",
     N: "en", O: "o", P: "pe", Q: "ki", R: "er", S: "es", T: "te", U: "u", V: "ve", W: "we", X: "eks", Y: "ye", Z: "zet",
@@ -44,10 +45,12 @@
   const STRINGS = {
     id: {
       title: "Jejak Huruf dan Angka",
-      modes: "Huruf atau angka",
-      letters: "Huruf",
+      modes: "Huruf besar, huruf kecil, atau angka",
+      letters: "Huruf besar",
+      lower: "Huruf kecil",
       numbers: "Angka",
-      stepLetter: "Huruf {char}",
+      stepLetter: "Huruf besar {char}",
+      stepSmall: "Huruf kecil {char}",
       stepNumber: "Angka {char}",
       start: "Mulai dari titik hijau",
       keepGoing: "Teruskan dari titik hijau",
@@ -64,10 +67,12 @@
     },
     en: {
       title: "Trace Letters and Numbers",
-      modes: "Letters or numbers",
-      letters: "Letters",
+      modes: "Capitals, lowercase or numbers",
+      letters: "Capitals",
+      lower: "Lowercase",
       numbers: "Numbers",
-      stepLetter: "Letter {char}",
+      stepLetter: "Capital {char}",
+      stepSmall: "Lowercase {char}",
       stepNumber: "Number {char}",
       start: "Start at the green dot",
       keepGoing: "Carry on from the green dot",
@@ -106,7 +111,12 @@
   const glyphs = () => MODES[saved.mode];
   const glyph = () => glyphs()[saved.index[saved.mode]];
   const inkHex = () => MIX.toHex(MIX.NAMED_BY_ID[INKS[saved.index[saved.mode] % INKS.length]].rgb);
-  const isLetter = () => saved.mode === "letters";
+  const isLetter = () => saved.mode !== "numbers";
+  const rules = () => (saved.mode === "lower" ? GLYPHS.RULES.small : GLYPHS.RULES.capital);
+  const wordFor = (char) => WORDS[KIDS.prefs.lang][char.toUpperCase()];
+  // English voices read a lone "a" as the article, so letters are always said as capitals.
+  const nameOf = (char) => (KIDS.prefs.lang === "id" ? LETTER_NAMES_ID[char.toUpperCase()] : char.toUpperCase());
+  const STEP_LABEL = { letters: "stepLetter", lower: "stepSmall", numbers: "stepNumber" };
 
   let trace = TRACE.create(glyph());
   let drawing = null;
@@ -120,7 +130,8 @@
 
   const svgEl = KIDS.svgEl;
 
-  const toPoints = (pts) => pts.map((p) => p[0] + "," + p[1]).join(" ");
+  // A lone point is doubled so a dot stroke still draws, as a round cap.
+  const toPoints = (pts) => (pts.length === 1 ? pts.concat(pts) : pts).map((p) => p[0] + "," + p[1]).join(" ");
 
   let inkLine = null;
   let demoLayer = null;
@@ -132,9 +143,12 @@
     board.replaceChildren();
     board.classList.toggle("is-done", trace.done);
     svgEl("rect", { class: "sheet", x: -4, y: -4, width: 108, height: 108, rx: 9 }, board);
-    // Handwriting-book rules: the cap line and baseline solid, the middle line dashed.
-    for (const y of [10, 90]) svgEl("line", { class: "rule", x1: 0, x2: 100, y1: y, y2: y }, board);
-    svgEl("line", { class: "rule rule--mid", x1: 0, x2: 100, y1: 50, y2: 50 }, board);
+    // Handwriting-book rules: the top line and baseline solid, the middle line dashed, and for
+    // small letters a faint line for the tails of g, j, p, q and y.
+    const r = rules();
+    for (const y of [r.top, r.base]) svgEl("line", { class: "rule", x1: 0, x2: 100, y1: y, y2: y }, board);
+    svgEl("line", { class: "rule rule--mid", x1: 0, x2: 100, y1: r.mid, y2: r.mid }, board);
+    if (r.tail) svgEl("line", { class: "rule rule--tail", x1: 0, x2: 100, y1: r.tail, y2: r.tail }, board);
 
     const guide = svgEl("g", { class: "guide" }, board);
     for (const d of g.strokes) svgEl("path", { class: "track", d }, guide);
@@ -163,14 +177,16 @@
   }
 
   // The green dot sits where the finger has to go next, numbered with the stroke and with an
-  // arrow pointing the way.
+  // arrow pointing the way. A dot stroke goes nowhere, so it gets no arrow: it's just tapped.
   function renderStart() {
     const at = TRACE.current(trace);
     const ahead = TRACE.heading(trace);
-    const angle = Math.atan2(ahead[1] - at[1], ahead[0] - at[0]) * (180 / Math.PI);
     const start = svgEl("g", { class: "start", id: "start" }, board);
-    const arrow = svgEl("g", { transform: "translate(" + at[0] + " " + at[1] + ") rotate(" + angle.toFixed(1) + ")" }, start);
-    svgEl("path", { class: "arrow", d: "M10 -4.5 L17 0 L10 4.5 Z" }, arrow);
+    if (ahead[0] !== at[0] || ahead[1] !== at[1]) {
+      const angle = Math.atan2(ahead[1] - at[1], ahead[0] - at[0]) * (180 / Math.PI);
+      const arrow = svgEl("g", { transform: "translate(" + at[0] + " " + at[1] + ") rotate(" + angle.toFixed(1) + ")" }, start);
+      svgEl("path", { class: "arrow", d: "M10 -4.5 L17 0 L10 4.5 Z" }, arrow);
+    }
     const dot = svgEl("g", { class: "dot", transform: "translate(" + at[0] + " " + at[1] + ")" }, start);
     svgEl("circle", { r: 6.5 }, dot);
     const label = svgEl("text", { y: 0.4 }, dot);
@@ -195,7 +211,7 @@
     const char = glyph().char;
     span("caption-char", char);
     if (isLetter()) {
-      const [word, emoji] = WORDS[KIDS.prefs.lang][char];
+      const [word, emoji] = wordFor(char);
       span("caption-emoji", emoji).setAttribute("aria-hidden", "true");
       span("caption-word", word);
     } else {
@@ -213,7 +229,7 @@
       btn.type = "button";
       btn.className = "step" + (done.has(g.char) ? " is-done" : "") + (i === saved.index[saved.mode] ? " is-current" : "");
       btn.textContent = g.char;
-      btn.setAttribute("aria-label", t(isLetter() ? "stepLetter" : "stepNumber", { char: g.char }));
+      btn.setAttribute("aria-label", t(STEP_LABEL[saved.mode], { char: g.char }));
       if (i === saved.index[saved.mode]) btn.setAttribute("aria-current", "step");
       btn.addEventListener("click", () => choose(i));
       return btn;
@@ -289,8 +305,7 @@
     KIDS.sfx.fanfare();
     KIDS.burst(KIDS.centerOf(board), INKS.map((id) => MIX.toHex(MIX.NAMED_BY_ID[id].rgb)), 24);
     if (isLetter()) {
-      const name = KIDS.prefs.lang === "id" ? LETTER_NAMES_ID[char] : char;
-      KIDS.speak(t("sayLetter", { name, word: WORDS[KIDS.prefs.lang][char][0] }), 250);
+      KIDS.speak(t("sayLetter", { name: nameOf(char), word: wordFor(char)[0] }), 250);
     } else {
       KIDS.speak(KIDS.numberWord(Number(char)), 250);
     }
@@ -308,9 +323,17 @@
       return;
     }
     e.preventDefault();
+    // The press itself is followed too, which is all a dot stroke needs.
+    const r = TRACE.follow(trace, p, p);
+    trace = r.state;
+    if (r.status !== "on") {
+      onStatus(r.status);
+      return;
+    }
     drawing = { id: e.pointerId, last: p };
     board.setPointerCapture(e.pointerId);
     board.classList.add("is-drawing");
+    renderInk();
   });
 
   board.addEventListener("pointermove", (e) => {
@@ -404,7 +427,7 @@
   function sayName() {
     const char = glyph().char;
     if (!isLetter()) KIDS.speak(KIDS.numberWord(Number(char)), 0);
-    else KIDS.speak(KIDS.prefs.lang === "id" ? LETTER_NAMES_ID[char] : char, 0);
+    else KIDS.speak(nameOf(char), 0);
   }
 
   function choose(i) {

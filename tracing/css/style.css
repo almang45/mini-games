@@ -42,6 +42,7 @@
 .sheet { fill: var(--ceramic); }
 .rule { stroke: var(--rule); stroke-width: 0.7; }
 .rule--mid { stroke: var(--rule-mid); stroke-dasharray: 2.5 2; }
+.rule--tail { opacity: 0.45; }
 
 .track { fill: none; stroke: var(--track); stroke-width: 13; stroke-linecap: round; stroke-linejoin: round; }
 .dots { fill: none; stroke: var(--dots); stroke-width: 1.8; stroke-linecap: round; stroke-dasharray: 0 4.5; }
