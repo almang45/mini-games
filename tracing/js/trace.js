@@ -91,8 +91,16 @@
     return pts[Math.min(pts.length - 1, state.at + 4)];
   }
 
+  // The dot on i or j: a stroke of one point, finished by the press alone.
+  function atDot(state) {
+    return !state.done && state.strokes[state.stroke].length === 1;
+  }
+
   function canStart(state, p) {
-    return !state.done && dist(p, current(state)) <= START;
+    if (state.done || dist(p, current(state)) > START) return false;
+    // A press nearer a dot still to come is that dot tapped too early, not a start on this stroke.
+    const here = dist(p, current(state));
+    return !state.strokes.slice(state.stroke + 1).some((pts) => pts.length === 1 && dist(p, pts[0]) < here);
   }
 
   function finishStroke(state) {
@@ -132,7 +140,7 @@
     return (before + state.at) / total;
   }
 
-  const api = { STEP, TOL, OFF, START, WINDOW, END, parse, sample, create, current, heading, canStart, follow, progress };
+  const api = { STEP, TOL, OFF, START, WINDOW, END, parse, sample, create, current, heading, atDot, canStart, follow, progress };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

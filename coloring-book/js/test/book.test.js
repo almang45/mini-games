@@ -1,6 +1,6 @@
 const assert = require("assert");
 const BOOK = require("../book.js");
-const { SIZE, PICTURES, PICTURES_BY_ID, cloud, band } = require("../pictures.js");
+const { SIZE, PICTURES, PICTURES_BY_ID, cloud, band, star } = require("../pictures.js");
 
 let passed = 0;
 function ok(label, cond, extra) {
@@ -59,6 +59,9 @@ const numbersIn = (value) => String(value).match(/-?\d+(\.\d+)?/g) || [];
   ok("rainbow band spans its outer diameter", band(200, 300, 190, 170).startsWith("M10 300 A190 190 0 0 1 390 300 L370 300 A170 170 0 0 0 30 300 Z"));
   const rainbow = PICTURES_BY_ID.rainbow.regions.filter((r) => r.id.startsWith("band"));
   ok("seven rainbow bands, for mejikuhibiniu", rainbow.length === 7);
+  const s = star(100, 100, 30, 12);
+  ok("a star starts at its top point", s.startsWith("M100 70 L"), s);
+  ok("a star has five points and five dips", s.split(" L").length === 10 && s.endsWith(" Z"), s);
 })();
 
 (function paintingAndUndo() {

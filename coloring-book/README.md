@@ -13,10 +13,12 @@ confetti and a "Gambar selesai!" ("All colored in!") say well done.
 
 ## Pictures
 
-Seven line drawings, each with 12 to 16 parts to fill: a fish, a house, a
-butterfly, a flower, a car, a rainbow with seven bands for *mejikuhibiniu*,
-and a rocket. They're drawn in `js/pictures.js` as plain SVG shapes on a
-400 × 400 page, so adding one is a matter of listing its shapes.
+Fifteen line drawings, each with 10 to 21 parts to fill: animals (a fish, a
+butterfly, a dinosaur, a cat, a turtle and an owl), things that go (a car, a
+rocket, a train and a sailboat), a house, a flower, an ice cream, a ringed
+planet with its moon, and a rainbow with seven bands for *mejikuhibiniu*.
+All of them are drawn for this game, in `js/pictures.js` as plain SVG shapes
+on a 400 × 400 page, so adding one is a matter of listing its shapes.
 
 ## Crayons
 

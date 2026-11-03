@@ -1,6 +1,7 @@
 const assert = require("assert");
 const T = require("../trace.js");
-const { BOX, LETTERS, NUMBERS, GLYPHS_BY_CHAR, arcPath } = require("../glyphs.js");
+const { BOX, RULES, LETTERS, SMALL, NUMBERS, GLYPHS_BY_CHAR, arcPath } = require("../glyphs.js");
+const ALL = LETTERS.concat(SMALL, NUMBERS);
 
 let passed = 0;
 function ok(label, cond, extra) {
@@ -12,11 +13,13 @@ function ok(label, cond, extra) {
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const near = (a, b, tol) => dist(a, b) <= (tol || 0.6);
 
-// Drags a finger through `points` one move at a time, the way pointermove events arrive.
+// Presses at the first point and drags through the rest one move at a time, the way the page
+// feeds pointer events: the press itself is only followed on a dot.
 function drag(state, points) {
   const statuses = [];
-  for (let i = 1; i < points.length; i++) {
-    const r = T.follow(state, points[i - 1], points[i]);
+  for (let i = 0; i < points.length; i++) {
+    if (i === 0 && !T.atDot(state)) continue;
+    const r = T.follow(state, points[Math.max(0, i - 1)], points[i]);
     state = r.state;
     statuses.push(r.status);
     if (r.status !== "on") break;
@@ -42,8 +45,9 @@ function traceAll(glyph, every, offset) {
 (function glyphsAreWellFormed() {
   ok("26 letters", LETTERS.length === 26 && LETTERS.map((g) => g.char).join("") === "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
   ok("10 numbers, counting order", NUMBERS.map((g) => g.char).join("") === "1234567890");
-  ok("every glyph is findable", Object.keys(GLYPHS_BY_CHAR).length === 36);
-  for (const glyph of LETTERS.concat(NUMBERS)) {
+  ok("26 small letters", SMALL.map((g) => g.char).join("") === "abcdefghijklmnopqrstuvwxyz");
+  ok("every glyph is findable", Object.keys(GLYPHS_BY_CHAR).length === 62);
+  for (const glyph of ALL) {
     ok(glyph.char + ": has strokes", glyph.strokes.length >= 1 && glyph.strokes.length <= 4);
     glyph.strokes.forEach((d, s) => {
       const where = glyph.char + " stroke " + (s + 1);
@@ -51,18 +55,32 @@ function traceAll(glyph, every, offset) {
       const pts = T.sample(d);
       let length = 0;
       for (let i = 1; i < pts.length; i++) length += dist(pts[i - 1], pts[i]);
-      ok(where + ": long enough to trace", length >= 30, length);
+      // A stroke that starts where it ends is a dot, tapped rather than traced.
+      if (length === 0) ok(where + ": only i and j have a dot, and it comes last", "ij".includes(glyph.char) && s === glyph.strokes.length - 1);
+      else ok(where + ": long enough to trace", length >= 30, length);
       ok(where + ": stays on the page", pts.every((p) => p[0] >= 2 && p[0] <= BOX - 2 && p[1] >= 2 && p[1] <= BOX - 2), pts.find((p) => p[0] < 2 || p[0] > BOX - 2 || p[1] < 2 || p[1] > BOX - 2));
       // Spacing is measured along the line, so only a corner brings two points closer.
       // The very end snaps onto the last point, so the final gap can stretch by a quarter step.
       ok(where + ": points are no further apart than a step", pts.slice(1).every((p, i) => dist(pts[i], p) <= T.STEP * (i === pts.length - 2 ? 1.25 : 1) + 0.05 && dist(pts[i], p) > 0.2));
     });
-    // Glyphs sit between the cap line and the baseline, give or take a tail or a curve's swell.
+    // Glyphs sit on their lines, give or take a tail or a curve's swell.
     const all = glyph.strokes.flatMap((d) => T.sample(d));
     const top = Math.min(...all.map((p) => p[1]));
     const bottom = Math.max(...all.map((p) => p[1]));
-    ok(glyph.char + ": reaches the cap line", top <= 12, top);
-    ok(glyph.char + ": reaches the baseline", bottom >= 86, bottom);
+    if (SMALL.includes(glyph)) {
+      const r = RULES.small;
+      const tall = "bdfhkl".includes(glyph.char);
+      const tail = "gjpqy".includes(glyph.char);
+      if (tall) ok(glyph.char + ": reaches the top line", top <= r.top + 2, top);
+      else if (glyph.char === "t") ok("t: stands a little above the x", top < r.mid - 10 && top > r.top + 4, top);
+      else if ("ij".includes(glyph.char)) ok(glyph.char + ": its dot floats above the x", top < r.mid - 10 && top > r.top, top);
+      else ok(glyph.char + ": stays within the x height", top >= r.mid - 2 && top <= r.mid + 2, top);
+      if (tail) ok(glyph.char + ": hangs below the baseline", bottom >= r.base + 20 && bottom <= r.tail, bottom);
+      else ok(glyph.char + ": sits on the baseline", bottom >= r.base - 2 && bottom <= r.base + 2, bottom);
+    } else {
+      ok(glyph.char + ": reaches the cap line", top <= RULES.capital.top + 2, top);
+      ok(glyph.char + ": reaches the baseline", bottom >= RULES.capital.base - 4, bottom);
+    }
   }
 })();
 
@@ -94,7 +112,7 @@ function traceAll(glyph, every, offset) {
 })();
 
 (function everyGlyphCanBeTraced() {
-  for (const glyph of LETTERS.concat(NUMBERS)) {
+  for (const glyph of ALL) {
     const expected = glyph.strokes.map((_, i) => (i === glyph.strokes.length - 1 ? "done" : "stroke"));
     for (const every of [1, 3, 6]) {
       const { state, statuses } = traceAll(glyph, every);
@@ -162,6 +180,25 @@ function traceAll(glyph, every, offset) {
   ok("and offers nowhere to start", T.current(r.state) === null && !T.canStart(r.state, [74, 90]));
   const h = T.heading(T.create(GLYPHS_BY_CHAR.L));
   ok("heading points down the L's stem", h[0] === 30 && h[1] > 10);
+})();
+
+(function dotsAreTapped() {
+  const fresh = T.create(GLYPHS_BY_CHAR.i);
+  ok("i: the stem isn't a dot", !T.atDot(fresh));
+  for (const p of [[50, 24], [50, 27], [53, 30]]) ok("i: a tap on the dot before the stem is refused " + p, !T.canStart(fresh, p));
+  ok("i: the stem still starts from a press near its top", T.canStart(fresh, [50, 40]) && T.canStart(fresh, [50, 34]));
+  let i = drag(fresh, [[50, 40], [50, 55], [50, 70]]).state;
+  ok("i: then the dot is", T.atDot(i));
+  ok("i: the stem comes first", i.stroke === 1 && !i.done);
+  ok("i: the dot can't be tapped from far away", !T.canStart(i, [50, 50]) && !T.canStart(i, [80, 24]));
+  ok("i: the dot can be tapped a little off", T.canStart(i, [56, 28]));
+  const tap = T.follow(i, [56, 28], [56, 28]);
+  ok("i: a tap on the dot finishes the letter", tap.status === "done" && tap.state.done && !T.atDot(tap.state));
+  const j = T.create(GLYPHS_BY_CHAR.j);
+  ok("j: the dot can't come first", !T.canStart(j, [56, 24]) && !T.canStart(j, [56, 28]));
+  // Strokes that start where an earlier one did (E, B) aren't dots, so they don't block each other.
+  const E = drag(T.create(GLYPHS_BY_CHAR.E), T.create(GLYPHS_BY_CHAR.E).strokes[0]).state;
+  ok("E: the top bar starts where the stem did", E.stroke === 1 && T.canStart(E, [30, 10]));
 })();
 
 console.log("trace.test.js: " + passed + " assertions passed");
