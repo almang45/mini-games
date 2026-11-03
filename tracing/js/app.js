@@ -11,7 +11,10 @@
   const $ = (id) => document.getElementById(id);
 
   const STORE_KEY = "tracing.v1";
-  const MODES = { letters: GLYPHS.LETTERS, lower: GLYPHS.SMALL, numbers: GLYPHS.NUMBERS };
+  // An older cached glyphs.js has no small letters or RULES; leave that tab out rather than fail.
+  const MODES = Object.fromEntries(Object.entries({ letters: GLYPHS.LETTERS, lower: GLYPHS.SMALL, numbers: GLYPHS.NUMBERS })
+    .filter(([, list]) => Array.isArray(list)));
+  const RULES = GLYPHS.RULES || { capital: { top: 10, mid: 50, base: 90 } };
   const INKS = ["red", "orange", "green", "blue", "indigo", "purple", "pink"];
   const DEMO_SPEED = 70; // box units per second, about a kid's careful pace
   const DEMO_PAUSE = 350;
@@ -112,7 +115,7 @@
   const glyph = () => glyphs()[saved.index[saved.mode]];
   const inkHex = () => MIX.toHex(MIX.NAMED_BY_ID[INKS[saved.index[saved.mode] % INKS.length]].rgb);
   const isLetter = () => saved.mode !== "numbers";
-  const rules = () => (saved.mode === "lower" ? GLYPHS.RULES.small : GLYPHS.RULES.capital);
+  const rules = () => (saved.mode === "lower" ? RULES.small : RULES.capital);
   const wordFor = (char) => WORDS[KIDS.prefs.lang][char.toUpperCase()];
   // English voices read a lone "a" as the article, so letters are always said as capitals.
   const nameOf = (char) => (KIDS.prefs.lang === "id" ? LETTER_NAMES_ID[char.toUpperCase()] : char.toUpperCase());
@@ -143,8 +146,7 @@
     board.replaceChildren();
     board.classList.toggle("is-done", trace.done);
     svgEl("rect", { class: "sheet", x: -4, y: -4, width: 108, height: 108, rx: 9 }, board);
-    // Handwriting-book rules: the top line and baseline solid, the middle line dashed, and for
-    // small letters a faint line for the tails of g, j, p, q and y.
+    // Handwriting-book rules; only small letters have a tail line.
     const r = rules();
     for (const y of [r.top, r.base]) svgEl("line", { class: "rule", x1: 0, x2: 100, y1: y, y2: y }, board);
     svgEl("line", { class: "rule rule--mid", x1: 0, x2: 100, y1: r.mid, y2: r.mid }, board);
@@ -182,7 +184,7 @@
     const at = TRACE.current(trace);
     const ahead = TRACE.heading(trace);
     const start = svgEl("g", { class: "start", id: "start" }, board);
-    if (ahead[0] !== at[0] || ahead[1] !== at[1]) {
+    if (!TRACE.atDot(trace)) {
       const angle = Math.atan2(ahead[1] - at[1], ahead[0] - at[0]) * (180 / Math.PI);
       const arrow = svgEl("g", { transform: "translate(" + at[0] + " " + at[1] + ") rotate(" + angle.toFixed(1) + ")" }, start);
       svgEl("path", { class: "arrow", d: "M10 -4.5 L17 0 L10 4.5 Z" }, arrow);
@@ -239,7 +241,10 @@
   }
 
   function renderModes() {
-    document.querySelectorAll(".mode").forEach((tab) => tab.setAttribute("aria-selected", String(tab.dataset.mode === saved.mode)));
+    document.querySelectorAll(".mode").forEach((tab) => {
+      tab.hidden = !MODES[tab.dataset.mode];
+      tab.setAttribute("aria-selected", String(tab.dataset.mode === saved.mode));
+    });
   }
 
   function renderButtons() {
@@ -323,17 +328,18 @@
       return;
     }
     e.preventDefault();
-    // The press itself is followed too, which is all a dot stroke needs.
-    const r = TRACE.follow(trace, p, p);
-    trace = r.state;
-    if (r.status !== "on") {
-      onStatus(r.status);
-      return;
+    // A dot is finished by the press alone; any other stroke waits for the finger to move.
+    if (TRACE.atDot(trace)) {
+      const r = TRACE.follow(trace, p, p);
+      trace = r.state;
+      if (r.status !== "on") {
+        onStatus(r.status);
+        return;
+      }
     }
     drawing = { id: e.pointerId, last: p };
     board.setPointerCapture(e.pointerId);
     board.classList.add("is-drawing");
-    renderInk();
   });
 
   board.addEventListener("pointermove", (e) => {
@@ -439,7 +445,7 @@
   }
 
   function setMode(mode) {
-    if (mode === saved.mode) return;
+    if (mode === saved.mode || !MODES[mode]) return;
     saved.mode = mode;
     persist();
     reset();

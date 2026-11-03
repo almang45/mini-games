@@ -9,9 +9,7 @@
   const BOX = 100;
   const n = (v) => Number(v.toFixed(1));
 
-  // The handwriting-book lines each set sits on. Capitals and numbers fill the space between
-  // two solid lines; small letters sit on a higher baseline so g, j, p, q and y can hang below
-  // it, with the dashed line marking the top of an x.
+  // Small letters sit on a higher baseline so the tails of g, j, p, q and y fit below it.
   const RULES = {
     capital: { top: 10, mid: 50, base: 90 },
     small: { top: 10, mid: 40, base: 70, tail: 96 },
@@ -85,12 +83,12 @@
     { char: "c", strokes: [arcPath(52, 55, 16, 15, -40, -320)] },
     { char: "d", strokes: [bowl, "M62 10 L62 70"] },
     { char: "e", strokes: ["M34 55 L64 55" + arcTo(49, 55, 15, 15, 0, -315)] },
-    { char: "f", strokes: ["M62 15 C58 8 46 8 46 20 L46 70", "M34 40 L60 40"] },
+    { char: "f", strokes: ["M62 15 C58 8 46 8 46 20 L46 70", "M32 40 L62 40"] },
     { char: "g", strokes: [bowl, "M62 40 L62 84 C62 98 38 98 33 88"] },
     { char: "h", strokes: ["M34 10 L34 70", hump(34)] },
     { char: "i", strokes: ["M50 40 L50 70", "M50 24 L50 24"] },
     { char: "j", strokes: ["M56 40 L56 84 C56 98 34 98 30 88", "M56 24 L56 24"] },
-    { char: "k", strokes: ["M34 10 L34 70", "M62 40 L34 58", "M44 52 L64 70"] },
+    { char: "k", strokes: ["M34 10 L34 70", "M62 40 L34 58", "M40 54 L66 70"] },
     { char: "l", strokes: ["M50 10 L50 70"] },
     { char: "m", strokes: ["M22 40 L22 70", "M22 52 C22 36 49 36 49 52 L49 70", "M49 52 C49 36 76 36 76 52 L76 70"] },
     { char: "n", strokes: ["M34 40 L34 70", hump(34)] },
@@ -99,7 +97,7 @@
     { char: "q", strokes: [bowl, "M62 40 L62 96"] },
     { char: "r", strokes: ["M38 40 L38 70", "M38 54 C40 42 54 38 64 44"] },
     { char: "s", strokes: ["M62 45 C58 38 38 37 38 47 C38 56 62 52 62 62 C62 73 40 73 36 65"] },
-    { char: "t", strokes: ["M48 18 L48 63 C48 70 55 72 61 68", "M36 40 L62 40"] },
+    { char: "t", strokes: ["M48 18 L48 63 C48 70 55 72 61 68", "M34 40 L64 40"] },
     { char: "u", strokes: ["M34 40 L34 56 C34 74 64 74 64 56 L64 40", "M64 40 L64 70"] },
     { char: "v", strokes: ["M34 40 L49 70 L64 40"] },
     { char: "w", strokes: ["M24 40 L34 70 L49 46 L64 70 L74 40"] },

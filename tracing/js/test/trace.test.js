@@ -14,18 +14,12 @@ const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const near = (a, b, tol) => dist(a, b) <= (tol || 0.6);
 
 // Presses at the first point and drags through the rest one move at a time, the way the page
-// feeds pointerdown and pointermove events (the press itself counts, which is what finishes a dot).
+// feeds pointer events: the press itself is only followed on a dot.
 function drag(state, points) {
   const statuses = [];
   for (let i = 0; i < points.length; i++) {
-    if (i === 0) {
-      const r = T.follow(state, points[0], points[0]);
-      state = r.state;
-      if (r.status === "on") continue;
-      statuses.push(r.status);
-      break;
-    }
-    const r = T.follow(state, points[i - 1], points[i]);
+    if (i === 0 && !T.atDot(state)) continue;
+    const r = T.follow(state, points[Math.max(0, i - 1)], points[i]);
     state = r.state;
     statuses.push(r.status);
     if (r.status !== "on") break;
@@ -63,7 +57,7 @@ function traceAll(glyph, every, offset) {
       for (let i = 1; i < pts.length; i++) length += dist(pts[i - 1], pts[i]);
       // A stroke that starts where it ends is a dot, tapped rather than traced.
       if (length === 0) ok(where + ": only i and j have a dot, and it comes last", "ij".includes(glyph.char) && s === glyph.strokes.length - 1);
-      else ok(where + ": long enough to trace", length >= 20, length);
+      else ok(where + ": long enough to trace", length >= 30, length);
       ok(where + ": stays on the page", pts.every((p) => p[0] >= 2 && p[0] <= BOX - 2 && p[1] >= 2 && p[1] <= BOX - 2), pts.find((p) => p[0] < 2 || p[0] > BOX - 2 || p[1] < 2 || p[1] > BOX - 2));
       // Spacing is measured along the line, so only a corner brings two points closer.
       // The very end snaps onto the last point, so the final gap can stretch by a quarter step.
@@ -189,14 +183,22 @@ function traceAll(glyph, every, offset) {
 })();
 
 (function dotsAreTapped() {
-  let i = drag(T.create(GLYPHS_BY_CHAR.i), [[50, 40], [50, 55], [50, 70]]).state;
+  const fresh = T.create(GLYPHS_BY_CHAR.i);
+  ok("i: the stem isn't a dot", !T.atDot(fresh));
+  for (const p of [[50, 24], [50, 27], [53, 30]]) ok("i: a tap on the dot before the stem is refused " + p, !T.canStart(fresh, p));
+  ok("i: the stem still starts from a press near its top", T.canStart(fresh, [50, 40]) && T.canStart(fresh, [50, 34]));
+  let i = drag(fresh, [[50, 40], [50, 55], [50, 70]]).state;
+  ok("i: then the dot is", T.atDot(i));
   ok("i: the stem comes first", i.stroke === 1 && !i.done);
   ok("i: the dot can't be tapped from far away", !T.canStart(i, [50, 50]) && !T.canStart(i, [80, 24]));
   ok("i: the dot can be tapped a little off", T.canStart(i, [56, 28]));
   const tap = T.follow(i, [56, 28], [56, 28]);
-  ok("i: a tap on the dot finishes the letter", tap.status === "done" && tap.state.done);
+  ok("i: a tap on the dot finishes the letter", tap.status === "done" && tap.state.done && !T.atDot(tap.state));
   const j = T.create(GLYPHS_BY_CHAR.j);
-  ok("j: the dot can't come first", !T.canStart(j, [56, 20]));
+  ok("j: the dot can't come first", !T.canStart(j, [56, 24]) && !T.canStart(j, [56, 28]));
+  // Strokes that start where an earlier one did (E, B) aren't dots, so they don't block each other.
+  const E = drag(T.create(GLYPHS_BY_CHAR.E), T.create(GLYPHS_BY_CHAR.E).strokes[0]).state;
+  ok("E: the top bar starts where the stem did", E.stroke === 1 && T.canStart(E, [30, 10]));
 })();
 
 console.log("trace.test.js: " + passed + " assertions passed");

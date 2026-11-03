@@ -31,7 +31,9 @@ of the line moves the trace forward; farther than 22 and it has left the
 line. The trace only looks 20 units ahead, so a finger can't cut across the
 middle of an O or jump the crossing of an 8. A press has to land within 16
 units of the green dot, and a stroke counts as finished within 8 units of
-its end. A dot is a stroke of one point, so the press alone finishes it.
+its end. A dot is a stroke of one point, so the press alone finishes it, and
+a press nearer a dot still to come than to the green dot is refused: tapping
+the dot of an i first doesn't count as starting its stem.
 
 Finished letters and numbers, and where the kid is in each, are saved in
 `localStorage` (`tracing.v1`). The language and sound toggles are shared

@@ -134,3 +134,10 @@
   .side { flex: 0 0 clamp(180px, 34vw, 300px); justify-content: center; }
   .caption-things { font-size: 1.1rem; }
 }
+/* The smallest landscape phones fit three tabs between the back link and the toggles. */
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 700px) {
+  .back-link { font-size: 0; padding: 6px 11px; }
+  .back-link::before { content: "←"; font-size: 1rem; }
+  .mode { padding: 8px 10px; font-size: 0.85rem; }
+  .mode > [aria-hidden="true"] { display: none; }
+}
