@@ -6,6 +6,7 @@
    layout, etc.) stays local to each project's own CSS instead of here. */
 
 :root {
+  color-scheme: dark;
   --bg: #0f3d2e;
   --bg-2: #0a2e22;
   --panel: rgba(0, 0, 0, 0.25);
@@ -16,6 +17,14 @@
   --danger: #e0554f;
   --ok: #6ad48a;
   --felt-line: rgba(255, 255, 255, 0.08);
+
+  /* Shared geometry and elevation tokens */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 999px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 * { box-sizing: border-box; }
@@ -27,6 +36,14 @@ html, body {
   color: var(--ink);
   font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
+
+/* Base link color across games: guarantees WCAG AA contrast (10.7:1) on dark green felt */
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  transition: filter 0.15s ease;
+}
+a:hover { filter: brightness(1.15); }
 
 body { padding-inline: 12px; }
 
@@ -45,7 +62,7 @@ h1 {
   margin: 0;
   letter-spacing: 0.04em;
   color: var(--accent);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  text-shadow: var(--shadow-sm);
   text-align: center;
 }
 
@@ -55,7 +72,7 @@ button {
   background: linear-gradient(180deg, #2a6b4c, #1c4a34);
   color: var(--ink);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 9px 16px;
   cursor: pointer;
   transition: transform 0.1s ease, filter 0.15s ease;
@@ -66,6 +83,7 @@ button:active { transform: translateY(1px) scale(0.98); }
 button:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
 
 .btn-primary {
+  background-color: #e0a83a;
   background: linear-gradient(180deg, #ffdb85, #e0a83a);
   color: #2a1c00;
   border-color: rgba(0, 0, 0, 0.2);
@@ -80,7 +98,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
   text-decoration: none;
   font-size: 0.82rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   padding: 5px 12px;
   transition: color 0.15s ease, border-color 0.15s ease;
 }
