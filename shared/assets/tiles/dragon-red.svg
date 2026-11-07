@@ -2,7 +2,7 @@
   <style>
     .st3{fill:#fff}
   </style>
-  <switch>
+  
     <g>
       <filter id="filter3970-5" width="1.2171124" height="1.2150326" x="-.10855621" y="-.10751629" color-interpolation-filters="sRGB">
         <feGaussianBlur id="feGaussianBlur3972-8" stdDeviation=".12800763"/>
