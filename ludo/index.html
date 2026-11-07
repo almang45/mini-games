@@ -56,7 +56,10 @@
   .token {
     position: absolute; width: calc(100% / 15); height: calc(100% / 15); padding: 0; border: 0; background: none;
     display: flex; align-items: center; justify-content: center; cursor: default;
-    transition: left 0.14s ease, top 0.14s ease, transform 0.14s ease; z-index: 2;
+    transition: left 0.14s ease, top 0.14s ease, transform 0.14s ease;
+    will-change: left, top, transform;
+    transform: translateZ(0);
+    z-index: 2;
   }
   .token::after {
     content: ""; position: absolute; inset: -11px;
