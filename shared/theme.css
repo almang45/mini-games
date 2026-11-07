@@ -74,8 +74,15 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-md);
   padding: 9px 16px;
+  min-height: 38px;
   cursor: pointer;
   transition: transform 0.1s ease, filter 0.15s ease;
+}
+
+@media (max-width: 600px) {
+  button, select {
+    min-height: 44px;
+  }
 }
 
 button:hover { filter: brightness(1.15); }
@@ -96,10 +103,14 @@ button:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
 .back-link {
   color: var(--ink-dim);
   text-decoration: none;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-full);
-  padding: 5px 12px;
+  padding: 6px 14px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: color 0.15s ease, border-color 0.15s ease;
 }
 .back-link:hover { color: var(--accent); border-color: var(--accent); }

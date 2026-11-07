@@ -26,6 +26,10 @@
   font-size: 0.8rem;
   text-decoration: none;
   border-bottom: 1px solid transparent;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 6px;
 }
 .guide-link:hover { border-bottom-color: var(--accent); }
 
@@ -492,6 +496,13 @@
   height: auto;
   aspect-ratio: 48 / 64;
   padding: 2px;
+  position: relative;
+}
+.trainer-hand .hand-tile::after {
+  content: "";
+  position: absolute;
+  inset: -10px -2px;
+  pointer-events: auto;
 }
 
 .verdict { margin: 0; min-height: 1.4em; font-size: 0.95rem; text-align: center; }

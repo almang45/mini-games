@@ -40,7 +40,7 @@
   .stat b { display: block; font-size: 1.05rem; color: var(--accent); }
 
   .zoom-controls { display: flex; align-items: center; gap: 6px; }
-  .zoom-controls button { width: 34px; padding: 8px 0; font-size: 1.1rem; line-height: 1; }
+  .zoom-controls button { min-width: 44px; min-height: 44px; padding: 8px 0; font-size: 1.1rem; line-height: 1; }
   #zoomLabel { min-width: 42px; text-align: center; font-size: 0.8rem; color: var(--ink-dim); }
 
   /* #sizer takes the board's scaled size, so auto margins centre it when it
@@ -64,6 +64,7 @@
     justify-content: center;
     transition: transform 0.12s ease, opacity 0.22s ease;
   }
+  .tile::after { content: ""; position: absolute; inset: -4px; pointer-events: auto; }
   .tile:hover { transform: translateY(-2px); }
   .tile-face-img { width: 84%; height: 84%; object-fit: contain; pointer-events: none; }
   .tile.selected { outline: 3px solid var(--accent); outline-offset: 1px; transform: translateY(-3px); z-index: 2; }

@@ -58,6 +58,10 @@
     display: flex; align-items: center; justify-content: center; cursor: default;
     transition: left 0.14s ease, top 0.14s ease, transform 0.14s ease; z-index: 2;
   }
+  .token::after {
+    content: ""; position: absolute; inset: -11px;
+    pointer-events: auto;
+  }
   .token:hover, .token:active { filter: none; }
   .token::before {
     content: ""; width: 74%; height: 74%; border-radius: 50%;

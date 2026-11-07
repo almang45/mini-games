@@ -20,7 +20,15 @@
 [hidden] { display: none !important; }
 
 .tagline { margin: 4px 0 0; color: var(--ink-dim); font-size: 0.9rem; text-align: center; }
-.guide-link { color: var(--accent); font-size: 0.85rem; text-decoration: none; }
+.guide-link {
+  color: var(--accent);
+  font-size: 0.85rem;
+  text-decoration: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 6px;
+}
 .guide-link:hover { text-decoration: underline; }
 
 .btn-danger { background: linear-gradient(180deg, #e0736c, #b3352c); }

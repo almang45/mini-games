@@ -56,11 +56,14 @@
   .card p { margin: 0; color: var(--ink-dim); font-size: 0.88rem; line-height: 1.5; flex: 1; }
   .card-links { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
   .btn {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     text-decoration: none;
     font-size: 0.85rem;
-    border-radius: 8px;
-    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    padding: 8px 16px;
+    min-height: 44px;
     transition: filter 0.15s ease;
   }
   .btn:hover { filter: brightness(1.15); }
