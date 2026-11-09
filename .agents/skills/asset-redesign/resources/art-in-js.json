@@ -1,0 +1,44 @@
+[
+  {
+    "file": "coloring-book/js/pictures.js",
+    "edit": "whole file",
+    "art": "Coloring Book line drawings (regions, clips, detail lines) on a 400x400 page",
+    "keep": "picture ids, SIZE, the PICTURES export shape, region order (later regions sit on top); coloring-book/js/test/book.test.js passes"
+  },
+  {
+    "file": "tracing/js/glyphs.js",
+    "edit": "whole file",
+    "art": "Tracing letters and numbers as stroke paths on a 100x100 box",
+    "keep": "stroke count, order and direction per glyph (they teach handwriting), absolute M/L/C commands only, BOX and RULES; tracing/js/test/trace.test.js passes"
+  },
+  {
+    "file": "memory-cards/js/app.js",
+    "edit": ["BLOB_PATH", "ANIMALS (emoji only)", "DOT_CELLS", "THEMES.*.draw"],
+    "art": "Memory card faces: color blob, animal emoji, number dots",
+    "keep": "face ids, THEMES keys and their faces arrays, names; memory-cards/js/test/memory.test.js passes"
+  },
+  {
+    "file": "card-games/js/ui/bust-seven-ui.js",
+    "edit": ["ACTION_GLYPH", "renderFace"],
+    "art": "Bust Seven card faces",
+    "keep": "classes other CSS relies on, card titles; card-games tests pass"
+  },
+  {
+    "file": "card-games/js/ui/color-clash-ui.js",
+    "edit": ["GLYPH", "renderFace"],
+    "art": "Color Clash card faces",
+    "keep": "classes other CSS relies on, card titles; card-games tests pass"
+  },
+  {
+    "file": "card-games/js/ui/last-fuse-ui.js",
+    "edit": ["GLYPH", "renderFace"],
+    "art": "Last Fuse card faces",
+    "keep": "classes other CSS relies on, card titles; card-games tests pass"
+  },
+  {
+    "file": "card-games/js/ui/property-deal-ui.js",
+    "edit": ["renderFace"],
+    "art": "Property Deal card faces",
+    "keep": "classes other CSS relies on, card titles; card-games tests pass"
+  }
+]
