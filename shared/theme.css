@@ -16,6 +16,14 @@
   --danger: #e0554f;
   --ok: #6ad48a;
   --felt-line: rgba(255, 255, 255, 0.08);
+
+  /* Card styling tokens shared across Solitaire and Card Table games */
+  --card-face: #fdf8ee;
+  --card-border: #8a7452;
+  --card-red: #b3352c;
+  --card-black: #1c1c1c;
+  --card-back-a: #2a6b4c;
+  --card-back-b: #1c4a34;
 }
 
 * { box-sizing: border-box; }
