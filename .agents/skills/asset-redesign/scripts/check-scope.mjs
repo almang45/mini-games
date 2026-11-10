@@ -7,7 +7,7 @@
 // Exit 2: the check itself failed.
 import { existsSync, readFileSync } from "node:fs";
 import {
-  IMAGE_EXT, ToolError, commitsWithoutCoauthor, enterRepoRoot, extOf, git, inlineBlocks, readArtInJs, runMain,
+  IMAGE_EXT, ToolError, uncreditedCommits, enterRepoRoot, extOf, git, inlineBlocks, readArtInJs, runMain,
 } from "./lib.mjs";
 
 const FREE_EXT = new Set([...IMAGE_EXT, ".css", ".md"]);
@@ -20,7 +20,7 @@ runMain("check-scope", () => {
   const base = process.argv[2] ? verifyRef(process.argv[2]) : mergeBase();
   const artInJs = new Map(readArtInJs().map((e) => [e.file, e]));
   const results = changedFiles(base).map((change) => classify(change, base, artInJs));
-  const uncredited = commitsWithoutCoauthor(base);
+  const uncredited = uncreditedCommits(base);
 
   if (!results.length && !uncredited.length) {
     console.log(`No changes against ${base}.`);
@@ -33,7 +33,7 @@ runMain("check-scope", () => {
   }
   if (uncredited.length) {
     console.log("\n| Status | Commit | Why |\n|---|---|---|");
-    for (const c of uncredited) console.log(`| BLOCKED | \`${c.sha}\` ${c.subject} | no Co-Authored-By trailer |`);
+    for (const c of uncredited) console.log(`| BLOCKED | \`${c.sha}\` ${c.subject} | ${c.why} |`);
   }
 
   const blocked = results.filter((r) => r.status === "BLOCKED").length;
@@ -41,7 +41,7 @@ runMain("check-scope", () => {
   console.log("");
   if (review) console.log(`${review} REVIEW file(s): allowed, but say in the PR what changed and that the listed limits hold.`);
   if (uncredited.length) {
-    console.log(`${uncredited.length} commit(s) without a co-author: amend them (git commit --amend, or rebase -x for several) to add "Co-Authored-By: Antigravity <noreply@antigravity.google>", or your own agent's trailer.`);
+    console.log(`${uncredited.length} commit(s) not credited as AGENTS.md asks: amend them (git commit --amend, or rebase -x for several) so each ends with "Assisted-by: Antigravity", or your own agent's trailer.`);
   }
   if (blocked) {
     console.log(`${blocked} BLOCKED file(s): revert them, or keep only asset-path / class-name edits and justify each in the PR.`);
