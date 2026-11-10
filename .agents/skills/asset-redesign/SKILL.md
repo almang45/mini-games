@@ -121,6 +121,11 @@ contains the audit.
 
 ## Phase 6: Deliver
 
+Every commit on the branch ends with the trailer
+`Co-Authored-By: Antigravity <noreply@antigravity.google>` (see `AGENTS.md`;
+`sh .agents/hooks/install.sh` adds a hook that appends it), and
+`check-scope.mjs` blocks a commit that has no `Co-Authored-By` trailer.
+
 In the same branch, set the status of each row you closed in
 `docs/design/audit.md` to `done in #<PR>` (or `partly done` with a note).
 Commit with `feat(design): <game> ...`. Open a pull request against `main`
