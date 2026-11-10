@@ -1,19 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 19.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" [
-	<!ENTITY ns_extend "http://ns.adobe.com/Extensibility/1.0/">
-	<!ENTITY ns_ai "http://ns.adobe.com/AdobeIllustrator/10.0/">
-	<!ENTITY ns_graphs "http://ns.adobe.com/Graphs/1.0/">
-	<!ENTITY ns_vars "http://ns.adobe.com/Variables/1.0/">
-	<!ENTITY ns_imrep "http://ns.adobe.com/ImageReplacement/1.0/">
-	<!ENTITY ns_sfw "http://ns.adobe.com/SaveForWeb/1.0/">
-	<!ENTITY ns_custom "http://ns.adobe.com/GenericCustomNamespace/1.0/">
-	<!ENTITY ns_adobe_xpath "http://ns.adobe.com/XPath/1.0/">
-]>
-<svg version="1.1"
-	 id="svg2985" xmlns:x="&ns_extend;" xmlns:i="&ns_ai;" xmlns:graph="&ns_graphs;" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg"
-	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="-192 293.9 210 255"
-	 style="enable-background:new -192 293.9 210 255;" xml:space="preserve">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 210 255">
+<g transform="translate(192, -293.9)">
 <style type="text/css">
 	.st0{enable-background:new    ;}
 	.st1{fill:#005F00;}
@@ -24,11 +10,8 @@
 	.st6{fill:url(#SVGID_1_);}
 	.st7{fill:#038249;stroke:#038249;stroke-width:2;stroke-miterlimit:10;}
 </style>
-<switch>
-	<foreignObject requiredExtensions="&ns_ai;" x="0" y="0" width="1" height="1">
-		<i:pgfRef  xlink:href="#adobe_illustrator_pgf">
-		</i:pgfRef>
-	</foreignObject>
+
+	
 	<g i:extraneous="self">
 		
 			<filter  width="1.2171124" height="1.2150326" y="-0.10751629" x="-0.10855621" id="filter3970-5" color-interpolation-filters="sRGB">
@@ -142,7 +125,7 @@
 				c1.9-0.5,4.1-0.7,6.8-0.7c2.6,0,4.8,0.2,6.8,0.7c2,0.5,3,1,3,1.6C-138.2,360.5-139.2,361-141.2,361.3z"/>
 		</g>
 	</g>
-</switch>
+
 <i:pgf  id="adobe_illustrator_pgf">
 	<![CDATA[
 	eJzkvWlzK8tyGDifbwT/A8AVO7obOwiSWBoNgAAJEADBHSCWxkKsbAB30QfHk8YaSSFrpJnQ2JZC
@@ -789,4 +772,5 @@ MOar+kZQ7G1/Ngmmi4k54ev+2hZFrvtrgsh1f20MmX/KjjLzyQxHLm1PjTjf+db6zTfGqdVeODcE
 /xdaVlNS
 	]]>
 </i:pgf>
+</g>
 </svg>

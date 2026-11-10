@@ -15,19 +15,56 @@ modified versions) must credit the authors above and remain under a
 compatible share-alike license. This does not extend to the rest of this
 repository's code, which stays under the project's own MIT license.
 
-## Source files → local filenames
+## Per-file origin and licensing
 
-| Local name | Source file |
-|---|---|
-| `man1.svg` .. `man9.svg` | `MJw1-.svg` .. `MJw9-.svg` (characters/萬) |
-| `sou1.svg` .. `sou9.svg` | `MJs1-.svg` .. `MJs9-.svg` (bamboo/索) |
-| `pin1.svg` .. `pin9.svg` | `MJt1-.svg` .. `MJt9-.svg` (circles/筒) |
-| `wind-east/south/west/north.svg` | `MJf1-.svg` .. `MJf4-.svg` |
-| `dragon-red.svg` | `MJd1-.svg` (Chun) |
-| `dragon-green.svg` | `MJd2-.svg` (Hatsu) |
-| `dragon-white.svg` | `MJd3-.svg` (Haku) |
-| `season-spring/summer/autumn/winter.svg` | `MJh1-.svg` .. `MJh4-.svg` |
-| `flower-plum/orchid/chrysanthemum/bamboo.svg` | `MJh5-.svg` .. `MJh8-.svg` |
+All 42 tile files were modified to strip legacy Adobe Illustrator editor
+metadata, comments, DTDs and switch/foreignObject blocks, and normalize the
+viewBox to standard `0 0 210 255`.
+
+| File | Source file | Origin | License | Notes |
+|---|---|---|---|---|
+| `dragon-green.svg` | `MJd2-.svg` (Hatsu) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `dragon-red.svg` | `MJd1-.svg` (Chun) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `dragon-white.svg` | `MJd3-.svg` (Haku) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `flower-bamboo.svg` | `MJh8-.svg` | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `flower-chrysanthemum.svg` | `MJh7-.svg` | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `flower-orchid.svg` | `MJh6-.svg` | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `flower-plum.svg` | `MJh5-.svg` | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `man1.svg` | `MJw1-.svg` (characters/萬) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `man2.svg` | `MJw2-.svg` (characters/萬) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `man3.svg` | `MJw3-.svg` (characters/萬) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `man4.svg` | `MJw4-.svg` (characters/萬) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `man5.svg` | `MJw5-.svg` (characters/萬) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `man6.svg` | `MJw6-.svg` (characters/萬) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `man7.svg` | `MJw7-.svg` (characters/萬) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `man8.svg` | `MJw8-.svg` (characters/萬) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `man9.svg` | `MJw9-.svg` (characters/萬) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `pin1.svg` | `MJt1-.svg` (circles/筒) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `pin2.svg` | `MJt2-.svg` (circles/筒) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `pin3.svg` | `MJt3-.svg` (circles/筒) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `pin4.svg` | `MJt4-.svg` (circles/筒) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `pin5.svg` | `MJt5-.svg` (circles/筒) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `pin6.svg` | `MJt6-.svg` (circles/筒) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `pin7.svg` | `MJt7-.svg` (circles/筒) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `pin8.svg` | `MJt8-.svg` (circles/筒) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `pin9.svg` | `MJt9-.svg` (circles/筒) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `season-autumn.svg` | `MJh3-.svg` | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `season-spring.svg` | `MJh1-.svg` | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `season-summer.svg` | `MJh2-.svg` | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `season-winter.svg` | `MJh4-.svg` | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `sou1.svg` | `MJs1-.svg` (bamboo/索) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `sou2.svg` | `MJs2-.svg` (bamboo/索) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `sou3.svg` | `MJs3-.svg` (bamboo/索) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `sou4.svg` | `MJs4-.svg` (bamboo/索) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `sou5.svg` | `MJs5-.svg` (bamboo/索) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `sou6.svg` | `MJs6-.svg` (bamboo/索) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `sou7.svg` | `MJs7-.svg` (bamboo/索) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `sou8.svg` | `MJs8-.svg` (bamboo/索) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `sou9.svg` | `MJs9-.svg` (bamboo/索) | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `wind-east.svg` | `MJf1-.svg` | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `wind-north.svg` | `MJf4-.svg` | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `wind-south.svg` | `MJf2-.svg` | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
+| `wind-west.svg` | `MJf3-.svg` | modified | CC BY-SA 4.0 | Metadata stripped, normalized viewBox `0 0 210 255` |
 
 Fetched via Wikimedia's `Special:FilePath` redirector, e.g.
 `https://commons.wikimedia.org/wiki/Special:FilePath/MJt1-.svg`.

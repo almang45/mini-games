@@ -1,19 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 19.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" [
-	<!ENTITY ns_extend "http://ns.adobe.com/Extensibility/1.0/">
-	<!ENTITY ns_ai "http://ns.adobe.com/AdobeIllustrator/10.0/">
-	<!ENTITY ns_graphs "http://ns.adobe.com/Graphs/1.0/">
-	<!ENTITY ns_vars "http://ns.adobe.com/Variables/1.0/">
-	<!ENTITY ns_imrep "http://ns.adobe.com/ImageReplacement/1.0/">
-	<!ENTITY ns_sfw "http://ns.adobe.com/SaveForWeb/1.0/">
-	<!ENTITY ns_custom "http://ns.adobe.com/GenericCustomNamespace/1.0/">
-	<!ENTITY ns_adobe_xpath "http://ns.adobe.com/XPath/1.0/">
-]>
-<svg version="1.1"
-	 id="svg2985" xmlns:x="&ns_extend;" xmlns:i="&ns_ai;" xmlns:graph="&ns_graphs;" xmlns:svg="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"
-	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="-192 293.9 210 255"
-	 style="enable-background:new -192 293.9 210 255;" xml:space="preserve">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 210 255">
+<g transform="translate(192, -293.9)">
 <style type="text/css">
 	.st0{enable-background:new    ;}
 	.st1{fill:#005F00;}
@@ -26,11 +12,8 @@
 	.st8{fill:#BF3718;}
 	.st9{fill:#2A3B92;}
 </style>
-<switch>
-	<foreignObject requiredExtensions="&ns_ai;" x="0" y="0" width="1" height="1">
-		<i:pgfRef  xlink:href="#adobe_illustrator_pgf">
-		</i:pgfRef>
-	</foreignObject>
+
+	
 	<g i:extraneous="self">
 		
 			<filter  height="1.2150326" width="1.2171124" id="filter3970-5" x="-0.10855621" y="-0.10751629" color-interpolation-filters="sRGB">
@@ -138,7 +121,7 @@
 				c2.4,2.5,5.5,4.4,9.2,5.8c-7,1.1-14.1,1.2-21.4,0.3c-2.6-0.4-4-1.9-4-4.5C-114,363.3-111.9,361.5-107.8,361.5z"/>
 		</g>
 	</g>
-</switch>
+
 <i:pgf  id="adobe_illustrator_pgf">
 	<![CDATA[
 	eJzkvWlzY0t2IObPL4L/AeAKEtvdF7K4YOW+L8UdBQIgiSIIgFjqvdKHiZY8sqTQyNI45FkUCo8n
@@ -755,4 +738,5 @@ hHPJt9QfibE7fghNWI+OwApAcpdVXu7me9d7i2e+8x0o3/jCp7/5u/Qvv/7tv3778X9++uWv/1q/
 u//mN/zR+oNf/erXf/+3f/kX/wufmNBc
 	]]>
 </i:pgf>
+</g>
 </svg>
