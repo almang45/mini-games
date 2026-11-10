@@ -89,6 +89,7 @@
 }
 
 .face-blob { width: 78%; flex: 0 1 auto; min-height: 0; }
+.face-animal { width: 74%; flex: 0 1 auto; min-height: 0; }
 .face-emoji { font-size: calc(var(--card-w) * 0.5); line-height: 1; }
 .face-digit {
   font-size: calc(var(--card-w) * 0.62);
