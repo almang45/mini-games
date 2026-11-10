@@ -51,16 +51,16 @@
   .p1 { --c: #d9483f; }
   .p2 { --c: #2f7fd1; }
   .swatch { background: var(--c); }
-  .box { fill: var(--c); opacity: 0.28; }
-  .box-mark { fill: var(--c); font-weight: 700; text-anchor: middle; dominant-baseline: central; font-family: inherit; }
-  .seg .ink { stroke: rgba(0, 0, 0, 0.08); stroke-width: 7; stroke-linecap: round; }
+  .box { fill: var(--c); opacity: 0.35; transition: opacity 0.2s ease; }
+  .box-mark { fill: var(--c); font-weight: 800; text-anchor: middle; dominant-baseline: central; font-family: inherit; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4)); }
+  .seg .ink { stroke: rgba(0, 0, 0, 0.12); stroke-width: 7; stroke-linecap: round; transition: stroke 0.15s ease, stroke-width 0.15s ease; }
   .seg .hit { fill: transparent; }
   .seg.free.live { cursor: pointer; }
-  .seg.free.live:hover .ink, .seg.free.live:focus-visible .ink { stroke: rgba(0, 0, 0, 0.3); }
+  .seg.free.live:hover .ink, .seg.free.live:focus-visible .ink { stroke: rgba(255, 209, 102, 0.65); stroke-width: 9; }
   .seg:focus { outline: none; }
-  .seg.drawn .ink { stroke: var(--c); stroke-width: 8; }
-  .seg.last .ink { stroke-width: 11; }
-  .dot { fill: #2a2a2a; }
+  .seg.drawn .ink { stroke: var(--c); stroke-width: 8; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35)); }
+  .seg.last .ink { stroke-width: 10; filter: drop-shadow(0 0 3px var(--accent)); }
+  .dot { fill: #222; stroke: rgba(255, 255, 255, 0.2); stroke-width: 1.5; }
 
   .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
   .overlay[hidden] { display: none; }

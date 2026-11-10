@@ -44,8 +44,8 @@
   }
   .sq { position: absolute; width: calc(100% / 15); height: calc(100% / 15); box-shadow: inset 0 0 0 0.5px var(--cell-line); display: flex; align-items: center; justify-content: center; }
   .sq.tint { background: var(--c); }
-  .sq.star::after { content: "★"; color: rgba(0, 0, 0, 0.35); font-size: clamp(9px, 2.6vw, 16px); }
-  .sq.tint.star::after { color: rgba(255, 255, 255, 0.85); }
+  .sq.star::after { content: "★"; color: #8a6a1a; text-shadow: 0 0 1px rgba(0, 0, 0, 0.2); font-size: clamp(10px, 2.8vw, 17px); }
+  .sq.tint.star::after { color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
   .yard { position: absolute; width: calc(100% * 6 / 15); height: calc(100% * 6 / 15); background: var(--c); }
   .yard::before { content: ""; position: absolute; inset: calc(100% / 6); background: var(--cell); border-radius: 8px; }
   .spot { position: absolute; width: calc(100% / 15); height: calc(100% / 15); border-radius: 50%; background: var(--c); opacity: 0.35; }
