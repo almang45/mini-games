@@ -235,9 +235,20 @@
 
 .seat-hand {
   display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
+  flex-wrap: nowrap;
+  gap: 2px;
   min-height: 40px;
+  align-items: center;
+}
+
+.seat.pos-bottom .seat-hand {
+  justify-content: center;
+}
+
+.seat.pos-bottom .hand-tile {
+  width: clamp(20px, calc((100vw - 80px) / 15.5), 32px);
+  height: auto;
+  aspect-ratio: 26 / 36;
 }
 
 .hand-tile, .tile-back {
@@ -446,16 +457,20 @@
 
 @media (max-width: 620px) {
   .mahjong-table {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
     grid-template-areas:
-      "top"
-      "left"
-      "right"
-      "center"
-      "bottom";
+      ". top ."
+      "left center right"
+      "bottom bottom bottom";
+    gap: 4px;
+    padding: 6px;
   }
-  .hand-tile, .tile-back { width: 22px; height: 30px; font-size: 1rem; }
-  .tile-mini, .discard-tile { width: 17px; height: 22px; font-size: 0.78rem; }
+  .seat { padding: 4px; }
+  .seat-header { font-size: 0.68rem; gap: 3px; }
+  .hand-tile, .tile-back { width: clamp(18px, calc((100vw - 48px) / 15), 24px); height: auto; aspect-ratio: 26 / 36; font-size: 0.9rem; }
+  .tile-mini, .discard-tile { width: 14px; height: 18px; font-size: 0.7rem; }
+  .seat.pos-bottom { grid-column: 1 / -1; }
+  .seat.pos-bottom .seat-hand { justify-content: center; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 }
 
 @media (max-width: 400px) {
