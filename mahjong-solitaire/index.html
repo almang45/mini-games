@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mahjong Solitaire</title>
-<link rel="icon" href="favicon.png">
+<link rel="icon" href="favicon.svg">
 <link rel="manifest" href="../manifest.webmanifest">
 <script src="../shared/register-sw.js" defer></script>
 <style>
@@ -22,6 +22,7 @@
     --blocked-overlay: rgba(0, 0, 0, 0.45);
     --danger: #e0554f;
     --ok: #6ad48a;
+    --felt-line: rgba(255, 255, 255, 0.08);
   }
 
   * { box-sizing: border-box; }
@@ -282,6 +283,25 @@
     font-size: 0.72rem;
     text-align: center;
     max-width: 500px;
+  }
+
+  @media (max-width: 600px) {
+    /* Inset ring instead of padding/border: fitBoard() sizes the wrap from clientWidth and sets its height. */
+    .board-wrap {
+      box-shadow: inset 0 0 0 1px var(--felt-line);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .tile {
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 2px 4px rgba(0, 0, 0, 0.45);
+    }
+    .tile-face-img {
+      width: 90%;
+      height: 90%;
+    }
+    .tile.free {
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 0 0 1px rgba(255, 209, 102, 0.35), 0 3px 6px rgba(0, 0, 0, 0.45);
+    }
   }
 
   @media (max-width: 480px) {

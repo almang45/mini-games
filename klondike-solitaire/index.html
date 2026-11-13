@@ -7,6 +7,7 @@
 <link rel="icon" href="favicon.svg">
 <link rel="manifest" href="../manifest.webmanifest">
 <script src="../shared/register-sw.js" defer></script>
+<link rel="stylesheet" href="../shared/theme.css">
 <style>
   :root {
     --bg: #0f3d2e;
@@ -17,12 +18,6 @@
     --accent: #ffd166;
     --ok: #6ad48a;
     --danger: #e0554f;
-    --card-face: #fdf8ee;
-    --card-back: #2a6b4c;
-    --card-back-2: #1c4a34;
-    --card-border: #8a7452;
-    --card-red: #b3352c;
-    --card-black: #1c1c1c;
     --cw: clamp(42px, 8.6vw, 78px);
     --ch: calc(var(--cw) * 1.42);
     --zoom: 1;
@@ -30,8 +25,10 @@
 
   * { box-sizing: border-box; }
 
+  /* Card tokens come from shared/theme.css; .app already pads the page, so drop theme.css's body inset. */
   html, body {
     margin: 0;
+    padding: 0;
     height: 100%;
     background: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-2) 70%);
     color: var(--ink);
@@ -200,7 +197,7 @@
   }
 
   .card.face-down {
-    background: repeating-linear-gradient(135deg, var(--card-back), var(--card-back) 6px, var(--card-back-2) 6px, var(--card-back-2) 12px);
+    background: repeating-linear-gradient(135deg, var(--card-back-a), var(--card-back-a) 6px, var(--card-back-b) 6px, var(--card-back-b) 12px);
     border-color: rgba(0,0,0,0.4);
   }
 

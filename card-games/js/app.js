@@ -46,7 +46,7 @@
     DOM.clear(grid);
     GAME_ORDER.forEach((key) => {
       const g = GAMES[key];
-      const card = DOM.el("button", "game-card" + (key === selectedGameKey ? " is-selected" : ""), [
+      const card = DOM.el("button", "game-card game-" + key + (key === selectedGameKey ? " is-selected" : ""), [
         DOM.el("h3", null, g.label),
         DOM.el("p", null, g.tagline),
         DOM.el("div", "game-meta", g.seatMin === g.seatMax ? "Exactly " + g.seatMax + " players" : g.seatMin + "-" + g.seatMax + " players"),

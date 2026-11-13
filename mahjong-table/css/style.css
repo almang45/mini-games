@@ -110,9 +110,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr);
   grid-template-areas:
-    ".    top   ."
-    "left center right"
-    ".    bottom .";
+    ".      top    ."
+    "left   center right"
+    "bottom bottom bottom";
   gap: 8px;
   background: radial-gradient(ellipse at center, #1a5c40 0%, #0d3d29 100%);
   border: 1px solid var(--felt-line);
@@ -238,6 +238,20 @@
   flex-wrap: wrap;
   gap: 3px;
   min-height: 40px;
+  align-items: center;
+}
+
+/* The bottom seat spans the table width; tiles size to fit 14 plus the drawn-tile gap in one row,
+   and wrap rather than clip or scroll on screens too narrow even for the minimum size. */
+.seat.pos-bottom .seat-hand {
+  justify-content: center;
+  gap: 2px;
+}
+
+.seat.pos-bottom .hand-tile {
+  width: clamp(16px, calc((min(100vw, 900px) - 90px) / 14), 32px);
+  height: auto;
+  aspect-ratio: 26 / 36;
 }
 
 .hand-tile, .tile-back {
@@ -446,16 +460,21 @@
 
 @media (max-width: 620px) {
   .mahjong-table {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
     grid-template-areas:
-      "top"
-      "left"
-      "right"
-      "center"
-      "bottom";
+      ". top ."
+      "left center right"
+      "bottom bottom bottom";
+    gap: 4px;
+    padding: 6px;
   }
-  .hand-tile, .tile-back { width: 22px; height: 30px; font-size: 1rem; }
-  .tile-mini, .discard-tile { width: 17px; height: 22px; font-size: 0.78rem; }
+  .seat { padding: 4px; }
+  .seat-header { font-size: 0.68rem; gap: 3px; }
+  .hand-tile { font-size: 0.9rem; }
+  /* Opponent hands wrap inside ~110px columns; small backs keep them to three rows. */
+  .tile-back { width: 14px; height: auto; aspect-ratio: 26 / 36; font-size: 0.6rem; }
+  .seat-hand { min-height: 0; gap: 2px; }
+  .tile-mini, .discard-tile { width: 14px; height: 18px; font-size: 0.7rem; }
 }
 
 @media (max-width: 400px) {
