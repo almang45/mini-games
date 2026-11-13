@@ -15,8 +15,8 @@
     future: "Future", nope: "Nope", tabby: "Tabby", calico: "Calico", siamese: "Siamese", sphynx: "Sphynx", ginger: "Ginger",
   };
   const GLYPH = {
-    bomb: "💣", defuse: "✂", attack: "⚔", skip: "⏭", favor: "🤲", shuffle: "🔀",
-    future: "👁", nope: "✋", tabby: "🐯", calico: "🐾", siamese: "🐱", sphynx: "𓃠", ginger: "🦊",
+    bomb: "💣︎", defuse: "✂", attack: "⚔", skip: "⏭︎", favor: "🤲︎", shuffle: "⇄",
+    future: "👁︎", nope: "✋︎", tabby: "🐈︎", calico: "🐈︎", siamese: "🐈︎", sphynx: "🐈︎", ginger: "🐈︎",
   };
   const ORDER = ["defuse", "nope", "attack", "skip", "future", "shuffle", "favor"].concat(LF.CATS);
 

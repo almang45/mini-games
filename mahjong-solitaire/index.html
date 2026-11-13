@@ -22,6 +22,7 @@
     --blocked-overlay: rgba(0, 0, 0, 0.45);
     --danger: #e0554f;
     --ok: #6ad48a;
+    --felt-line: rgba(255, 255, 255, 0.08);
   }
 
   * { box-sizing: border-box; }
@@ -285,9 +286,9 @@
   }
 
   @media (max-width: 600px) {
+    /* Inset ring instead of padding/border: fitBoard() sizes the wrap from clientWidth and sets its height. */
     .board-wrap {
-      padding: 6px;
-      border: 1px solid var(--felt-line);
+      box-shadow: inset 0 0 0 1px var(--felt-line);
       border-radius: 12px;
       background: rgba(0, 0, 0, 0.2);
     }

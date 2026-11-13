@@ -56,10 +56,11 @@
   .seg .ink { stroke: rgba(0, 0, 0, 0.12); stroke-width: 7; stroke-linecap: round; transition: stroke 0.15s ease, stroke-width 0.15s ease; }
   .seg .hit { fill: transparent; }
   .seg.free.live { cursor: pointer; }
-  .seg.free.live:hover .ink, .seg.free.live:focus-visible .ink { stroke: rgba(255, 209, 102, 0.65); stroke-width: 9; }
+  /* Dark preview, not gold: gold on the cream board falls below usable contrast. */
+  .seg.free.live:hover .ink, .seg.free.live:focus-visible .ink { stroke: rgba(0, 0, 0, 0.38); stroke-width: 9; }
   .seg:focus { outline: none; }
   .seg.drawn .ink { stroke: var(--c); stroke-width: 8; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35)); }
-  .seg.last .ink { stroke-width: 10; filter: drop-shadow(0 0 3px var(--accent)); }
+  .seg.last .ink { stroke-width: 11; filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.55)); }
   .dot { fill: #222; stroke: rgba(255, 255, 255, 0.2); stroke-width: 1.5; }
 
   .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }

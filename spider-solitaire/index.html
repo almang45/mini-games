@@ -9,13 +9,6 @@
 <script src="../shared/register-sw.js" defer></script>
 <link rel="stylesheet" href="../shared/theme.css">
 <style>
-  :root {
-    --card-face: #fdf8ee;
-    --card-border: #8a7452;
-    --card-red: #b3352c;
-    --card-black: #1c1c1c;
-  }
-
   header {
     display: flex;
     flex-wrap: wrap;
@@ -115,7 +108,8 @@
     text-align: left;
     transition: none;
   }
-  .card.down { background: repeating-linear-gradient(135deg, var(--card-back-a) 0 5px, var(--card-back-b) 5px 10px); border-color: rgba(255, 255, 255, 0.25); }
+  /* Blue backs on purpose: green would vanish into the green felt. */
+  .card.down { background: repeating-linear-gradient(135deg, #2152a8 0 5px, #2f66c9 5px 10px); border-color: rgba(255, 255, 255, 0.55); }
   .card.red { color: var(--card-red); }
   .card .corner {
     position: absolute;
