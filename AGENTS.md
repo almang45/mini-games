@@ -14,6 +14,15 @@ identical across games. Read `README.md` before changing anything.
   They must pass before every commit.
 - Never commit to or push `main`. Work on a branch, one pull request per change.
 - Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`).
+- **Every commit Antigravity makes ends with the trailer
+  `Assisted-by: Antigravity`**, including the amends, fixups and merge commits
+  it creates. Never credit Antigravity with `Co-Authored-By`; another agent
+  keeps its own trailer. Write it in the message yourself. As a backstop,
+  `.agents/hooks/commit-msg` appends it (and drops a `Co-Authored-By:
+  Antigravity` line) when the commit comes from Antigravity (install once per
+  clone with `sh .agents/hooks/install.sh`), and `check-scope.mjs` blocks a
+  branch with a commit that has neither an `Assisted-by` nor a
+  `Co-Authored-By` trailer, or that credits Antigravity as a co-author.
 - Do not commit generated scratch files, mockups, screenshots, `.DS_Store` or
   local config.
 

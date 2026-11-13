@@ -70,6 +70,26 @@ export function readArtInJs() {
   }
 }
 
+// Commits after base whose agent is not credited the way AGENTS.md asks: Antigravity as
+// `Assisted-by: Antigravity`, never as a co-author; any other agent by its own trailer.
+export function uncreditedCommits(base) {
+  return git(["log", "--no-merges", "--format=%h%x1f%s%x1f%(trailers:unfold)%x1e", `${base}..HEAD`])
+    .split("\x1e")
+    .map((rec) => rec.replace(/^\n/, ""))
+    .filter(Boolean)
+    .map((rec) => {
+      const [sha, subject, body = ""] = rec.split("\x1f");
+      if (/^co-authored-by:\s*antigravity\b/im.test(body)) {
+        return { sha, subject, why: "credits Antigravity with Co-Authored-By; use `Assisted-by: Antigravity`" };
+      }
+      if (!/^(assisted-by|co-authored-by):\s*\S/im.test(body)) {
+        return { sha, subject, why: "no `Assisted-by: Antigravity` trailer" };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
 export function runMain(name, main) {
   try {
     const code = main();
