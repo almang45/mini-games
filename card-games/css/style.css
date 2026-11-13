@@ -50,7 +50,9 @@
 .game-card p { margin: 0; color: var(--ink-dim); font-size: 0.82rem; line-height: 1.4; }
 .game-card .game-meta { font-size: 0.72rem; color: var(--ink-dim); opacity: 0.8; }
 
-/* Mini card badges on lobby game cards, keyed by game so GAME_ORDER changes never mislabel them. */
+/* Mini card badges on lobby game cards, keyed by game so GAME_ORDER changes never mislabel them.
+   Glyphs stay in the BMP text ranges (no emoji fonts); the `/ ""` alt text keeps them out of the
+   button's accessible name, and the plain `content` before it is the fallback for older engines. */
 .game-card::after {
   content: "";
   position: absolute;
@@ -68,22 +70,22 @@
   font-size: 1rem;
   line-height: 1;
 }
-.game-card.game-hearts::after { content: "♥"; color: var(--card-red); }
-.game-card.game-spades::after { content: "♠"; color: var(--card-black); }
-.game-card.game-oh-hell::after { content: "♣"; color: var(--card-black); }
-.game-card.game-euchre::after { content: "♦"; color: var(--card-red); }
-.game-card.game-crazy-eights::after { content: "8"; font-weight: 800; color: #2a6b4c; }
-.game-card.game-color-clash::after { content: "◆"; color: #c8322b; }
-.game-card.game-president::after { content: "👑"; font-size: 0.85rem; }
-.game-card.game-big-two::after { content: "2"; font-weight: 800; color: var(--card-black); }
-.game-card.game-gin-rummy::after { content: "🂠"; font-size: 0.85rem; color: #3a5c40; }
-.game-card.game-cribbage::after { content: "⚄"; font-size: 1.1rem; color: #8a7452; }
-.game-card.game-chinese-poker::after { content: "A"; font-weight: 800; color: var(--card-black); }
-.game-card.game-texas-holdem::after { content: "♠"; color: #b3352c; }
-.game-card.game-blackjack::after { content: "21"; font-size: 0.72rem; font-weight: 800; color: var(--card-black); }
-.game-card.game-bust-seven::after { content: "7"; font-weight: 800; color: #e0a83a; }
-.game-card.game-property-deal::after { content: "$"; font-weight: 800; color: #2f8f46; }
-.game-card.game-last-fuse::after { content: "💣"; font-size: 0.85rem; }
+.game-card.game-hearts::after { content: "\2665\FE0E"; content: "\2665\FE0E" / ""; color: var(--card-red); }
+.game-card.game-spades::after { content: "\2660\FE0E"; content: "\2660\FE0E" / ""; color: var(--card-black); }
+.game-card.game-oh-hell::after { content: "\2663\FE0E"; content: "\2663\FE0E" / ""; color: var(--card-black); }
+.game-card.game-euchre::after { content: "\2666\FE0E"; content: "\2666\FE0E" / ""; color: var(--card-red); }
+.game-card.game-crazy-eights::after { content: "8"; content: "8" / ""; font-weight: 800; color: var(--card-back-a); }
+.game-card.game-color-clash::after { content: "\25C6"; content: "\25C6" / ""; color: #c8322b; }
+.game-card.game-president::after { content: "\265B\FE0E"; content: "\265B\FE0E" / ""; color: var(--card-black); }
+.game-card.game-big-two::after { content: "2"; content: "2" / ""; font-weight: 800; color: var(--card-black); }
+.game-card.game-gin-rummy::after { content: "\2261"; content: "\2261" / ""; font-weight: 800; color: var(--card-back-b); }
+.game-card.game-cribbage::after { content: "15"; content: "15" / ""; font-size: 0.72rem; font-weight: 800; color: var(--card-border); }
+.game-card.game-chinese-poker::after { content: "A"; content: "A" / ""; font-weight: 800; color: var(--card-black); }
+.game-card.game-texas-holdem::after { content: "\2660\FE0E"; content: "\2660\FE0E" / ""; color: var(--card-red); }
+.game-card.game-blackjack::after { content: "21"; content: "21" / ""; font-size: 0.72rem; font-weight: 800; color: var(--card-black); }
+.game-card.game-bust-seven::after { content: "7"; content: "7" / ""; font-weight: 800; color: #e0a83a; }
+.game-card.game-property-deal::after { content: "$"; content: "$" / ""; font-weight: 800; color: #2f8f46; }
+.game-card.game-last-fuse::after { content: "\2739"; content: "\2739" / ""; color: var(--card-red); }
 
 .start-panel {
   width: 100%;
@@ -176,11 +178,10 @@
 
 .seat-hand { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; min-height: 70px; }
 .seat.pos-left .seat-hand, .seat.pos-right .seat-hand { flex-direction: column; }
-/* Hidden side hands stack as a fan; each overlap leaves a strip visible so the hand size still reads.
-   Open hands (Bust Seven) keep the gap: their values must stay readable. */
+/* Hidden side hands are always card-small (only the bottom viewer seat is revealed) and stack as a
+   fan with a strip of each card showing, so the hand size still reads. Open hands (Bust Seven) keep
+   the gap: their values must stay readable. */
 .seat.pos-left .seat-hand:not(.is-open), .seat.pos-right .seat-hand:not(.is-open) { flex-wrap: nowrap; gap: 0; }
-.seat.pos-left .seat-hand:not(.is-open) .card + .card,
-.seat.pos-right .seat-hand:not(.is-open) .card + .card { margin-top: -50px; }
 .seat.pos-left .seat-hand:not(.is-open) .card-small + .card-small,
 .seat.pos-right .seat-hand:not(.is-open) .card-small + .card-small { margin-top: -33px; }
 
@@ -454,9 +455,6 @@ button.pd-pick.is-picked { background: var(--accent); color: #2a1c00; font-weigh
   .seat.pos-left .seat-header, .seat.pos-right .seat-header { flex-wrap: wrap; justify-content: center; padding: 4px 6px; border-radius: 12px; text-align: center; }
   .seat.pos-left .seat-score, .seat.pos-right .seat-score { margin-left: 0; }
   .card { width: 36px; height: 50px; }
-  /* Full cards shrink to 50px here; .card-small keeps its 45px height and overlap. */
-  .seat.pos-left .seat-hand:not(.is-open) .card + .card:not(.card-small),
-  .seat.pos-right .seat-hand:not(.is-open) .card + .card:not(.card-small) { margin-top: -38px; }
   /* The felt is 178px wide inside; five 36px board cards would wrap. */
   .board-row { flex-wrap: nowrap; gap: 2px; }
   .board-row .card { width: 32px; height: 45px; }

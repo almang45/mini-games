@@ -1,24 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect width="100" height="100" rx="22" fill="#0f3d2e"/>
-  <!-- 2-bend connecting path (gold glow) -->
   <path d="M31 46 V30 H69 V54" fill="none" stroke="#ffd166" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
   <path d="M31 46 V30 H69 V54" fill="none" stroke="#ffd166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Corner glow nodes -->
   <circle cx="31" cy="30" r="2.5" fill="#fff"/>
   <circle cx="69" cy="30" r="2.5" fill="#fff"/>
-  <!-- Bottom-left matching tile -->
   <g>
     <rect x="19" y="49" width="26" height="34" rx="4.5" fill="#145237"/>
     <rect x="18" y="46" width="26" height="34" rx="4.5" fill="#fdf8ee" stroke="#8a7452" stroke-width="1.5"/>
-    <!-- Pin 1 motif: concentric blue/red flower circle -->
     <circle cx="31" cy="63" r="7.5" fill="none" stroke="#2564b3" stroke-width="2"/>
     <circle cx="31" cy="63" r="3.5" fill="#b3352c"/>
   </g>
-  <!-- Top-right matching tile -->
   <g>
     <rect x="57" y="21" width="26" height="34" rx="4.5" fill="#145237"/>
     <rect x="56" y="18" width="26" height="34" rx="4.5" fill="#fdf8ee" stroke="#8a7452" stroke-width="1.5"/>
-    <!-- Matching Pin 1 motif -->
     <circle cx="69" cy="35" r="7.5" fill="none" stroke="#2564b3" stroke-width="2"/>
     <circle cx="69" cy="35" r="3.5" fill="#b3352c"/>
   </g>

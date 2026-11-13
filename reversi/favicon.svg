@@ -12,20 +12,15 @@
     </radialGradient>
   </defs>
   <rect width="100" height="100" rx="22" fill="#0f3d2e"/>
-  <!-- 2x2 Reversi Board Frame -->
   <rect x="15" y="15" width="70" height="70" rx="10" fill="#1b6343" stroke="#0e3a27" stroke-width="3"/>
   <line x1="50" y1="15" x2="50" y2="85" stroke="#0e3a27" stroke-width="2"/>
   <line x1="15" y1="50" x2="85" y2="50" stroke="#0e3a27" stroke-width="2"/>
-  <!-- Top-left: White disc -->
   <circle cx="32.5" cy="34" r="12" fill="rgba(0,0,0,0.35)"/>
   <circle cx="32.5" cy="32.5" r="12" fill="url(#discWhite)" stroke="#baa" stroke-width="1"/>
-  <!-- Top-right: Black disc -->
   <circle cx="67.5" cy="34" r="12" fill="rgba(0,0,0,0.35)"/>
   <circle cx="67.5" cy="32.5" r="12" fill="url(#discBlack)" stroke="#222" stroke-width="1"/>
-  <!-- Bottom-left: Black disc -->
   <circle cx="32.5" cy="69" r="12" fill="rgba(0,0,0,0.35)"/>
   <circle cx="32.5" cy="67.5" r="12" fill="url(#discBlack)" stroke="#222" stroke-width="1"/>
-  <!-- Bottom-right: White disc -->
   <circle cx="67.5" cy="69" r="12" fill="rgba(0,0,0,0.35)"/>
   <circle cx="67.5" cy="67.5" r="12" fill="url(#discWhite)" stroke="#baa" stroke-width="1"/>
 </svg>
