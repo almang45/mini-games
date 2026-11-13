@@ -5,7 +5,7 @@ Date: 2026-11-09 · Commit: `fc8e725` · Auditor: Antigravity (asset-redesign sk
 ## Summary
 
 - Assets reviewed: 98 (icons 25, tiles 42, CSS-drawn visuals 24, art in JS 7, illustrations 0)
-- P1: 10 · P2: 12 · P3: 4
+- P1: 10 · P2: 12 · P3: 5
 - Cross-game themes: Six games use heavy raster PNGs for favicons instead of hand-written SVG; four SVGs rely on live `<text>` nodes that render unpredictably across OSs; all 42 mahjong tile SVGs carry legacy Adobe Illustrator DTDs and editor metadata; card back designs and color variables are duplicated inconsistently across solitaire and card table titles; card table side seats stretch vertically and push the player hand offscreen on phones and 800px viewports; several games rely on raw system emojis rather than bespoke vector assets; and Color Clash directly imitates commercial Uno trade dress.
 
 ## Findings
@@ -41,6 +41,7 @@ Status: `open` · `done in #<PR>` · `partly done in #<PR>: <what is left>` · `
 | 24 | `hub` | `index.html` | Hub cards apply `border-radius: 10px` to `.card-icon`, producing double-curved borders on icons that already carry internal `rx="22"` rounded rects. | `index.html:53`; `hub_desktop.png` | Craft | P3 | Harmonize icon corner radii so SVGs fill their bounding boxes cleanly without redundant clipping. | CSS | done in #13 |
 | 25 | `word-grid` | `word-grid/index.html` | Bonus grid cells (Triple Word, Double Word, Triple Letter, Double Letter) rely strictly on color (red, pink, dark blue, light blue) without text abbreviations or icons. | `board_word-grid_desktop.png`; WCAG 1.4.1 | Accessibility | P2 | Add subtle text abbreviations or patterns (e.g. "3W", "2W", "3L", "2L") inside bonus squares to avoid relying on color alone. | CSS | done in #13 |
 | 26 | `dots-boxes` | `dots-boxes/index.html` | Claimed boxes and drawn lines have flat visuals with narrow mobile hit targets and minimal tactile game-board feedback. | `board_dots-boxes_phone.png` | Craft | P3 | Add subtle bevel/shadow styling and expand touch target hit areas in CSS for tactile board feel. | CSS | partly done in #13: shadows on lines, boxes and dots; hit areas unchanged (their geometry is set in the inline script, out of scope) |
+| 27 | `coloring-book` | `coloring-book/js/pictures.js` | Line drawings are plain and stiff: mostly bare circles, ellipses and simple paths, few details, and flat compositions. | line drawings plain and stiff | Craft | P3 | Redraw all fifteen pictures with charming rounded shapes, expressive faces, scenery details, and kid-friendly tap regions. | art in JS | done in #14 |
 
 ## Screens
 
@@ -86,7 +87,7 @@ Status: `open` · `done in #<PR>` · `partly done in #<PR>: <what is left>` · `
 | `color-fusion` | `Free play` | ok | ok | Paint bowl and pigment tubes clean and responsive |
 | `color-fusion` | `Challenges` | ok | ok | Target color swatch and mixing stage clear |
 | `color-fusion` | `Color book` | ok | ok | Color swatch gallery and recipe steps clear |
-| `coloring-book` | `index.html` | ok | ok | Line drawings, palette crayons and easel fit neatly |
+| `coloring-book` | `index.html` | finding #27 | finding #27 | Line drawings plain and stiff; redrawn with richer charming details |
 | `kolintang` | `Free play` | ok | ok | Wooden bar resonator and pitch notes clear |
 | `kolintang` | `Songs` | ok | ok | Song selector tabs and note prompts clear |
 | `kolintang` | `Copy me` | ok | ok | Simon-style listening prompt clear |

@@ -13,7 +13,7 @@ confetti and a "Gambar selesai!" ("All colored in!") say well done.
 
 ## Pictures
 
-Fifteen line drawings, each with 10 to 21 parts to fill: animals (a fish, a
+Fifteen line drawings, each with 14 to 26 parts to fill: animals (a fish, a
 butterfly, a dinosaur, a cat, a turtle and an owl), things that go (a car, a
 rocket, a train and a sailboat), a house, a flower, an ice cream, a ringed
 planet with its moon, and a rainbow with seven bands for *mejikuhibiniu*.
