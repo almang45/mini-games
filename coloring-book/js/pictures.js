@@ -70,6 +70,24 @@
     return d + "M" + n(cx - 0.5) + " " + n(cy) + " L" + n(cx + 0.5) + " " + n(cy);
   }
 
+  const ring = (cx, cy, r) => "M" + n(cx - r) + " " + n(cy) + " A" + r + " " + r + " 0 1 1 " + n(cx + r) + " " + n(cy) +
+    " A" + r + " " + r + " 0 1 1 " + n(cx - r) + " " + n(cy);
+
+  // A wheel hub: a rim ring and a solid centre nut, instead of a crosshair.
+  const hubcap = (cx, cy) => ring(cx, cy, 16) + " " + dot(cx, cy, 6);
+
+  // The hole of a ring buoy and the four band edges, set diagonally so it never reads as a crosshair.
+  function lifebuoyMarks(cx, cy, r) {
+    const hole = n(r * 0.42);
+    let d = ring(cx, cy, hole);
+    for (const deg of [45, 135, 225, 315]) {
+      const a = (deg * Math.PI) / 180;
+      d += " M" + n(cx + (hole + 2) * Math.cos(a)) + " " + n(cy + (hole + 2) * Math.sin(a)) +
+        " L" + n(cx + (r - 2) * Math.cos(a)) + " " + n(cy + (r - 2) * Math.sin(a));
+    }
+    return d;
+  }
+
   const sky = { id: "bg", tag: "rect", attrs: { x: 0, y: 0, width: SIZE, height: SIZE } };
   const ground = (y, id) => ({ id: id || "ground", tag: "path", attrs: { d: "M0 " + y + " Q200 " + (y - 22) + " 400 " + y + " V400 H0 Z" } });
 
@@ -79,32 +97,33 @@
       name: { id: "Ikan", en: "Fish" },
       regions: [
         sky,
-        { id: "weed-left", tag: "path", attrs: { d: "M26 332 C8 258 64 218 44 138 C76 170 92 222 72 280 C64 304 68 320 72 332 Z" } },
-        { id: "weed-right", tag: "path", attrs: { d: "M336 332 C318 270 364 224 352 152 C384 186 392 240 378 294 C374 312 376 324 380 332 Z" } },
+        { id: "weed-left", tag: "path", attrs: { d: "M26 318 C14 290 46 268 38 238 C32 216 42 198 58 186 C76 210 68 232 76 254 C86 284 62 298 74 318 Z" } },
+        { id: "weed-right", tag: "path", attrs: { d: "M338 318 C324 276 360 252 346 212 C338 188 348 166 366 150 C384 176 372 198 380 222 C392 258 362 282 378 318 Z" } },
         { id: "sand", tag: "path", attrs: { d: "M0 318 Q100 296 200 318 T400 310 V400 H0 Z" } },
         { id: "starfish", tag: "path", attrs: { d: star(332, 354, 38, 21) } },
         { id: "pebble1", tag: "ellipse", attrs: { cx: 80, cy: 362, rx: 32, ry: 21 } },
-        { id: "tail", tag: "path", attrs: { d: "M124 186 C80 104 28 110 22 150 C18 178 58 182 76 186 C58 190 18 194 22 222 C28 262 80 268 124 186 Z" } },
-        { id: "fin-top", tag: "path", attrs: { d: "M142 128 C148 48 226 40 242 84 C264 60 294 74 292 130 Z" } },
-        { id: "fin-bottom", tag: "path", attrs: { d: "M162 246 C164 326 238 330 250 246 Z" } },
-        { id: "body", tag: "ellipse", attrs: { cx: 218, cy: 186, rx: 108, ry: 78 } },
-        { id: "stripe1", tag: "path", clip: "body", attrs: { d: "M140 94 Q124 162 140 218 Q160 232 180 218 Q164 162 180 94 Z" } },
-        { id: "stripe2", tag: "path", clip: "body", attrs: { d: "M196 94 Q180 162 196 218 Q216 232 236 218 Q220 162 236 94 Z" } },
-        { id: "fin-pec", tag: "ellipse", attrs: { cx: 204, cy: 242, rx: 30, ry: 20, transform: "rotate(-10 204 242)" } },
-        { id: "eye", tag: "circle", attrs: { cx: 282, cy: 164, r: 22 } },
-        { id: "bubble1", tag: "circle", attrs: { cx: 344, cy: 102, r: 22 } },
-        { id: "bubble2", tag: "circle", attrs: { cx: 314, cy: 48, r: 20 } },
+        { id: "tail", tag: "path", attrs: { d: "M120 182 C94 140 62 110 36 118 C20 124 22 150 40 166 C50 174 60 180 68 182 C60 184 50 190 40 198 C22 214 20 240 36 246 C62 254 94 224 120 182 Z" } },
+        { id: "fin-top", tag: "path", attrs: { d: "M148 120 C156 50 240 32 290 116 Z" } },
+        { id: "fin-bottom", tag: "path", attrs: { d: "M152 240 C136 266 124 296 136 310 C150 318 196 300 230 254 Z" } },
+        { id: "body", tag: "ellipse", attrs: { cx: 214, cy: 182, rx: 110, ry: 80 } },
+        // Stripes taper to a point above the belly so the body stays one connected part to tap.
+        { id: "stripe1", tag: "path", clip: "body", attrs: { d: "M144 96 C134 142 142 196 166 238 C186 196 194 142 188 96 Z" } },
+        { id: "stripe2", tag: "path", clip: "body", attrs: { d: "M212 96 C202 142 210 190 232 228 C252 190 258 142 254 96 Z" } },
+        { id: "eye", tag: "circle", attrs: { cx: 284, cy: 160, r: 22 } },
+        { id: "bubble1", tag: "circle", attrs: { cx: 346, cy: 96, r: 22 } },
+        { id: "bubble2", tag: "circle", attrs: { cx: 318, cy: 42, r: 19 } },
       ],
       lines: [
-        dot(285, 165, 9),
-        "M272 136 Q284 130 296 136",
-        "M314 196 Q298 214 278 204",
-        "M275 200 L279 208",
-        "M152 120 Q192 90 242 84 M242 84 Q262 96 284 120",
-        "M58 150 Q86 176 114 186 M58 222 Q86 196 114 186",
+        dot(287, 161, 9),
+        "M270 130 Q284 122 298 130",
+        "M318 194 Q306 208 290 202",
+        "M44 136 Q72 158 100 176 M44 228 Q72 206 100 188",
+        "M180 104 Q194 76 216 62 M226 106 Q238 86 254 78",
+        "M146 298 Q166 282 182 264 M168 300 Q188 286 204 268",
+        "M338 86 Q342 80 350 80 M312 36 Q316 31 322 31",
         "M130 370 A14 9 0 1 1 158 370 A14 9 0 1 1 130 370",
         "M327 352 Q332 358 337 352",
-        "M362 68 A3 3 0 1 1 362 66",
+        "M370 54 A3 3 0 1 1 370 52",
       ],
     },
     {
@@ -215,8 +234,8 @@
         "M74 240 H86 V256 H72",
         "M324 274 Q338 282 346 274",
         "M59 64 Q64 71 69 64",
-        "M132 292 m-14 0 a14 14 0 1 0 28 0 a14 14 0 1 0 -28 0 M282 292 m-14 0 a14 14 0 1 0 28 0 a14 14 0 1 0 -28 0",
-        "M132 278 V306 M118 292 H146 M282 278 V306 M268 292 H296",
+        hubcap(132, 292),
+        hubcap(282, 292),
         "M32 352 H88 M172 352 H228 M312 352 H368",
       ],
     },
@@ -432,13 +451,13 @@
         { id: "sail-front", tag: "path", attrs: { d: "M196 80 L196 204 L84 204 Q140 142 196 80 Z" } },
         { id: "hull", tag: "path", attrs: { d: "M64 210 H336 L320 268 H80 Z" } },
         { id: "hull-stripe", tag: "path", attrs: { d: "M80 268 H320 Q306 306 286 308 L114 308 Q94 306 80 268 Z" } },
-        { id: "lifebuoy", tag: "circle", attrs: { cx: 200, cy: 264, r: 21 } },
+        { id: "lifebuoy", tag: "circle", attrs: { cx: 200, cy: 239, r: 24 } },
       ],
       lines: [
         "M200 26 V210 M80 204 H334",
         "M74 134 Q84 124 94 134 Q104 124 114 134 M264 110 Q274 100 284 110 Q294 100 304 110",
         "M335 62 Q340 69 345 62",
-        "M200 243 V285 M179 264 H221 M200 264 m-9 0 a9 9 0 1 0 18 0 a9 9 0 1 0 -18 0",
+        lifebuoyMarks(200, 239, 24),
       ],
     },
     {
