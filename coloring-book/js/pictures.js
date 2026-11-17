@@ -22,15 +22,15 @@
       " L" + (cx + inner) + " " + cy + " A" + inner + " " + inner + " 0 0 0 " + (cx - inner) + " " + cy + " Z";
   }
 
-  // Rainbow band clipped cleanly to x in [-14, 414] and y <= 355 so wide bands stay in bounds.
-  function wideBand(cx, cy, outer, inner) {
+  // A rainbow band like band(), cut off at the horizon `baseY` and at `halfWidth` either side of
+  // cx, so bands wider than the page end at its edge instead of running off it.
+  function wideBand(cx, cy, outer, inner, baseY = 355, halfWidth = 214) {
     const pt = (r, side) => {
-      const dy = cy - 355;
-      const dxMax = 214;
-      if (r * r - dy * dy <= dxMax * dxMax) {
-        return n(cx + side * Math.sqrt(r * r - dy * dy)) + " 355";
+      const dy = cy - baseY;
+      if (r * r - dy * dy <= halfWidth * halfWidth) {
+        return n(cx + side * Math.sqrt(r * r - dy * dy)) + " " + baseY;
       }
-      return (side < 0 ? cx - dxMax : cx + dxMax) + " " + n(cy - Math.sqrt(r * r - dxMax * dxMax));
+      return (side < 0 ? cx - halfWidth : cx + halfWidth) + " " + n(cy - Math.sqrt(r * r - halfWidth * halfWidth));
     };
     return "M" + pt(outer, -1) + " A" + outer + " " + outer + " 0 0 1 " + pt(outer, 1) +
       " L" + pt(inner, 1) + " A" + inner + " " + inner + " 0 0 0 " + pt(inner, -1) + " Z";
@@ -102,6 +102,7 @@
         { id: "sand", tag: "path", attrs: { d: "M0 318 Q100 296 200 318 T400 310 V400 H0 Z" } },
         { id: "starfish", tag: "path", attrs: { d: star(332, 354, 38, 21) } },
         { id: "pebble1", tag: "ellipse", attrs: { cx: 80, cy: 362, rx: 32, ry: 21 } },
+        { id: "pebble2", tag: "ellipse", attrs: { cx: 158, cy: 366, rx: 26, ry: 19 } },
         { id: "tail", tag: "path", attrs: { d: "M120 182 C94 140 62 110 36 118 C20 124 22 150 40 166 C50 174 60 180 68 182 C60 184 50 190 40 198 C22 214 20 240 36 246 C62 254 94 224 120 182 Z" } },
         { id: "fin-top", tag: "path", attrs: { d: "M148 120 C156 50 240 32 290 116 Z" } },
         { id: "fin-bottom", tag: "path", attrs: { d: "M152 240 C136 266 124 296 136 310 C150 318 196 300 230 254 Z" } },
@@ -121,7 +122,6 @@
         "M180 104 Q194 76 216 62 M226 106 Q238 86 254 78",
         "M146 298 Q166 282 182 264 M168 300 Q188 286 204 268",
         "M338 86 Q342 80 350 80 M312 36 Q316 31 322 31",
-        "M130 370 A14 9 0 1 1 158 370 A14 9 0 1 1 130 370",
         "M327 352 Q332 358 337 352",
         "M370 54 A3 3 0 1 1 370 52",
       ],
@@ -153,7 +153,7 @@
         "M132 218 V266 M108 242 H156 M258 218 V266 M234 242 H282",
         "M208 288 A2.5 2.5 0 1 1 208 285",
         "M74 385 V398",
-        "M172 350 H218 M162 392 Q195 386 228 392",
+        "M172 350 H218",
       ],
     },
     {
@@ -225,7 +225,7 @@
         { id: "body", tag: "path", attrs: { d: "M72 286 C60 250 72 208 108 200 L284 200 C314 202 342 224 352 254 C360 274 354 286 340 286 Z" } },
         { id: "window-back", tag: "path", attrs: { d: "M122 194 C126 138 186 138 192 194 Z" } },
         { id: "window-front", tag: "path", attrs: { d: "M202 194 C208 138 266 138 270 194 Z" } },
-        { id: "light", tag: "circle", attrs: { cx: 334, cy: 244, r: 20 } },
+        { id: "light", tag: "circle", attrs: { cx: 322, cy: 246, r: 20 } },
         { id: "wheel-back", tag: "circle", attrs: { cx: 132, cy: 292, r: 38 } },
         { id: "wheel-front", tag: "circle", attrs: { cx: 282, cy: 292, r: 38 } },
       ],
@@ -282,13 +282,13 @@
         { id: "window", tag: "circle", attrs: { cx: 200, cy: 178, r: 36 } },
       ],
       lines: [
-        "M176 184 A24 24 0 1 1 224 184 A24 24 0 1 1 176 184",
+        ring(200, 184, 24),
         "M190 174 A2 2 0 1 1 190 172 M210 174 A2 2 0 1 1 210 172 M194 186 Q200 192 206 186",
         "M326 74 Q332 82 338 74 M302 62 Q332 54 362 62",
         "M58 158 Q64 164 70 158",
         "M158 232 H242",
         "M148 352 Q174 334 200 348 Q226 334 252 352",
-        "M74 282 L78 272 L82 282 L92 286 L82 290 L78 300 L74 290 L64 286 Z",
+        "M56 296 L60 286 L64 296 L74 300 L64 304 L60 314 L56 304 L46 300 Z",
         "M336 296 L340 286 L344 296 L354 300 L344 304 L340 314 L336 304 L326 300 Z",
       ],
     },
@@ -320,7 +320,6 @@
       ],
       lines: [
         dot(337, 85, 8),
-        "M322 58 Q336 52 348 58",
         "M318 112 Q334 126 352 110",
         "M356 96 A2 2 0 1 1 356 94",
         "M308 106 Q314 112 320 106",
@@ -351,11 +350,12 @@
         { id: "eye-right", tag: "circle", attrs: { cx: 234, cy: 142, r: 21 } },
       ],
       lines: [
-        "M140 108 L142 64 L176 92",
-        "M260 108 L258 64 L224 92",
+        // Inner ears end on the head outline: lines draw over the head, so nothing hides an overshoot.
+        "M137 106 L142 64 L171 80",
+        "M263 106 L258 64 L229 80",
         dot(168, 145, 8),
         dot(232, 145, 8),
-        "M192 170 L208 170 L200 180 Z",
+        dot(200, 174, 6),
         "M200 180 Q190 194 180 188 M200 180 Q210 194 220 188",
         "M144 176 Q150 182 156 176 M244 176 Q250 182 256 176",
         "M148 180 L104 174 M148 190 L104 196 M252 180 L296 174 M252 190 L296 196",
@@ -375,6 +375,8 @@
         ground(302, "sand"),
         { id: "starfish", tag: "path", attrs: { d: star(342, 348, 38, 21) } },
         { id: "pebble1", tag: "ellipse", attrs: { cx: 76, cy: 358, rx: 30, ry: 21 } },
+        { id: "pebble2", tag: "ellipse", attrs: { cx: 140, cy: 366, rx: 26, ry: 19 } },
+        { id: "tail", tag: "path", attrs: { d: "M96 250 C60 252 22 266 14 280 C22 294 60 306 96 308 Z" } },
         { id: "leg-back", tag: "rect", attrs: { x: 112, y: 266, width: 48, height: 70, rx: 16 } },
         { id: "leg-front", tag: "rect", attrs: { x: 230, y: 266, width: 48, height: 70, rx: 16 } },
         { id: "head", tag: "ellipse", attrs: { cx: 324, cy: 218, rx: 52, ry: 40 } },
@@ -390,11 +392,9 @@
         dot(341, 205, 8),
         "M338 230 Q352 242 364 228",
         "M318 228 Q324 234 330 228",
-        "M77 265 L48 275 L77 284",
         "M14 235 Q30 225 46 235 Q62 245 78 235 M346 276 Q362 266 376 276 Q388 284 398 276",
         "M57 62 Q62 69 67 62",
-        "M120 368 A12 8 0 1 1 144 368 A12 8 0 1 1 120 368",
-        "M342 128 A4 4 0 1 1 350 128 A4 4 0 1 1 342 128",
+        dot(388, 182, 4),
       ],
     },
     {
@@ -403,7 +403,8 @@
       regions: [
         sky,
         { id: "sun", tag: "circle", attrs: { cx: 62, cy: 62, r: 34 } },
-        { id: "hill", tag: "path", attrs: { d: "M0 202 Q76 98 164 202 Z" } },
+        // Runs behind the wagon to the ground along the page edge, so it stays one piece on the land.
+        { id: "hill", tag: "path", attrs: { d: "M0 332 V190 Q30 120 96 118 Q146 118 158 200 L14 200 V332 Z" } },
         { id: "smoke-big", tag: "circle", attrs: { cx: 218, cy: 48, r: 34 } },
         { id: "smoke3", tag: "circle", attrs: { cx: 264, cy: 80, r: 26 } },
         { id: "smoke-small", tag: "circle", attrs: { cx: 294, cy: 116, r: 22 } },
@@ -428,7 +429,7 @@
         "M160 284 H174",
         "M282 210 V296 M306 210 V296",
         "M214 298 L282 304 L326 304",
-        "M50 304 m-8 0 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0 M122 304 m-8 0 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0 M214 298 m-10 0 a10 10 0 1 0 20 0 a10 10 0 1 0 -20 0",
+        ring(50, 304, 8) + " " + ring(122, 304, 8) + " " + ring(214, 298, 10),
         "M10 332 H390 M10 342 H390",
         "M36 342 V364 M76 342 V364 M116 342 V364 M156 342 V364 M196 342 V364 M236 342 V364 M276 342 V364 M316 342 V364 M356 342 V364",
         "M57 62 Q62 69 67 62",
@@ -449,7 +450,7 @@
         { id: "sail-main", tag: "path", attrs: { d: "M204 72 Q282 140 332 204 L204 204 Z" } },
         { id: "sail-stripe", tag: "path", clip: "sail-main", attrs: { d: "M200 134 H345 V174 H200 Z" } },
         { id: "sail-front", tag: "path", attrs: { d: "M196 80 L196 204 L84 204 Q140 142 196 80 Z" } },
-        { id: "hull", tag: "path", attrs: { d: "M64 210 H336 L320 268 H80 Z" } },
+        { id: "hull", tag: "path", attrs: { d: "M64 204 H336 L320 268 H80 Z" } },
         { id: "hull-stripe", tag: "path", attrs: { d: "M80 268 H320 Q306 306 286 308 L114 308 Q94 306 80 268 Z" } },
         { id: "lifebuoy", tag: "circle", attrs: { cx: 200, cy: 239, r: 24 } },
       ],
@@ -476,15 +477,15 @@
         { id: "scoop-bottom", tag: "path", attrs: { d: "M118 228 C102 152 298 152 282 228 Q266 242 250 228 Q234 242 218 228 Q200 242 182 228 Q166 242 150 228 Q134 242 118 228 Z" } },
         { id: "scoop-top", tag: "path", attrs: { d: "M138 180 C120 70 280 70 262 180 Q246 196 230 180 Q215 196 200 180 Q185 196 170 180 Q154 196 138 180 Z" } },
         { id: "syrup", tag: "path", clip: "scoop-top", attrs: { d: "M130 70 H270 V136 Q252 154 234 134 Q216 158 200 130 Q184 158 166 134 Q148 154 130 136 Z" } },
-        { id: "cherry", tag: "circle", attrs: { cx: 200, cy: 62, r: 22 } },
+        { id: "cherry", tag: "circle", attrs: { cx: 200, cy: 80, r: 22 } },
         { id: "wafer", tag: "path", attrs: { d: "M232 132 L278 52 L306 70 L260 150 Z" } },
       ],
       lines: [
         "M140 282 L234 336 M158 318 L218 362 M176 352 L202 388 M260 282 L166 336 M242 318 L182 362 M224 352 L198 388",
-        "M200 40 Q206 20 230 12 M214 24 Q228 18 225 30",
+        "M200 58 Q206 38 230 30 M214 42 Q228 36 225 48",
         "M36 206 L20 194 L20 218 Z M80 206 L96 194 L96 218 Z M320 206 L304 194 L304 218 Z M364 206 L380 194 L380 218 Z",
         "M164 162 L176 158 M222 164 L228 156 M144 212 L156 206 M244 208 L254 216 M194 214 L206 208",
-        "M250 112 L278 130 M265 86 L293 104",
+        "M247 105 L275 123 M263 79 L291 97",
       ],
     },
     {
@@ -544,7 +545,6 @@
         "M54 170 A3 3 0 1 1 54 167 M82 172 A3 3 0 1 1 82 169 M110 170 A3 3 0 1 1 110 167",
         "M192 356 L196 346 L200 356 L210 360 L200 364 L196 374 L192 364 L182 360 Z",
         "M356 124 L359 116 L362 124 L370 127 L362 130 L359 138 L356 130 L348 127 Z",
-        "M84 334 A9 9 0 1 1 84 333.9",
       ],
     },
   ].map((picture) => Object.freeze(Object.assign({}, picture, {
