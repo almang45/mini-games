@@ -8,11 +8,13 @@
 <link rel="manifest" href="../manifest.webmanifest">
 <script src="../shared/register-sw.js" defer></script>
 <link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="../shared/net/net.css">
 <style>
   header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 
   .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
   .controls label { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  .controls label[hidden] { display: none; }
   select {
     font: inherit;
     font-size: 0.85rem;
@@ -124,9 +126,10 @@
         <option value="red">You play Red vs AI</option>
         <option value="yellow">You play Yellow vs AI</option>
         <option value="pvp">Two players</option>
+        <option value="online">Online - two devices</option>
       </select>
     </label>
-    <label>AI
+    <label id="levelLabel">AI
       <select id="level">
         <option value="easy">Easy</option>
         <option value="medium" selected>Medium</option>
@@ -137,6 +140,8 @@
     <button id="btnUndo" type="button">Undo</button>
   </div>
 
+  <div id="online"></div>
+
   <div class="scoreboard">
     <div class="score" id="scoreRed"><span class="disc red"></span><b id="nameRed">Red</b></div>
     <p class="status" id="status" aria-live="polite"></p>
@@ -145,7 +150,7 @@
 
   <div class="board" id="board" aria-label="Board"></div>
 
-  <footer>Take turns dropping a disc into a column; it falls to the lowest free hole. Get four of your colour in a row — across, down or diagonally — to win. A full board with no four is a draw. Red moves first.</footer>
+  <footer>Take turns dropping a disc into a column; it falls to the lowest free hole. Get four of your colour in a row — across, down or diagonally — to win. A full board with no four is a draw. Red moves first. Online, the host plays Red in the first game and the colours swap every new game.</footer>
 </div>
 
 <div class="overlay" id="overlay" hidden>
@@ -160,10 +165,14 @@
 </div>
 
 <script src="js/connect-four.js"></script>
+<script src="../shared/net/relay-client.js"></script>
+<script src="../shared/net/turn-sync.js"></script>
+<script src="../shared/net/lobby.js"></script>
 <script>
 (function () {
   "use strict";
   const C4 = window.CONNECT_FOUR;
+  const NET = window.MINI_NET;
   const { ROWS, COLS, EMPTY, RED, YELLOW } = C4;
   const NAME = { [RED]: "Red", [YELLOW]: "Yellow" };
   const HUMANS = { red: [RED], yellow: [YELLOW], pvp: [RED, YELLOW] };
@@ -173,9 +182,17 @@
   let state = null;
   let animate = false; // only a fresh move animates, not undo or a new game
   let aiTimer = null;
+  let online = null; // { session, sync, hostColor } while this tab is in a room
 
   const mode = () => $("mode").value;
-  const isHuman = (player) => HUMANS[mode()].includes(player);
+  const isOnline = () => mode() === "online";
+  const seatColor = (seat) => (seat === 0 ? online.hostColor : C4.opponent(online.hostColor));
+  const isHuman = (player) => {
+    if (!isOnline()) return HUMANS[mode()].includes(player);
+    return online !== null && online.sync.started && player === seatColor(online.session.seat);
+  };
+  // Online, only the host starts games; a guest waits for the host's next round.
+  const canStartGame = () => !isOnline() || (online !== null && online.sync.isHost && online.sync.started);
 
   const columns = Array.from({ length: COLS }, (_, col) => {
     const btn = document.createElement("button");
@@ -193,7 +210,7 @@
   });
 
   function render() {
-    const canPlay = !state.gameOver && isHuman(state.turn) && !aiTimer;
+    const canPlay = !state.gameOver && isHuman(state.turn) && !aiTimer && (!isOnline() || online.sync.canMove());
     const winning = new Set(state.winLine || []);
     columns.forEach(({ btn, holes }, col) => {
       const open = state.board[col] === EMPTY;
@@ -230,28 +247,50 @@
     $("scoreRed").classList.toggle("is-turn", !state.gameOver && state.turn === RED);
     $("scoreYellow").classList.toggle("is-turn", !state.gameOver && state.turn === YELLOW);
     $("status").textContent = statusText();
-    $("btnUndo").disabled = state.history.length === 0;
+    $("btnUndo").disabled = state.history.length === 0 || isOnline();
+    $("btnNew").disabled = !canStartGame();
+    $("modalNew").disabled = !canStartGame();
   }
 
   function playerLabel(player) {
     if (mode() === "pvp") return NAME[player];
+    if (isOnline()) return online && online.sync.started ? (isHuman(player) ? "You" : "Opponent") : NAME[player];
     return isHuman(player) ? "You" : "AI";
   }
 
   function statusText() {
+    if (isOnline()) {
+      if (!online) return "Host a game or join one to play online.";
+      if (!online.sync.started) return "Waiting for the game to start…";
+    }
     if (state.gameOver) return resultText();
     const who = NAME[state.turn];
     if (mode() === "pvp") return who + " to move.";
+    if (isOnline()) {
+      if (online.session.status !== "open") return "Reconnecting…";
+      if (!online.session.everyonePresent) return "Waiting for your opponent…";
+      return isHuman(state.turn) ? "Your move (" + who + ")." : "Opponent (" + who + ") to move.";
+    }
     return isHuman(state.turn) ? "Your move (" + who + ")." : "AI (" + who + ") is thinking…";
   }
 
   function resultText() {
     if (state.winner === EMPTY) return "Draw — the board is full.";
     if (mode() === "pvp") return NAME[state.winner] + " connects four and wins.";
+    if (isOnline()) return isHuman(state.winner) ? "You connect four — you win!" : "Your opponent connects four and wins.";
     return isHuman(state.winner) ? "You connect four — you win!" : "The AI connects four and wins.";
   }
 
+  function showResult() {
+    $("resultText").textContent = resultText() + (canStartGame() ? "" : " The host starts the next game.");
+    $("overlay").hidden = false;
+  }
+
   function onColumnClick(col) {
+    if (isOnline()) {
+      if (online && C4.landingRow(state.board, col) >= 0) online.sync.play(col);
+      return;
+    }
     if (state.gameOver || aiTimer || !isHuman(state.turn)) return;
     if (C4.landingRow(state.board, col) < 0) return;
     C4.play(state, col);
@@ -260,12 +299,9 @@
   }
 
   function advance() {
-    if (state.gameOver || isHuman(state.turn)) {
+    if (state.gameOver || isHuman(state.turn) || isOnline()) {
       render();
-      if (state.gameOver) {
-        $("resultText").textContent = resultText();
-        $("overlay").hidden = false;
-      }
+      if (state.gameOver && !isOnline()) showResult();
       return;
     }
     // Set before rendering so the columns render locked while the AI thinks.
@@ -286,12 +322,19 @@
   function newGame() {
     cancelAI();
     $("overlay").hidden = true;
+    if (isOnline() && online) {
+      // The colours swap every game, so each player gets to move first in turn.
+      if (canStartGame()) online.sync.newRound({ hostColor: C4.opponent(online.hostColor) });
+      else render();
+      return;
+    }
     state = C4.createGame();
     advance();
   }
 
   // Against the AI, rewind to the last position where it was your turn.
   function undo() {
+    if (isOnline()) return;
     cancelAI();
     $("overlay").hidden = true;
     let undone = C4.undo(state);
@@ -303,9 +346,73 @@
   $("modalNew").addEventListener("click", newGame);
   $("modalClose").addEventListener("click", () => { $("overlay").hidden = true; });
   $("btnUndo").addEventListener("click", undo);
-  $("mode").addEventListener("change", newGame);
+  // ---- online ---------------------------------------------------------------
 
+  // TurnSync drives the board through this, on both devices, for local and remote moves alike.
+  const adapter = {
+    reset(config) {
+      cancelAI();
+      $("overlay").hidden = true;
+      online.hostColor = config && config.hostColor === YELLOW ? YELLOW : RED;
+      state = C4.createGame();
+    },
+    apply(col) { C4.play(state, col); },
+    hash() { return state.board.join("") + "/" + state.turn + "/" + state.winner; },
+    turnSeat() {
+      if (state.gameOver) return -1;
+      return state.turn === online.hostColor ? 0 : 1;
+    },
+  };
+
+  function startOnline(session) {
+    cancelAI();
+    online = { session, sync: null, hostColor: RED };
+    online.sync = new NET.TurnSync({ session, adapter, onChange: onNetChange });
+    state = C4.createGame();
+    render();
+  }
+
+  function endOnline() {
+    online = null;
+    newGame();
+  }
+
+  function onNetChange(event) {
+    if (!online) return;
+    if (event.type === "need-round") {
+      online.sync.newRound({ hostColor: RED });
+      return;
+    }
+    animate = event.type === "move";
+    render();
+    if (event.type === "move" && state.gameOver) showResult();
+  }
+
+  const lobby = NET.mountLobby($("online"), {
+    game: "connect-four",
+    seats: 2,
+    peerName: () => "your opponent",
+    onSession: startOnline,
+    onEnd: endOnline,
+  });
+
+  function syncModeUI() {
+    lobby.show(isOnline());
+    $("levelLabel").hidden = isOnline();
+  }
+
+  $("mode").addEventListener("change", () => {
+    syncModeUI();
+    // Leaving the mode leaves the room; that ends in endOnline, which starts the local game.
+    if (!isOnline() && online) lobby.leave();
+    else newGame();
+  });
+
+  // A shared link (?room=CODE) opens straight into that room.
+  if (new URLSearchParams(location.search).has("room")) $("mode").value = "online";
+  syncModeUI();
   newGame();
+  if (isOnline()) lobby.joinFromUrl();
 })();
 </script>
 </body>
