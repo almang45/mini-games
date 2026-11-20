@@ -179,9 +179,37 @@
     return best;
   }
 
+  // The TurnSync adapter (shared/net/turn-sync.js) for online play. The page owns the game
+  // state; getState/setState reach it, and onReset clears whatever the page shows over the board.
+  function createOnlineAdapter({ getState, setState, onReset }) {
+    let hostColor = RED;
+    return {
+      get hostColor() { return hostColor; },
+      seatColor(seat) { return seat === 0 ? hostColor : opponent(hostColor); },
+      isValidConfig(config) {
+        return config !== null && typeof config === "object" && (config.hostColor === RED || config.hostColor === YELLOW);
+      },
+      reset(config) {
+        if (onReset) onReset();
+        hostColor = config.hostColor;
+        setState(createGame());
+      },
+      apply(col) { play(getState(), col); },
+      hash() {
+        const state = getState();
+        return state.board.join("") + "/" + state.turn + "/" + state.winner;
+      },
+      turnSeat() {
+        const state = getState();
+        if (state.gameOver) return -1;
+        return state.turn === hostColor ? 0 : 1;
+      },
+    };
+  }
+
   const api = {
     ROWS, COLS, EMPTY, RED, YELLOW, LEVELS,
-    opponent, landingRow, legalMoves, winningLine, createGame, play, undo, chooseMove,
+    opponent, landingRow, legalMoves, winningLine, createGame, play, undo, chooseMove, createOnlineAdapter,
   };
 
   if (typeof module !== "undefined" && module.exports) {

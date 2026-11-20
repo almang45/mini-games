@@ -1,7 +1,7 @@
 # Connect Four
 
 Connect Four on the standard 7-column, 6-row board, built as static
-HTML/CSS/JS with no build step and no server. You can play Red or Yellow
+HTML/CSS/JS with no build step and no server of its own. You can play Red or Yellow
 against the AI, two players can share one device, or two devices can play
 online through the relay (see the root README, "Online play").
 

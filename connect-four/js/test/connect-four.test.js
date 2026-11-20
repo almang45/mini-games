@@ -175,4 +175,24 @@ const started = Date.now();
 C4.chooseMove(C4.createGame().board, RED, "hard");
 const openingMs = Date.now() - started;
 
+// ---- online adapter ---------------------------------------------------------------
+
+{
+  let state = null;
+  let resets = 0;
+  const adapter = C4.createOnlineAdapter({ getState: () => state, setState: (next) => { state = next; }, onReset: () => resets++ });
+  ok("only a real colour is a valid config", adapter.isValidConfig({ hostColor: YELLOW })
+    && !adapter.isValidConfig(null) && !adapter.isValidConfig({}) && !adapter.isValidConfig({ hostColor: 3 }));
+  adapter.reset({ hostColor: YELLOW });
+  ok("reset starts a fresh game and clears the page", state.turn === RED && resets === 1);
+  ok("the host plays the configured colour", adapter.hostColor === YELLOW && adapter.seatColor(0) === YELLOW && adapter.seatColor(1) === RED);
+  ok("Red moves first, so the guest starts", adapter.turnSeat() === 1);
+  const before = adapter.hash();
+  adapter.apply(3);
+  ok("a move changes the hash and the turn", adapter.hash() !== before && adapter.turnSeat() === 0);
+  ok("an illegal move throws", (() => { try { adapter.apply(9); return false; } catch { return true; } })());
+  for (const col of [4, 3, 4, 3, 4, 3]) adapter.apply(col);
+  ok("nobody is to move once the game ends", state.gameOver && adapter.turnSeat() === -1);
+}
+
 console.log("connect-four.test.js: " + passed + " assertions passed (hard opening move " + openingMs + "ms)");

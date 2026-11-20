@@ -182,14 +182,13 @@
   let state = null;
   let animate = false; // only a fresh move animates, not undo or a new game
   let aiTimer = null;
-  let online = null; // { session, sync, hostColor } while this tab is in a room
+  let online = null; // { session, sync, adapter } while this tab is in a room
 
   const mode = () => $("mode").value;
   const isOnline = () => mode() === "online";
-  const seatColor = (seat) => (seat === 0 ? online.hostColor : C4.opponent(online.hostColor));
   const isHuman = (player) => {
     if (!isOnline()) return HUMANS[mode()].includes(player);
-    return online !== null && online.sync.started && player === seatColor(online.session.seat);
+    return online !== null && online.sync.started && player === online.adapter.seatColor(online.session.seat);
   };
   // Online, only the host starts games; a guest waits for the host's next round.
   const canStartGame = () => !isOnline() || (online !== null && online.sync.isHost && online.sync.started);
@@ -261,6 +260,7 @@
   function statusText() {
     if (isOnline()) {
       if (!online) return "Host a game or join one to play online.";
+      if (online.sync.desynced) return "Out of sync with the host - reload the page on both devices.";
       if (!online.sync.started) return "Waiting for the game to start…";
     }
     if (state.gameOver) return resultText();
@@ -324,7 +324,7 @@
     $("overlay").hidden = true;
     if (isOnline() && online) {
       // The colours swap every game, so each player gets to move first in turn.
-      if (canStartGame()) online.sync.newRound({ hostColor: C4.opponent(online.hostColor) });
+      if (canStartGame()) online.sync.newRound({ hostColor: C4.opponent(online.adapter.hostColor) });
       else render();
       return;
     }
@@ -348,26 +348,20 @@
   $("btnUndo").addEventListener("click", undo);
   // ---- online ---------------------------------------------------------------
 
-  // TurnSync drives the board through this, on both devices, for local and remote moves alike.
-  const adapter = {
-    reset(config) {
-      cancelAI();
-      $("overlay").hidden = true;
-      online.hostColor = config && config.hostColor === YELLOW ? YELLOW : RED;
-      state = C4.createGame();
-    },
-    apply(col) { C4.play(state, col); },
-    hash() { return state.board.join("") + "/" + state.turn + "/" + state.winner; },
-    turnSeat() {
-      if (state.gameOver) return -1;
-      return state.turn === online.hostColor ? 0 : 1;
-    },
-  };
-
-  function startOnline(session) {
+  function startOnline(session, { persist }) {
     cancelAI();
-    online = { session, sync: null, hostColor: RED };
-    online.sync = new NET.TurnSync({ session, adapter, onChange: onNetChange });
+    // TurnSync drives the board through the adapter, on both devices, for local and remote moves alike.
+    const adapter = C4.createOnlineAdapter({
+      getState: () => state,
+      setState: (next) => { state = next; },
+      onReset: () => {
+        cancelAI();
+        $("overlay").hidden = true;
+      },
+    });
+    const room = { session, adapter, sync: null };
+    room.sync = new NET.TurnSync({ session, adapter, persist, onChange: (event) => onNetChange(room, event) });
+    online = room;
     state = C4.createGame();
     render();
   }
@@ -377,8 +371,9 @@
     newGame();
   }
 
-  function onNetChange(event) {
-    if (!online) return;
+  function onNetChange(room, event) {
+    // A room this tab already left can still fire a late timer; it must not touch the next one.
+    if (online !== room) return;
     if (event.type === "need-round") {
       online.sync.newRound({ hostColor: RED });
       return;
