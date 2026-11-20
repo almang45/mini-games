@@ -10,6 +10,9 @@ import { log } from "./log.js";
 export const IDLE_TTL_MS = 30 * 60 * 1000;
 export const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const HELLO_TIMEOUT_MS = 10 * 1000;
+// Clients ping every 20 s. A seat silent this long belongs to a phone that vanished without a TCP close.
+export const STALE_MS = 90 * 1000;
+export const SWEEP_MS = 60 * 1000;
 // Per socket: bursts of 40 frames, 5 per second sustained. A turn-based game sends far less.
 export const BUCKET_SIZE = 40;
 const REFILL_PER_MS = 5 / 1000;
@@ -22,6 +25,8 @@ export class Room {
     this.env = env;
     this.meta = null;
     this.buckets = new WeakMap();
+    this.lastFrame = new WeakMap();
+    this.helloPending = new WeakSet();
     this.ready = ctx.blockConcurrencyWhile(async () => {
       this.meta = (await ctx.storage.get("meta")) || null;
     });
@@ -76,6 +81,7 @@ export class Room {
     if (typeof raw !== "string") return this.reject(ws, CLOSE.BAD_MESSAGE, "binary_frame");
     if (raw.length > MAX_MESSAGE_CHARS) return this.reject(ws, CLOSE.TOO_LARGE, "message_too_large");
     if (!this.takeToken(ws)) return this.reject(ws, CLOSE.RATE_LIMITED, "rate_limited");
+    this.lastFrame.set(ws, Date.now());
     let msg;
     try {
       msg = JSON.parse(raw);
@@ -85,7 +91,15 @@ export class Room {
     if (!msg || typeof msg !== "object") return this.reject(ws, CLOSE.BAD_MESSAGE, "not_an_object");
     const { seat } = this.attachment(ws);
     if (!Number.isInteger(seat)) {
-      return msg.t === "hello" ? this.hello(ws, msg) : this.reject(ws, CLOSE.BAD_MESSAGE, "hello_required");
+      if (msg.t !== "hello") return this.reject(ws, CLOSE.BAD_MESSAGE, "hello_required");
+      // A second hello while the first awaits its hash would claim a second seat.
+      if (this.helloPending.has(ws)) return this.reject(ws, CLOSE.BAD_MESSAGE, "duplicate_hello");
+      this.helloPending.add(ws);
+      try {
+        return await this.hello(ws, msg);
+      } finally {
+        this.helloPending.delete(ws);
+      }
     }
     switch (msg.t) {
       case "msg": return this.relay(ws, seat, msg);
@@ -104,13 +118,17 @@ export class Room {
     // Hash first: nothing below awaits, so two sockets can never claim the same free seat.
     const fresh = token === undefined ? randomToken() : null;
     const hash = await sha256Hex(token ?? fresh);
+    // The hello timeout may have closed this socket during the await.
+    if (this.attachment(ws).closed) return;
     const { meta } = this;
     if (!meta) return this.reject(ws, CLOSE.ROOM_GONE, "room_not_found");
     if (msg.game !== meta.game) return this.reject(ws, CLOSE.WRONG_GAME, "wrong_game");
     let seat;
     if (fresh) {
       seat = meta.tokens.indexOf(null);
+      if (seat < 0) seat = this.reclaimableSeat();
       if (seat < 0) return this.reject(ws, CLOSE.ROOM_FULL, "room_full");
+      if (meta.tokens[seat] !== null) log("info", "seat_reclaimed", { room: meta.code, seat });
       meta.tokens[seat] = hash;
     } else {
       seat = meta.tokens.indexOf(hash);
@@ -171,7 +189,8 @@ export class Room {
     if (!this.meta) return;
     // Silent when the seat was given up ("gone" already sent) or a newer socket replaced this one.
     const held = Number.isInteger(seat) && this.meta.tokens[seat] !== null;
-    if (held && this.seatSockets(seat).every((other) => other === ws)) {
+    const { announced } = this.attachment(ws);
+    if (held && !announced && this.seatSockets(seat).every((other) => other === ws)) {
       this.broadcast({ t: "peer", seat, state: "left" }, ws);
       log("info", "seat_disconnected", { room: this.meta.code, seat, code });
     }
@@ -195,7 +214,39 @@ export class Room {
     const { meta } = this;
     if (meta && now - meta.createdAt >= MAX_AGE_MS) return this.expire("max_age");
     if (meta && meta.idleSince !== null && now - meta.idleSince >= IDLE_TTL_MS) return this.expire("idle");
-    await this.reschedule(now);
+    this.sweepStale(now);
+    await this.markIdleIfEmpty();
+    await this.save();
+  }
+
+  // The relay can't rely on a close event from a phone that lost coverage, so it checks the
+  // heartbeat itself and frees the seat for presence and idle expiry.
+  sweepStale(now) {
+    if (!this.meta) return;
+    for (const peer of this.live()) {
+      if (now - this.lastSeen(peer.ws) <= STALE_MS) continue;
+      const att = this.attachment(peer.ws);
+      peer.ws.serializeAttachment({ ...att, announced: true });
+      this.closeSocket(peer.ws, CLOSE.STALE, "stale");
+      if (this.seatSockets(peer.seat).length === 0) this.broadcast({ t: "peer", seat: peer.seat, state: "left" });
+      log("info", "seat_stale", { room: this.meta.code, seat: peer.seat });
+    }
+  }
+
+  lastSeen(ws) {
+    const auto = typeof this.ctx.getWebSocketAutoResponseTimestamp === "function"
+      ? this.ctx.getWebSocketAutoResponseTimestamp(ws)
+      : null;
+    return Math.max(this.attachment(ws).at, auto ? auto.getTime() : 0, this.lastFrame.get(ws) || 0);
+  }
+
+  // A guest seat with no live socket: its holder lost the token (new tab, lost welcome) or is gone.
+  // Anyone holding the code may take it, the same trust that let them join in the first place.
+  reclaimableSeat() {
+    for (let seat = 1; seat < this.meta.seats; seat++) {
+      if (this.seatSockets(seat).length === 0) return seat;
+    }
+    return -1;
   }
 
   async expire(reason) {
@@ -225,6 +276,7 @@ export class Room {
       if (!Number.isInteger(att.seat) && !att.closed) due.push(att.at + HELLO_TIMEOUT_MS);
     }
     if (this.meta) {
+      if (this.live().length > 0) due.push(now + SWEEP_MS);
       due.push(this.meta.createdAt + MAX_AGE_MS);
       if (this.meta.idleSince !== null) due.push(this.meta.idleSince + IDLE_TTL_MS);
     }

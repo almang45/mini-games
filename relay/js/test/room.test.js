@@ -1,5 +1,5 @@
 import { FakeContext, ok, count, logs } from "./fakes.js";
-import { Room, IDLE_TTL_MS, MAX_AGE_MS, HELLO_TIMEOUT_MS, BUCKET_SIZE } from "../room.js";
+import { Room, IDLE_TTL_MS, MAX_AGE_MS, HELLO_TIMEOUT_MS, BUCKET_SIZE, STALE_MS, SWEEP_MS } from "../room.js";
 import { CLOSE, MAX_MESSAGE_CHARS, PROTOCOL_VERSION } from "../protocol.js";
 
 let clock = 1_000_000;
@@ -40,7 +40,7 @@ async function connect(room, ctx, hello) {
   const welcomeA = a.last();
   ok("host resumes seat 0 with its token", welcomeA.t === "welcome" && welcomeA.seat === 0 && welcomeA.token === host.token);
   ok("welcome lists who is present", JSON.stringify(welcomeA.present) === "[0]");
-  ok("an occupied room doesn't expire", ctx.alarmAt === clock + MAX_AGE_MS);
+  ok("an occupied room doesn't expire, only sweeps", ctx.alarmAt === clock + SWEEP_MS && room.meta.idleSince === null);
 
   const b = await connect(room, ctx, {});
   const welcomeB = b.last();
@@ -171,6 +171,69 @@ async function connect(room, ctx, hello) {
   ok("a room survives the object being evicted", revived.meta && revived.meta.seats === 4);
   const a = await connect(revived, ctx, { token: host.token });
   ok("and its host can still resume", a.last().seat === 0);
+}
+
+// ---- review fixes: reclaim, hello races, liveness ------------------------------------
+
+{
+  // The guest opens the link in a new tab: no token, and its old socket is gone.
+  const { ctx, room, host } = await newRoom();
+  const a = await connect(room, ctx, { token: host.token });
+  const b = await connect(room, ctx, {});
+  const oldToken = b.last().token;
+  b.close(1006, "");
+  await room.webSocketClose(b, 1006, "");
+  const b2 = await connect(room, ctx, {});
+  ok("a tokenless guest reclaims an empty guest seat", b2.last().t === "welcome" && b2.last().seat === 1);
+  ok("the reclaim is logged", logs.some((entry) => entry.event === "seat_reclaimed" && entry.seat === 1));
+  const ghost = await connect(room, ctx, { token: oldToken });
+  ok("the old token no longer works", ghost.closedWith && ghost.closedWith.code === CLOSE.FORBIDDEN);
+  a.close(1000, "");
+  await room.webSocketClose(a, 1000, "");
+  const intruder = await connect(room, ctx, {});
+  ok("the host seat is never reclaimed", intruder.closedWith && intruder.closedWith.code === CLOSE.ROOM_FULL);
+}
+
+{
+  const { ctx, room } = await newRoom(3);
+  const ws = ctx.socket();
+  await room.accept(ws);
+  const hello = JSON.stringify({ t: "hello", v: PROTOCOL_VERSION, game: "connect-four" });
+  const first = room.webSocketMessage(ws, hello);
+  const second = room.webSocketMessage(ws, hello);
+  await Promise.all([first, second]);
+  ok("a second hello during the first is refused", ws.closedWith && ws.closedWith.code === CLOSE.BAD_MESSAGE);
+  ok("and claims no seat", room.meta.tokens.filter(Boolean).length === 1);
+}
+
+{
+  const { ctx, room } = await newRoom(3);
+  const ws = ctx.socket();
+  await room.accept(ws);
+  const pending = room.webSocketMessage(ws, JSON.stringify({ t: "hello", v: PROTOCOL_VERSION, game: "connect-four" }));
+  room.closeSocket(ws, CLOSE.HELLO_TIMEOUT, "hello_timeout");
+  await pending;
+  ok("a socket closed while its hello hashed gets no seat", room.meta.tokens.filter(Boolean).length === 1 && ws.frames().length === 0);
+}
+
+{
+  const { ctx, room, host } = await newRoom();
+  const a = await connect(room, ctx, { token: host.token });
+  const b = await connect(room, ctx, {});
+  ok("an occupied room sweeps for dead sockets", ctx.alarmAt === clock + SWEEP_MS);
+  clock += STALE_MS / 2;
+  a.autoAt = clock;
+  clock += STALE_MS / 2 + 1000;
+  await room.alarm();
+  ok("a pinging seat survives the sweep", !a.closedWith);
+  ok("a silent seat is closed as stale", b.closedWith && b.closedWith.code === CLOSE.STALE);
+  ok("and the host hears it left", a.last().t === "peer" && a.last().seat === 1 && a.last().state === "left");
+  const before = a.sent.length;
+  await room.webSocketClose(b, CLOSE.STALE, "stale");
+  ok("the close event doesn't announce it twice", a.sent.length === before);
+  clock += STALE_MS + 1000;
+  await room.alarm();
+  ok("once everyone is stale the room starts its idle timer", a.closedWith && a.closedWith.code === CLOSE.STALE && room.meta.idleSince === clock);
 }
 
 console.log("relay room: " + count() + " checks passed");

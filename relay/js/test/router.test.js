@@ -117,4 +117,22 @@ for (const [label, body, status] of [
   ok("but is logged", logs.some((entry) => entry.event === "rate_limiter_missing"));
 }
 
+{
+  // A streamed body has no content-length, so only the bounded reader can stop it.
+  let pulled = 0;
+  const stream = new ReadableStream({
+    pull(controller) {
+      pulled++;
+      if (pulled > 100) return controller.close();
+      controller.enqueue(new Uint8Array(512));
+    },
+  });
+  const req = new Request("https://relay.test/rooms", {
+    method: "POST", headers: { Origin: ORIGIN }, body: stream, duplex: "half",
+  });
+  const res = await handle(req, fakeEnv());
+  ok("a streamed oversized body is refused with 413", res.status === 413);
+  ok("and the reader stops early", pulled < 10, pulled);
+}
+
 console.log("relay router: " + count() + " checks passed");

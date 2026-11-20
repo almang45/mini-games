@@ -4,7 +4,7 @@ import { randomCode } from "./ids.js";
 import { json } from "./http.js";
 import { log } from "./log.js";
 
-const MAX_BODY_CHARS = 1024;
+const MAX_BODY_BYTES = 1024;
 const CREATE_ATTEMPTS = 5;
 const ROOM_PATH = /^\/rooms\/([^/]+)\/ws$/;
 
@@ -61,13 +61,39 @@ async function underLimit(limiter, request, name) {
   return success;
 }
 
+// Stops reading past `max` bytes, so an oversized body never sits in the isolate's memory.
+async function readBounded(request, max) {
+  if (Number(request.headers.get("content-length")) > max) return null;
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 async function createRoom(request, env, cors) {
   if (!cors) return forbidden();
   if (!(await underLimit(env.CREATE_LIMITER, request, "create"))) {
     return json({ error: "rate_limited" }, 429, { ...cors, "retry-after": "60" });
   }
-  const text = await request.text();
-  if (text.length > MAX_BODY_CHARS) return json({ error: "body_too_large" }, 413, cors);
+  const text = await readBounded(request, MAX_BODY_BYTES);
+  if (text === null) return json({ error: "body_too_large" }, 413, cors);
   let body;
   try {
     body = JSON.parse(text);

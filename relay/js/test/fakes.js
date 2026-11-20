@@ -43,6 +43,7 @@ export class FakeContext {
     };
   }
   blockConcurrencyWhile(fn) { return fn(); }
+  getWebSocketAutoResponseTimestamp(ws) { return ws.autoAt ? new Date(ws.autoAt) : null; }
   acceptWebSocket(ws) { this.sockets.push(ws); }
   getWebSockets() { return this.sockets.slice(); }
   socket() { return new FakeSocket(this); }

@@ -17,6 +17,7 @@
     FORBIDDEN: 4003,
     ROOM_GONE: 4004,
     WRONG_GAME: 4005,
+    STALE: 4007,
     RATE_LIMITED: 4008,
     ROOM_FULL: 4009,
     REPLACED: 4010,
@@ -35,6 +36,12 @@
   const BACKOFF_BASE_MS = 500;
   const BACKOFF_MAX_MS = 10000;
   const RATE_LIMITED_DELAY_MS = 30000;
+  // A handshake on a dead network can hang for the OS TCP timeout (minutes); give up sooner.
+  const CONNECT_TIMEOUT_MS = 10000;
+  // A socket still connecting after this long is worth replacing when the page wakes or the network returns.
+  const STUCK_CONNECT_MS = 3000;
+  const LEAVE_DEADLINE_MS = 15000;
+  const CREATE_TIMEOUT_MS = 10000;
 
   class NetError extends Error {
     constructor(code, message, cause) {
@@ -72,8 +79,9 @@
     return Math.round(ceiling * (0.5 + random() / 2));
   }
 
-  async function createRoom({ baseUrl, game, seats, fetchImpl }) {
+  async function createRoom({ baseUrl, game, seats, fetchImpl, timeoutMs }) {
     const doFetch = fetchImpl || ((...args) => root.fetch(...args));
+    const limit = timeoutMs || CREATE_TIMEOUT_MS;
     let res;
     try {
       // text/plain keeps this a "simple" request, so the browser skips the CORS preflight round trip.
@@ -81,9 +89,11 @@
         method: "POST",
         headers: { "content-type": "text/plain" },
         body: JSON.stringify({ game, seats }),
+        signal: AbortSignal.timeout(limit),
       });
     } catch (error) {
-      throw new NetError("unreachable", "Couldn't reach the online server.", error);
+      const timedOut = error && (error.name === "TimeoutError" || error.name === "AbortError");
+      throw new NetError("unreachable", timedOut ? "The online server didn't answer in time." : "Couldn't reach the online server.", error);
     }
     if (res.status === 429) throw new NetError("rate_limited", "Too many new rooms - wait a minute and try again.");
     if (!res.ok) throw new NetError("create_failed", "The online server couldn't create a room (" + res.status + ").");
@@ -121,6 +131,11 @@
       this.ws = null;
       this.retryTimer = null;
       this.heartbeat = null;
+      this.connectTimer = null;
+      this.leaveTimer = null;
+      this.leaving = false;
+      this.opened = false;
+      this.connectStartedAt = 0;
       this.lastSeen = 0;
       this.listeners = {};
     }
@@ -158,12 +173,24 @@
 
     connect() {
       this.stopTimers();
-      this.setStatus(this.seat === null ? "connecting" : "reconnecting");
+      if (!this.leaving) this.setStatus(this.seat === null ? "connecting" : "reconnecting");
       const ws = new this.WebSocketImpl(socketUrl(this.baseUrl, this.code));
       this.ws = ws;
+      this.opened = false;
+      this.connectStartedAt = this.timers.now();
+      this.connectTimer = this.timers.setTimeout(() => {
+        this.connectTimer = null;
+        if (ws !== this.ws || this.opened) return;
+        this.ws = null;
+        this.closeQuietly(ws, 1000, "connect_timeout");
+        this.onClosed(1006, "connect_timeout");
+      }, CONNECT_TIMEOUT_MS);
       // Events from a socket that was already replaced are stale and ignored.
       ws.onopen = () => {
         if (ws !== this.ws) return;
+        this.opened = true;
+        if (this.connectTimer !== null) this.timers.clearTimeout(this.connectTimer);
+        this.connectTimer = null;
         this.lastSeen = this.timers.now();
         const hello = { t: "hello", v: PROTOCOL_VERSION, game: this.game };
         if (this.token) hello.token = this.token;
@@ -193,6 +220,11 @@
       }
       switch (msg.t) {
         case "welcome":
+          if (this.leaving) {
+            this.ws.send(JSON.stringify({ t: "leave" }));
+            this.close();
+            return;
+          }
           this.attempt = 0;
           this.seat = msg.seat;
           this.seats = msg.seats;
@@ -218,6 +250,14 @@
 
     onClosed(code, reason) {
       this.stopTimers();
+      if (this.leaving) {
+        if (FATAL.has(code)) return this.close();
+        this.retryTimer = this.timers.setTimeout(() => {
+          this.retryTimer = null;
+          this.connect();
+        }, backoffDelay(this.attempt++, this.random));
+        return;
+      }
       if (this.status === "closed") return;
       if (FATAL.has(code)) {
         this.setStatus("closed");
@@ -249,10 +289,15 @@
 
     // Call when the page becomes visible or the network returns: retry now instead of waiting out the backoff.
     nudge() {
-      if (this.status === "reconnecting" && this.retryTimer !== null) {
-        this.attempt = 0;
-        this.connect();
-      }
+      if (this.status !== "connecting" && this.status !== "reconnecting") return;
+      const waiting = this.retryTimer !== null;
+      const stuck = this.ws !== null && !this.opened && this.timers.now() - this.connectStartedAt > STUCK_CONNECT_MS;
+      if (!waiting && !stuck) return;
+      const old = this.ws;
+      this.ws = null;
+      if (old) this.closeQuietly(old, 1000, "replaced_by_nudge");
+      this.attempt = 0;
+      this.connect();
     }
 
     send(data, to) {
@@ -261,13 +306,30 @@
       return true;
     }
 
-    // Gives the seat up for good. close() only disconnects this tab.
+    // Gives the seat up for good. close() only disconnects this tab. While the socket is down the
+    // session reconnects silently just to say so, or the relay would keep the seat (and the host's room).
     leave() {
-      if (this.ws && this.status === "open") this.ws.send(JSON.stringify({ t: "leave" }));
-      this.close();
+      if (this.ws && this.status === "open") {
+        this.ws.send(JSON.stringify({ t: "leave" }));
+        this.close();
+        return;
+      }
+      if (!this.token || this.status === "closed" || this.status === "idle") {
+        this.close();
+        return;
+      }
+      this.leaving = true;
+      this.setStatus("closed");
+      this.listeners = {};
+      this.leaveTimer = this.timers.setTimeout(() => this.close(), LEAVE_DEADLINE_MS);
+      this.attempt = 0;
+      if (this.ws === null || this.retryTimer !== null) this.connect();
     }
 
     close() {
+      this.leaving = false;
+      if (this.leaveTimer !== null) this.timers.clearTimeout(this.leaveTimer);
+      this.leaveTimer = null;
       this.setStatus("closed");
       this.stopTimers();
       const ws = this.ws;
@@ -286,8 +348,10 @@
     stopTimers() {
       if (this.retryTimer !== null) this.timers.clearTimeout(this.retryTimer);
       if (this.heartbeat !== null) this.timers.clearInterval(this.heartbeat);
+      if (this.connectTimer !== null) this.timers.clearTimeout(this.connectTimer);
       this.retryTimer = null;
       this.heartbeat = null;
+      this.connectTimer = null;
     }
   }
 
@@ -314,17 +378,41 @@
   function forgetSeat(storage, game, code) {
     try {
       storage.removeItem(seatKey(game, code));
+      storage.removeItem(seatKey(game, code) + ":game");
     } catch (error) {
       console.warn("mini-net: couldn't forget the saved seat", error);
     }
   }
 
+  // The host's copy of the game, so a host reload restores it instead of trusting the guest's.
+  function snapshotStore(storage, game, code) {
+    const key = seatKey(game, code) + ":game";
+    return {
+      load() {
+        try {
+          const raw = storage.getItem(key);
+          return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+          console.warn("mini-net: couldn't read the saved game", error);
+          return null;
+        }
+      },
+      save(snapshot) {
+        try {
+          storage.setItem(key, JSON.stringify(snapshot));
+        } catch (error) {
+          console.warn("mini-net: couldn't save the game; a host reload will ask the guest for it", error);
+        }
+      },
+    };
+  }
+
   const api = {
     DEFAULT_RELAY_URL, PROTOCOL_VERSION, CODE_LENGTH, CODE_PATTERN, PING, CLOSE, FATAL,
-    HEARTBEAT_MS, DEAD_AFTER_MS, BACKOFF_MAX_MS,
+    HEARTBEAT_MS, DEAD_AFTER_MS, BACKOFF_MAX_MS, CONNECT_TIMEOUT_MS, STUCK_CONNECT_MS, LEAVE_DEADLINE_MS,
     NetError, RelaySession,
     normalizeCode, isValidCode, socketUrl, relayUrl, backoffDelay, createRoom,
-    saveSeat, loadSeat, forgetSeat,
+    saveSeat, loadSeat, forgetSeat, snapshotStore,
   };
 
   if (typeof module !== "undefined" && module.exports) {
