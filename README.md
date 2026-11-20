@@ -2,7 +2,8 @@
 
 A small collection of static, no-build browser games, deployed together on
 GitHub Pages. Nothing to install — every game is plain HTML/CSS/JS with no
-bundler and no server.
+bundler and no server of its own. Online play goes through the small relay in
+[relay/](relay/README.md).
 
 **[Play now →](https://almang45.github.io/mini-games/)**
 
@@ -75,7 +76,10 @@ A `shared/` folder at the repo root holds the handful of things that really
 are identical across projects (the color palette + base styles in
 `shared/theme.css` and one DOM-shim primitive reused by both test suites)
 — everything else stays local to its own game on purpose, since each game's
-UI is independent by design. `shared/favicon.svg` (a generic dice icon)
+UI is independent by design. The exception is `shared/net/`, the online layer
+(relay client, turn sync, lobby panel): it is game-agnostic on purpose so
+every game that goes online shares one tested protocol implementation, even
+while Connect Four is its only user. `shared/favicon.svg` (a generic dice icon)
 backs only the top-level hub page; each game has its own favicon (PNG or
 SVG) representing that specific game, also used as its icon on the hub.
 

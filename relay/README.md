@@ -41,7 +41,7 @@ WebSocket frames are JSON. The first one must be a hello within 10 seconds:
 
 | Client sends | Meaning |
 |---|---|
-| `{"t":"hello","v":1,"game":"…","token":"…"}` | Take a seat. Without `token`, the next free seat. With it, the seat that token owns |
+| `{"t":"hello","v":1,"game":"…","token":"…"}` | Take a seat. Without `token`, the next free seat, or else a guest seat nobody is connected to (its old token stops working). With it, the seat that token owns. One hello per socket |
 | `{"t":"msg","data":…,"to":1}` | Forward `data` to seat `to`, or to every other seat without `to` |
 | `{"t":"leave"}` | Give the seat up. The host leaving ends the room |
 | `{"t":"ping"}` | Answered with `{"t":"pong"}` by the runtime, without waking the room |
@@ -53,15 +53,20 @@ WebSocket frames are JSON. The first one must be a hello within 10 seconds:
 | `{"t":"msg","from":0,"data":…}` | A forwarded message |
 
 Close codes: 4000 bad message, 4001 no hello in time, 4003 unknown token,
-4004 room gone, 4005 code is for another game, 4008 too many frames, 4009
-room full, 4010 the seat was opened elsewhere, 4011 left, 4013 frame over
-32 KB, 4026 unsupported version. The client retries 4001, 4008 and network
-drops, and stops on the rest.
+4004 room gone, 4005 code is for another game, 4007 no traffic for 90 s,
+4008 too many frames, 4009 room full, 4010 the seat was opened elsewhere,
+4011 left, 4013 frame over 32 KB, 4026 unsupported version. The client
+retries 4001, 4007, 4008 and network drops, and stops on the rest.
 
 ## Limits and lifetime
 
 - Seat tokens are 128-bit random values, stored only as SHA-256 hashes.
+- `POST /rooms` bodies over 1 KB are refused with 413; the body is read in
+  chunks and the read stops at the limit.
 - Each socket may send bursts of 40 frames, refilled at 5 per second.
+- While anyone is connected the room checks every 60 s for seats that sent
+  nothing (not even a ping) for 90 s, closes them with 4007 and tells the
+  others the seat left. A phone that lost coverage never sends a TCP close.
 - A room with nobody connected is deleted after 30 minutes. Any room is
   deleted 24 hours after it was created.
 - The origin check keeps other websites from using the relay through their
@@ -73,10 +78,14 @@ drops, and stops on the rest.
 | Failure | What happens |
 |---|---|
 | Relay down or unreachable | "Host a game" says the server can't be reached; other modes are untouched |
-| A phone sleeps or changes network | The client sees no pong for 45 s, reconnects with backoff, and resumes its seat; the board stays locked meanwhile |
+| A phone sleeps or changes network | The client sees no pong for 45 s, reconnects with backoff, and resumes its seat; the board stays locked meanwhile. A handshake that hangs is abandoned after 10 s; waking the page or the network coming back retries at once |
+| A phone vanishes without closing | The relay's 90 s liveness sweep closes the seat (4007) so the other side sees it leave and the room can idle out |
+| A guest loses its token (new tab, lost welcome) | Joining the code again takes over the guest seat nobody is connected to. The host seat is never taken over |
+| Leave pressed while offline | The page ends the room at once; the client keeps reconnecting in the background for up to 15 s to tell the relay, so the seat is freed |
 | A deploy restarts the Worker | Sockets drop and reconnect the same way; rooms live in Durable Object storage and survive |
-| A tab reloads | The seat token is in `sessionStorage`; the page rejoins through `?room=`. A reloaded host gets the game back from the guest |
+| A tab reloads | The seat token is in `sessionStorage`; the page rejoins through `?room=`. A reloaded host restores the game from its own `sessionStorage` copy, and only asks the guest when it has none |
 | The devices disagree | Every move carries a state hash; a mismatch makes the host resend its move list |
+| A guest can't replay the host's list | It asks again after 1 s and 2 s, then shows "out of sync - reload" instead of looping |
 | Pages and Worker versions differ | The relay accepts every version in `SUPPORTED_VERSIONS`; an older one is refused with 4026 and the page asks for a reload |
 
 ## Deploying
@@ -108,7 +117,7 @@ npx wrangler@4.157.0 tail --format json        # live logs
 
 Logs are one JSON object per line, also kept in Workers Logs (dashboard →
 Workers → mini-games-relay → Logs). Events: `room_created`, `seat_joined`,
-`seat_disconnected`, `seat_left`, `room_closed` (with `reason`: idle,
+`seat_disconnected`, `seat_stale`, `seat_reclaimed`, `seat_left`, `room_closed` (with `reason`: idle,
 max_age, host_left), `socket_rejected` (with `reason`), `rate_limited`,
 `room_init_failed`, `unhandled`. No IP addresses or tokens are logged.
 
