@@ -1,9 +1,10 @@
 // The "Online" panel a game drops into its page: host a room, join one by code or link, see the
 // connection, share the link, leave. The game gets the session through onSession and decides
-// everything else. Needs relay-client.js loaded first; styles in net.css.
+// everything else. Needs relay-client.js loaded first; styles in net.css. The close-code helpers
+// also load in Node (require) for tests; mountLobby needs a DOM.
 (function (root) {
   "use strict";
-  const NET = root.MINI_NET;
+  const NET = root.MINI_NET || (typeof require === "function" ? require("./relay-client.js") : null);
 
   const CLOSE_TEXT = {
     [NET.CLOSE.FORBIDDEN]: "That seat belongs to someone else. Join again with the code.",
@@ -18,6 +19,10 @@
   const DROP_SEAT = new Set([
     NET.CLOSE.FORBIDDEN, NET.CLOSE.ROOM_GONE, NET.CLOSE.WRONG_GAME, NET.CLOSE.ROOM_FULL, NET.CLOSE.LEFT,
   ]);
+
+  const closeMessage = (code) => CLOSE_TEXT[code] || "The connection was refused (" + code + ").";
+  // "left" is the lobby's own reason for the Leave button.
+  const dropsSeat = (reason) => reason === "left" || DROP_SEAT.has(reason);
 
   function el(tag, props, children) {
     const node = Object.assign(document.createElement(tag), props || {});
@@ -40,6 +45,8 @@
     const baseUrl = NET.relayUrl(root.location);
     const peerName = opts.peerName || ((seat) => "Player " + (seat + 1));
     let session = null;
+    // Bumped whenever the panel moves on, so a room that finishes creating afterwards is dropped.
+    let generation = 0;
 
     const hostBtn = el("button", { type: "button", className: "btn-primary", textContent: "Host a game" });
     const codeInput = el("input", {
@@ -123,8 +130,9 @@
       const ended = session;
       session = null;
       if (ended) {
-        if (reason === "left" || DROP_SEAT.has(reason)) NET.forgetSeat(storage, opts.game, ended.code);
-        ended.close();
+        if (dropsSeat(reason)) NET.forgetSeat(storage, opts.game, ended.code);
+        // A leaving session closes itself once the relay has the leave, possibly after a reconnect.
+        if (reason !== "left") ended.close();
       }
       setRoomInUrl(null);
       showStart();
@@ -141,22 +149,29 @@
       session.on("status", describe);
       session.on("peer", describe);
       session.on("closed", ({ code: closeCode }) => {
-        end(closeCode, CLOSE_TEXT[closeCode] || "The connection was refused (" + closeCode + ").", "error");
+        end(closeCode, closeMessage(closeCode), "error");
       });
       showRoom(code);
       setRoomInUrl(code);
-      opts.onSession(session);
+      opts.onSession(session, { persist: NET.snapshotStore(storage, opts.game, code) });
       session.start();
     }
 
     async function host() {
+      const mine = ++generation;
       setBusy(true);
       say("Creating a room…", "wait");
       try {
         const room = await NET.createRoom({ baseUrl, game: opts.game, seats: opts.seats });
+        if (mine !== generation) {
+          // The player switched mode meanwhile; the unused room expires on the relay by itself.
+          console.info("mini-net: dropping room " + room.code + ", created after the panel moved on");
+          return;
+        }
         NET.saveSeat(storage, opts.game, room.code, room.token);
         begin(room.code, room.token);
       } catch (error) {
+        if (mine !== generation) return;
         console.error("mini-net: creating a room failed", error);
         setBusy(false);
         say(error.code === "unreachable" ? error.message + " Local modes still work." : error.message, "error");
@@ -206,6 +221,7 @@
     root.addEventListener("online", () => { if (session) session.nudge(); });
 
     function leave() {
+      generation++;
       if (!session) return;
       session.leave();
       end("left", "You left the room.", "idle");
@@ -214,7 +230,13 @@
     say("Host a room, then share its code or link with the other player.", "idle");
 
     return {
-      show(visible) { panel.hidden = !visible; },
+      show(visible) {
+        panel.hidden = !visible;
+        if (!visible && !session) {
+          generation++;
+          setBusy(false);
+        }
+      },
       leave,
       get session() { return session; },
       // Joins the room named in ?room=, if any. Returns whether it did.
@@ -225,5 +247,11 @@
     };
   }
 
-  root.MINI_NET = Object.assign(root.MINI_NET || {}, { mountLobby });
-})(window);
+  const api = { mountLobby, closeMessage, dropsSeat };
+
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = api;
+  } else {
+    root.MINI_NET = Object.assign(root.MINI_NET || {}, api);
+  }
+})(typeof window !== "undefined" ? window : globalThis);

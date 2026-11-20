@@ -176,11 +176,32 @@ ok("backoff is jittered down to half", NET.backoffDelay(3, () => 0) === 2000);
     const count = sockets.length;
     timers.advance(NET.DEAD_AFTER_MS);
     ok("a silent socket is dropped", ws.closedWith && ws.closedWith.reason === "heartbeat_timeout");
-    ok("and replaced after the backoff", session.status === "reconnecting");
-    timers.advance(NET.BACKOFF_MAX_MS);
-    ok("with a new socket", sockets.length === count + 1);
+    ok("and replaced after the backoff", session.status === "reconnecting" && sockets.length === count + 1);
+
+    // The replacement never finishes its handshake (dead network): it is abandoned, not waited on.
+    const hung = lastSocket();
+    timers.advance(NET.CONNECT_TIMEOUT_MS);
+    ok("a handshake that hangs is abandoned", hung.closedWith && hung.closedWith.reason === "connect_timeout");
+    ok("and retried after the backoff", sockets.length === count + 2 && session.status === "reconnecting");
+    session.close();
   }
 
+  {
+    const { session, timers } = newSession({ token: "tok" });
+    session.start();
+    const first = lastSocket();
+    timers.advance(1000);
+    session.nudge();
+    ok("nudge leaves a fresh handshake alone", sockets.length && lastSocket() === first);
+    timers.advance(NET.STUCK_CONNECT_MS);
+    session.nudge();
+    ok("but replaces one stuck connecting", lastSocket() !== first && first.closedWith);
+    session.close();
+  }
+
+  // Written out, not derived from NET.FATAL, so a code moved into the wrong set fails here.
+  const RETRIED = new Set([4001, 4007, 4008]);
+  ok("every close code is classified", Object.values(NET.CLOSE).every((code) => RETRIED.has(code) !== NET.FATAL.has(code)));
   for (const [name, code] of Object.entries(NET.CLOSE)) {
     const { session, timers, events } = newSession({ token: "tok" });
     session.start();
@@ -189,12 +210,11 @@ ok("backoff is jittered down to half", NET.backoffDelay(3, () => 0) === 2000);
     const count = sockets.length;
     ws.drop(code, "x");
     timers.advance(60000);
-    const fatal = NET.FATAL.has(code);
-    if (fatal) {
+    if (!RETRIED.has(code)) {
       ok(name + " ends the session for good", session.status === "closed" && sockets.length === count
         && events.some(([t, p]) => t === "closed" && p.code === code));
     } else {
-      ok(name + " is retried", sockets.length === count + 1 && !events.some(([t]) => t === "closed"));
+      ok(name + " is retried", sockets.length > count && !events.some(([t]) => t === "closed"));
       session.close();
     }
   }
@@ -223,6 +243,72 @@ ok("backoff is jittered down to half", NET.backoffDelay(3, () => 0) === 2000);
     lastSocket().push({ t: "welcome", v: 1, seat: 0, token: "t", game: "connect-four", seats: 2, present: [0] });
     console.error = originalError;
     ok("a throwing listener doesn't stop the others", second && session.status === "open");
+  }
+
+  {
+    // Leave pressed while the socket is down: the seat must still be given up on the relay.
+    const { session, timers, events } = newSession();
+    session.start();
+    let ws = lastSocket();
+    ws.open();
+    ws.push({ t: "welcome", v: 1, seat: 1, token: "tok", game: "connect-four", seats: 2, present: [0, 1] });
+    ws.drop(1006);
+    const seen = events.length;
+    session.leave();
+    ok("leave while reconnecting closes the session for the page", session.status === "closed");
+    ws = lastSocket();
+    ok("but reconnects at once to tell the relay", ws.closedWith === null && sockets.length > 0);
+    ws.open();
+    ok("with the seat token", ws.hello().token === "tok");
+    ws.push({ t: "welcome", v: 1, seat: 1, token: "tok", game: "connect-four", seats: 2, present: [0, 1] });
+    ok("then sends leave and closes", ws.sent[ws.sent.length - 1] === JSON.stringify({ t: "leave" }) && ws.closedWith.code === 1000);
+    ok("without telling the page anything more", events.length === seen + 1 && events[seen][1] === "closed");
+    ok("and stops every timer", timers.pendingCount() === 0);
+  }
+
+  {
+    const { session, timers } = newSession({ token: "tok" });
+    session.start();
+    lastSocket().drop(1006);
+    session.leave();
+    const count = sockets.length;
+    for (let i = 0; i < 20; i++) {
+      const ws = lastSocket();
+      if (!ws.closedWith) ws.drop(1006);
+      timers.advance(1000);
+    }
+    ok("a leave that can't reach the relay gives up at the deadline", timers.pendingCount() === 0 && sockets.length > count);
+  }
+
+  {
+    let error = null;
+    // AbortSignal.timeout's timer doesn't hold Node's event loop open; this one does.
+    const keepAlive = setTimeout(() => {}, 1000);
+    try {
+      await NET.createRoom({
+        baseUrl: "https://relay.test", game: "x", seats: 2, timeoutMs: 20,
+        fetchImpl: (url, init) => new Promise((resolve, reject) => {
+          init.signal.addEventListener("abort", () => reject(init.signal.reason));
+        }),
+      });
+    } catch (e) {
+      error = e;
+    }
+    clearTimeout(keepAlive);
+    ok("createRoom gives up on a server that never answers", error instanceof NET.NetError && error.code === "unreachable"
+      && /in time/.test(error.message), error && error.message);
+  }
+
+  {
+    const map = new Map();
+    const storage = { getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => map.set(k, v), removeItem: (k) => map.delete(k) };
+    const store = NET.snapshotStore(storage, "connect-four", "K7QX3");
+    ok("no saved game at first", store.load() === null);
+    store.save({ k: "state", round: 2, moves: [3] });
+    ok("a saved game comes back", store.load().round === 2);
+    NET.saveSeat(storage, "connect-four", "K7QX3", "tok");
+    NET.forgetSeat(storage, "connect-four", "K7QX3");
+    ok("forgetting the seat forgets the game too", store.load() === null);
   }
 
   // ---- seat storage ------------------------------------------------------------------

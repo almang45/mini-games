@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { TurnSync, RECOVER_MS } = require("../../net/turn-sync.js");
+const { TurnSync, RECOVER_MS, SYNC_RETRY_MS, MAX_SYNC_FAILURES } = require("../../net/turn-sync.js");
 const C4 = require("../../../connect-four/js/connect-four.js");
 
 let passed = 0;
@@ -9,7 +9,8 @@ function ok(label, cond, extra) {
   passed++;
 }
 
-const warnings = [];
+// Emptied at the start of every block (see fresh()), so one block's warning can't pass another's check.
+let warnings = [];
 console.warn = (...args) => warnings.push(args.join(" "));
 console.error = (...args) => warnings.push(args.join(" "));
 
@@ -66,26 +67,23 @@ class Hub {
 
 function fakeTimers() {
   const pending = new Map();
-  let id = 0;
+  let id = 0, last = null;
   return {
-    setTimeout: (fn) => { pending.set(++id, fn); return id; },
+    setTimeout: (fn, ms) => { pending.set(++id, fn); last = ms; return id; },
     clearTimeout: (t) => pending.delete(t),
+    lastDelay: () => last,
     fireAll() { const fns = [...pending.values()]; pending.clear(); fns.forEach((fn) => fn()); },
     count: () => pending.size,
   };
 }
 
-// The Connect Four page's adapter, minus the DOM.
-function player(hub, seat, timers) {
-  const p = { state: C4.createGame(), hostColor: C4.RED, events: [] };
-  const adapter = {
-    reset(config) { p.hostColor = config.hostColor; p.state = C4.createGame(); },
-    apply(col) { C4.play(p.state, col); },
-    hash() { return p.state.board.join("") + "/" + p.state.turn + "/" + p.state.winner; },
-    turnSeat() { return p.state.gameOver ? -1 : p.state.turn === p.hostColor ? 0 : 1; },
-  };
+// The same adapter the Connect Four page uses.
+function player(hub, seat, timers, persist) {
+  const p = { state: C4.createGame(), events: [] };
+  p.adapter = C4.createOnlineAdapter({ getState: () => p.state, setState: (next) => { p.state = next; } });
+  Object.defineProperty(p, "hostColor", { get: () => p.adapter.hostColor });
   p.session = hub.join(seat);
-  p.sync = new TurnSync({ session: p.session, adapter, timers, onChange: (e) => {
+  p.sync = new TurnSync({ session: p.session, adapter: p.adapter, timers, persist, onChange: (e) => {
     p.events.push(e);
     if (e.type === "need-round") p.sync.newRound({ hostColor: C4.RED });
   } });
@@ -93,7 +91,13 @@ function player(hub, seat, timers) {
   return p;
 }
 
+function memoryStore() {
+  let saved = null;
+  return { load: () => saved && JSON.parse(saved), save: (snap) => { saved = JSON.stringify(snap); } };
+}
+
 function pair() {
+  warnings = [];
   const hub = new Hub(2);
   const timers = fakeTimers();
   const host = player(hub, 0, timers);
@@ -202,6 +206,82 @@ function pair() {
   timers.fireAll();
   ok("then starts a fresh round", host2.sync.started && guest2.sync.started && guest2.board() === host2.board());
   ok("the old guest object is untouched", guest.sync.started);
+}
+
+// ---- review fixes -------------------------------------------------------------------------
+
+{
+  // Both sides apply the move, then disagree: the host must still redraw the board it now has.
+  const { host, guest } = pair();
+  host.sync.play(3);
+  host.state.board[0] = C4.RED; // a corrupted host position
+  const before = host.events.length;
+  guest.sync.play(3);
+  ok("a hash mismatch on the host is reported", warnings.some((w) => w.includes("hash_mismatch")));
+  ok("and the host page is told to redraw", host.events.slice(before).some((e) => e.type === "state"));
+}
+
+{
+  const { host, guest } = pair();
+  for (const config of [null, 7, {}, { hostColor: 9 }]) {
+    host.session.emit("message", { from: 1, data: { k: "state", round: 1, config, moves: [] } });
+  }
+  ok("a bad config never replaces the host's game", host.sync.started && host.sync.config.hostColor === C4.RED);
+  guest.session.emit("message", { from: 0, data: { k: "state", round: 5, config: null, moves: [] } });
+  ok("nor replaces the guest's", guest.sync.round === 1 && warnings.some((w) => w.includes("invalid config")));
+}
+
+{
+  // The host's record doesn't replay here (a stale page against a new rule, say): back off, then stop.
+  const { hub, host, guest, timers } = pair();
+  const bad = { k: "state", round: 1, config: { hostColor: C4.RED }, moves: [99] };
+  const asked = () => hub.log.filter((m) => m.from === 1 && m.data.k === "sync").length;
+  const start = asked();
+  guest.session.emit("message", { from: 0, data: bad });
+  ok("a failed replay doesn't ask again at once", asked() === start && timers.lastDelay() === SYNC_RETRY_MS);
+  host.sync.moves = [99]; // make the host keep answering with the bad record
+  host.sync.round = 1;
+  for (let i = 1; i < MAX_SYNC_FAILURES; i++) {
+    timers.fireAll();
+  }
+  ok("each retry waits longer", timers.lastDelay() === SYNC_RETRY_MS * 2);
+  ok("then the guest gives up and says so", guest.sync.desynced && guest.events.some((e) => e.type === "desync"));
+  ok("and stops asking", timers.count() === 0);
+}
+
+{
+  const { hub, guest, timers } = pair();
+  hub.disconnect(0);
+  const reloaded = player(hub, 0, timers);
+  guest.sync.config = null; // a guest with nothing to hand back
+  hub.connect(0);
+  ok("a reloaded host waits for recovery", timers.count() === 1);
+  reloaded.session.status = "closed";
+  reloaded.session.emit("status", "closed");
+  ok("closing the session stops the recovery timer", timers.count() === 0);
+}
+
+{
+  // A host with a saved copy restores it and ignores whatever a guest offers.
+  const hub = new Hub(2);
+  warnings = [];
+  const timers = fakeTimers();
+  const store = memoryStore();
+  const host = player(hub, 0, timers, store);
+  const guest = player(hub, 1, timers);
+  hub.connect(0);
+  hub.connect(1);
+  host.sync.play(3);
+  guest.sync.play(3);
+  ok("the host saves its record as play goes on", store.load().moves.length === 2);
+  hub.disconnect(0);
+  guest.state.board[0] = C4.YELLOW;
+  guest.sync.moves.push(0); // a guest that would hand back a different game
+  const reloaded = player(hub, 0, timers, store);
+  hub.connect(0);
+  ok("a reloaded host restores its own copy", reloaded.sync.started && reloaded.sync.moves.length === 2);
+  ok("without asking the guest", !hub.log.some((m) => m.from === 0 && m.data.k === "recover"));
+  ok("and puts the guest back on it", guest.sync.moves.length === 2 && guest.board() === reloaded.board());
 }
 
 ok("the recovery wait is short", RECOVER_MS <= 3000);
