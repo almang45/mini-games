@@ -1,0 +1,74 @@
+/* Online-play panel built by shared/net/lobby.js. Uses the shared/theme.css tokens. */
+
+.net-lobby {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--felt-line);
+}
+.net-lobby[hidden], .net-lobby [hidden] { display: none; }
+
+.net-start, .net-room, .net-join {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.net-start { gap: 14px; }
+.net-join label { font-size: 0.82rem; color: var(--ink-dim); }
+.net-join input {
+  font: inherit;
+  width: 7.5ch;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--bg-2);
+  color: var(--ink);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 1rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.net-join input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.net-room > span { font-size: 0.82rem; color: var(--ink-dim); }
+.net-code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 1.35rem;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  user-select: all;
+}
+
+.net-status {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+  text-align: center;
+}
+/* The dot repeats what the text says; it is never the only signal. */
+.net-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink-dim);
+}
+.net-dot[data-tone="ok"] { background: var(--ok); }
+.net-dot[data-tone="wait"] { background: var(--accent); animation: net-pulse 1.2s ease-in-out infinite alternate; }
+.net-dot[data-tone="error"] { background: var(--danger); }
+@keyframes net-pulse { to { opacity: 0.35; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .net-dot[data-tone="wait"] { animation: none; }
+}
