@@ -1,10 +1,12 @@
 const assert = require("assert");
-const { TurnSync, RECOVER_MS, SYNC_RETRY_MS, MAX_SYNC_FAILURES } = require("../../net/turn-sync.js");
+const { TurnSync, RECOVER_MS, SYNC_RETRY_MS, MAX_SYNC_FAILURES, REPLY_BURST } = require("../../net/turn-sync.js");
 const C4 = require("../../../connect-four/js/connect-four.js");
 
 let passed = 0;
+// Kept before console.error is captured below, so a failure still reaches the CI log.
+const realError = console.error.bind(console);
 function ok(label, cond, extra) {
-  if (!cond) console.error("FAIL:", label, extra !== undefined ? JSON.stringify(extra) : "");
+  if (!cond) realError("FAIL:", label, extra !== undefined ? JSON.stringify(extra) : "");
   assert.ok(cond, label);
   passed++;
 }
@@ -222,11 +224,19 @@ function pair() {
 }
 
 {
-  const { host, guest } = pair();
+  // A recovering host is the only one that takes a guest's record, so each bad config goes to one.
   for (const config of [null, 7, {}, { hostColor: 9 }]) {
-    host.session.emit("message", { from: 1, data: { k: "state", round: 1, config, moves: [] } });
+    const { hub, guest, timers } = pair();
+    hub.disconnect(0);
+    const reloaded = player(hub, 0, timers);
+    guest.sync.config = null; // so the guest's own answer doesn't settle the recovery first
+    hub.connect(0);
+    warnings = [];
+    reloaded.session.emit("message", { from: 1, data: { k: "state", round: 4, config, moves: [] } });
+    ok("a recovering host refuses config " + JSON.stringify(config),
+      reloaded.sync.round === 1 && reloaded.sync.config.hostColor === C4.RED && warnings.some((w) => w.includes("invalid config")));
   }
-  ok("a bad config never replaces the host's game", host.sync.started && host.sync.config.hostColor === C4.RED);
+  const { guest } = pair();
   guest.session.emit("message", { from: 0, data: { k: "state", round: 5, config: null, moves: [] } });
   ok("nor replaces the guest's", guest.sync.round === 1 && warnings.some((w) => w.includes("invalid config")));
 }
@@ -282,6 +292,75 @@ function pair() {
   ok("a reloaded host restores its own copy", reloaded.sync.started && reloaded.sync.moves.length === 2);
   ok("without asking the guest", !hub.log.some((m) => m.from === 0 && m.data.k === "recover"));
   ok("and puts the guest back on it", guest.sync.moves.length === 2 && guest.board() === reloaded.board());
+}
+
+{
+  // A guest floods the host with sync requests: the host answers a few, not all of them.
+  const { hub, host } = pair();
+  host.sync.play(3);
+  const before = hub.log.filter((m) => m.from === 0).length;
+  for (let i = 0; i < 40; i++) host.session.emit("message", { from: 1, data: { k: "sync" } });
+  const sent = hub.log.filter((m) => m.from === 0).length - before;
+  ok("a sync flood gets a bounded answer", sent > 0 && sent <= REPLY_BURST, sent);
+  ok("and is logged", warnings.some((w) => w.includes("too many requests from seat 1")));
+}
+
+{
+  // Two guests hand a reloaded host different games: it trusts neither and starts over.
+  warnings = [];
+  const hub = new Hub(3);
+  const timers = fakeTimers();
+  const host = player(hub, 0, timers);
+  const a = player(hub, 1, timers);
+  const b = player(hub, 2, timers);
+  hub.connect(0);
+  hub.connect(1);
+  hub.connect(2);
+  host.sync.play(3);
+  b.sync.moves.push(0); // b would hand back a different game
+  hub.disconnect(0);
+  const reloaded = player(hub, 0, timers);
+  hub.connect(0);
+  ok("disagreeing guests aren't trusted", reloaded.sync.moves.length === 0 && warnings.some((w) => w.includes("disagree")));
+  ok("so the host starts a new round", reloaded.sync.started && a.sync.moves.length === 0);
+}
+
+{
+  // Two guests with the same game: the host waits for both, then takes it.
+  warnings = [];
+  const hub = new Hub(3);
+  const timers = fakeTimers();
+  const host = player(hub, 0, timers);
+  player(hub, 1, timers);
+  player(hub, 2, timers);
+  hub.connect(0);
+  hub.connect(1);
+  hub.connect(2);
+  host.sync.play(3);
+  hub.disconnect(0);
+  const reloaded = player(hub, 0, timers);
+  hub.connect(0);
+  ok("agreeing guests hand the game back", reloaded.sync.moves.length === 1 && timers.count() === 0);
+}
+
+{
+  // The reloaded host drops and returns while still waiting: only the newest wait may end recovery.
+  const { hub, guest, timers } = pair();
+  hub.disconnect(0);
+  const reloaded = player(hub, 0, timers);
+  guest.sync.config = null;
+  hub.connect(0);
+  reloaded.session.emit("welcome", {});
+  ok("a second welcome replaces the recovery wait", timers.count() === 1);
+}
+
+{
+  // A good record after a failed one cancels the pending retry.
+  const { host, guest, timers } = pair();
+  guest.session.emit("message", { from: 0, data: { k: "state", round: 1, config: { hostColor: C4.RED }, moves: [99] } });
+  ok("a failed replay arms a retry", timers.count() === 1);
+  guest.session.emit("message", { from: 0, data: host.sync.snapshot() });
+  ok("a good record cancels it", timers.count() === 0 && guest.sync.syncFailures === 0);
 }
 
 ok("the recovery wait is short", RECOVER_MS <= 3000);

@@ -354,12 +354,10 @@
     const adapter = C4.createOnlineAdapter({
       getState: () => state,
       setState: (next) => { state = next; },
-      onReset: () => {
-        cancelAI();
-        $("overlay").hidden = true;
-      },
+      // The overlay is left to onNetChange: a resync replays the same finished game and must not close it.
+      onReset: cancelAI,
     });
-    const room = { session, adapter, sync: null };
+    const room = { session, adapter, sync: null, resultShownFor: null };
     room.sync = new NET.TurnSync({ session, adapter, persist, onChange: (event) => onNetChange(room, event) });
     online = room;
     state = C4.createGame();
@@ -380,7 +378,12 @@
     }
     animate = event.type === "move";
     render();
-    if (event.type === "move" && state.gameOver) showResult();
+    if (event.type === "round" || (event.type === "state" && !state.gameOver)) $("overlay").hidden = true;
+    // Once per round, so a reconnect after the end doesn't reopen a result the player closed.
+    if ((event.type === "move" || event.type === "state") && state.gameOver && room.resultShownFor !== room.sync.round) {
+      room.resultShownFor = room.sync.round;
+      showResult();
+    }
   }
 
   const lobby = NET.mountLobby($("online"), {

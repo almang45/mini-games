@@ -14,12 +14,15 @@
     [NET.CLOSE.REPLACED]: "This game was opened in another tab.",
     [NET.CLOSE.LEFT]: "You left the room.",
     [NET.CLOSE.VERSION]: "The game was updated - reload this page on both devices.",
+    [NET.CLOSE.BAD_MESSAGE]: "The online server didn't understand this page - reload it and join again.",
+    [NET.CLOSE.TOO_LARGE]: "This game grew too large to send - start a new round or room.",
   };
   // After these the saved seat is useless, so a reload shouldn't try it again.
   const DROP_SEAT = new Set([
     NET.CLOSE.FORBIDDEN, NET.CLOSE.ROOM_GONE, NET.CLOSE.WRONG_GAME, NET.CLOSE.ROOM_FULL, NET.CLOSE.LEFT,
   ]);
 
+  const hasCloseText = (code) => Object.prototype.hasOwnProperty.call(CLOSE_TEXT, code);
   const closeMessage = (code) => CLOSE_TEXT[code] || "The connection was refused (" + code + ").";
   // "left" is the lobby's own reason for the Leave button.
   const dropsSeat = (reason) => reason === "left" || DROP_SEAT.has(reason);
@@ -96,8 +99,11 @@
 
     function shareUrl() {
       const url = new URL(root.location.href);
+      // Only a local relay override survives (relayUrl honours it on localhost alone).
+      const relay = url.searchParams.get("relay");
       url.search = "";
       url.hash = "";
+      if (relay) url.searchParams.set("relay", relay);
       url.searchParams.set("room", session.code);
       return url.href;
     }
@@ -249,7 +255,7 @@
     };
   }
 
-  const api = { mountLobby, closeMessage, dropsSeat };
+  const api = { mountLobby, closeMessage, hasCloseText, dropsSeat };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

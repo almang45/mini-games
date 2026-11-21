@@ -8,6 +8,11 @@ identical across games. Read `README.md` before changing anything.
 
 - No build step, no bundler, no npm dependencies, no external CDNs or web fonts.
   Everything a page loads must live in this repo.
+- Two deliberate exceptions, described in `README.md`: `shared/net/` is the
+  game-agnostic online layer every online game shares, and `relay/` is the
+  Cloudflare Worker behind it, deployed on its own with a pinned `wrangler`
+  run through `npx` (still no npm dependencies). Neither changes how the site
+  is served.
 - Tests (Node 24, the same loop as `.github/workflows/tests.yml`; the subshell
   keeps a failure from closing an interactive terminal):
   `( for f in */js/test/*.test.js; do node "$f" || exit 1; done )`.

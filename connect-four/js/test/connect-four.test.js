@@ -182,7 +182,8 @@ const openingMs = Date.now() - started;
   let resets = 0;
   const adapter = C4.createOnlineAdapter({ getState: () => state, setState: (next) => { state = next; }, onReset: () => resets++ });
   ok("only a real colour is a valid config", adapter.isValidConfig({ hostColor: YELLOW })
-    && !adapter.isValidConfig(null) && !adapter.isValidConfig({}) && !adapter.isValidConfig({ hostColor: 3 }));
+    && !adapter.isValidConfig(null) && !adapter.isValidConfig({}) && !adapter.isValidConfig({ hostColor: 3 })
+    && !adapter.isValidConfig({ hostColor: YELLOW, pad: "x" }));
   adapter.reset({ hostColor: YELLOW });
   ok("reset starts a fresh game and clears the page", state.turn === RED && resets === 1);
   ok("the host plays the configured colour", adapter.hostColor === YELLOW && adapter.seatColor(0) === YELLOW && adapter.seatColor(1) === RED);

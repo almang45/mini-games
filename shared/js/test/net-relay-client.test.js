@@ -80,6 +80,25 @@ ok("localhost may point at a local relay",
 ok("backoff grows and is capped", NET.backoffDelay(0, () => 1) === 500 && NET.backoffDelay(20, () => 1) === NET.BACKOFF_MAX_MS);
 ok("backoff is jittered down to half", NET.backoffDelay(3, () => 0) === 2000);
 
+{
+  // A hidden tab: the browser runs the heartbeat once a minute, and the relay answers every ping.
+  const { session, timers } = newSession();
+  const interval = timers.setInterval;
+  timers.setInterval = (fn) => interval(fn, 60000);
+  session.start();
+  const ws = lastSocket();
+  ws.open();
+  ws.push({ t: "welcome", v: 1, seat: 0, token: "tok", game: "connect-four", seats: 2, present: [0, 1] });
+  for (let i = 0; i < 5; i++) {
+    timers.advance(60000);
+    if (ws.sent[ws.sent.length - 1] === NET.PING) ws.push({ t: "pong" });
+  }
+  ok("a throttled heartbeat keeps a live socket", ws.closedWith === null && session.status === "open");
+  timers.advance(3 * 60000);
+  ok("but still drops one that stops answering", ws.closedWith && ws.closedWith.reason === "heartbeat_timeout");
+  session.close();
+}
+
 // ---- createRoom ------------------------------------------------------------------
 
 (async () => {
@@ -174,9 +193,9 @@ ok("backoff is jittered down to half", NET.backoffDelay(3, () => 0) === 2000);
     timers.advance(NET.HEARTBEAT_MS);
     ok("a ping goes out on the heartbeat", ws.sent[ws.sent.length - 1] === NET.PING);
     const count = sockets.length;
-    timers.advance(NET.DEAD_AFTER_MS);
+    timers.advance(NET.DEAD_AFTER_MS + NET.HEARTBEAT_MS);
     ok("a silent socket is dropped", ws.closedWith && ws.closedWith.reason === "heartbeat_timeout");
-    ok("and replaced after the backoff", session.status === "reconnecting" && sockets.length === count + 1);
+    ok("and replaced after the backoff", session.status === "reconnecting" && sockets.length === count + 1, [session.status, sockets.length - count]);
 
     // The replacement never finishes its handshake (dead network): it is abandoned, not waited on.
     const hung = lastSocket();
@@ -329,6 +348,19 @@ ok("backoff is jittered down to half", NET.backoffDelay(3, () => 0) === 2000);
       }
     })();
     ok("and still creates rooms", room.code === "K7QX3");
+  }
+
+  for (const [label, json] of [
+    ["an HTML page", async () => { throw new SyntaxError("Unexpected token <"); }],
+    ["a null body", async () => null],
+  ]) {
+    let error = null;
+    try {
+      await NET.createRoom({ baseUrl: "https://relay.test", game: "x", seats: 2, fetchImpl: async () => ({ ok: true, status: 200, json }) });
+    } catch (e) {
+      error = e;
+    }
+    ok("createRoom reports " + label + " as an unexpected answer", error instanceof NET.NetError && error.code === "create_failed", error && error.message);
   }
 
   {

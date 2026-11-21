@@ -79,12 +79,14 @@ retries 4001, 4007, 4008 and network drops, and stops on the rest.
 | Failure | What happens |
 |---|---|
 | Relay down or unreachable | "Host a game" says the server can't be reached; other modes are untouched |
-| A phone sleeps or changes network | The client sees no pong for 45 s, reconnects with backoff, and resumes its seat; the board stays locked meanwhile. A handshake that hangs is abandoned after 10 s; waking the page or the network coming back retries at once |
+| A phone sleeps or changes network | A ping goes unanswered for 45 s, so the client reconnects with backoff, and resumes its seat; the board stays locked meanwhile. A handshake that hangs is abandoned after 10 s; waking the page or the network coming back retries at once |
 | A phone vanishes without closing | The relay's 90 s liveness sweep closes the seat (4007) so the other side sees it leave and the room can idle out |
 | A guest loses its token (new tab, lost welcome) | After the seat has been empty for 3 minutes, joining the code again takes it over. A guest that is only reconnecting can't be displaced, and the host seat is never taken over |
 | Leave pressed while offline | The page ends the room at once; the client keeps reconnecting in the background for up to 15 s to tell the relay, so the seat is freed |
 | A deploy restarts the Worker | Sockets drop and reconnect the same way; rooms live in Durable Object storage and survive |
-| A tab reloads | The seat token is in `sessionStorage`; the page rejoins through `?room=`. A reloaded host restores the game from its own `sessionStorage` copy, and only asks the guest when it has none |
+| A hidden tab's timers slow to once a minute | Liveness is timed from the unanswered ping, not the last frame, so a throttled but healthy socket stays up |
+| A tab reloads | The seat token is in `sessionStorage`; the page rejoins through `?room=`. A reloaded host restores the game from its own `sessionStorage` copy, and only asks the guests when it has none; it takes their record only if every guest that answers sends the same one, else it starts a new round |
+| A peer floods requests | Snapshot and sync replies come out of a small per-peer bucket (4, refilled 1/s), so a flood can't push the answering device over the relay's rate limit |
 | The devices disagree | Every move carries a state hash; a mismatch makes the host resend its move list |
 | A guest can't replay the host's list | It asks again after 1 s and 2 s, then shows "out of sync - reload" instead of looping |
 | Pages and Worker versions differ | The relay accepts every version in `SUPPORTED_VERSIONS`; an older one is refused with 4026 and the page asks for a reload |

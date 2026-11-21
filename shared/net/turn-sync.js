@@ -21,6 +21,10 @@
   // the same record would fail the same way forever.
   const SYNC_RETRY_MS = 1000;
   const MAX_SYNC_FAILURES = 3;
+  // Replies a peer can trigger (snapshots, sync requests) come out of a small bucket per peer,
+  // so a flood of requests can't push this device over the relay's own rate limit.
+  const REPLY_BURST = 4;
+  const REPLY_REFILL_MS = 1000;
 
   class TurnSync {
     constructor({ session, adapter, onChange, timers, persist }) {
@@ -29,6 +33,9 @@
       this.onChange = onChange;
       this.persist = persist || null;
       this.timers = timers || { setTimeout: (fn, ms) => root.setTimeout(fn, ms), clearTimeout: (id) => root.clearTimeout(id) };
+      this.now = (timers && timers.now) || (() => Date.now());
+      this.replyBuckets = new Map();
+      this.recovery = null;
       this.round = 0;
       this.config = null;
       this.moves = [];
@@ -96,12 +103,11 @@
         // Back from a drop or a reload: whatever the guests did meanwhile, the host's record counts.
         this.session.send(this.snapshot());
       } else if (this.session.present.length > 1) {
-        // A reloaded host has lost its game; a guest that still has it can hand it back.
+        // A reloaded host has lost its game; the guests that still have it can hand it back.
         // Armed before asking: the timer doubles as the "accept a guest's state" flag.
-        this.recoverTimer = this.timers.setTimeout(() => {
-          this.recoverTimer = null;
-          if (!this.started) this.notify({ type: "need-round" });
-        }, RECOVER_MS);
+        this.stopRecovering();
+        this.recovery = new Map();
+        this.recoverTimer = this.timers.setTimeout(() => this.finishRecovery(), RECOVER_MS);
         this.session.send({ k: "recover" });
       } else {
         this.notify({ type: "need-round" });
@@ -109,7 +115,7 @@
     }
 
     onPeer({ seat, state }) {
-      if (this.isHost && state === "joined" && this.started) this.session.send(this.snapshot(), seat);
+      if (this.isHost && state === "joined" && this.started) this.reply(seat, this.snapshot());
       this.notify({ type: "peer", seat, state });
     }
 
@@ -122,13 +128,13 @@
         case "state":
           // Guests take the host's record; the host takes a guest's only to recover after a reload.
           if (from === 0 && !this.isHost) this.load(data);
-          else if (this.isHost && this.recoverTimer !== null) this.adopt(data);
+          else if (this.isHost && this.recoverTimer !== null) this.collect(from, data);
           break;
         case "sync":
-          if (this.isHost && this.started) this.session.send(this.snapshot(), from);
+          if (this.isHost && this.started) this.reply(from, this.snapshot());
           break;
         case "recover":
-          if (from === 0 && !this.isHost && this.started) this.session.send(this.snapshot(), 0);
+          if (from === 0 && !this.isHost && this.started) this.reply(0, this.snapshot());
           break;
         case "move":
           this.remoteMove(from, data);
@@ -143,8 +149,43 @@
       return Boolean(saved) && this.load(saved);
     }
 
-    adopt(data) {
+    // Sends `data` to one peer in answer to something it sent, unless that peer has used up its replies.
+    reply(seat, data) {
+      const now = this.now();
+      const bucket = this.replyBuckets.get(seat) || { tokens: REPLY_BURST, at: now };
+      bucket.tokens = Math.min(REPLY_BURST, bucket.tokens + (now - bucket.at) / REPLY_REFILL_MS);
+      bucket.at = now;
+      this.replyBuckets.set(seat, bucket);
+      if (bucket.tokens < 1) {
+        console.warn("turn-sync: too many requests from seat " + seat + ", not answering");
+        return false;
+      }
+      bucket.tokens -= 1;
+      return this.session.send(data, seat);
+    }
+
+    // Every present guest answers a recovering host; a record is adopted only when they all agree,
+    // so one modified page can't hand the host a game of its own making.
+    collect(from, data) {
+      this.recovery.set(from, data);
+      const guests = this.session.present.filter((seat) => seat !== 0);
+      if (guests.every((seat) => this.recovery.has(seat))) this.finishRecovery();
+    }
+
+    finishRecovery() {
+      const answers = [...this.recovery.values()];
       this.stopRecovering();
+      if (this.started) return;
+      const records = new Set(answers.map((a) => JSON.stringify([a.round, a.config, a.moves])));
+      if (records.size === 1) {
+        this.adopt(answers[0]);
+        return;
+      }
+      if (records.size > 1) console.warn("turn-sync: the guests' records disagree, starting a new round");
+      this.notify({ type: "need-round" });
+    }
+
+    adopt(data) {
       if (!this.load(data)) {
         this.notify({ type: "need-round" });
         return;
@@ -173,6 +214,7 @@
       this.config = config;
       this.moves = moves.slice();
       this.syncFailures = 0;
+      this.stopSyncRetry();
       this.save();
       if (this.desynced) {
         this.desynced = false;
@@ -221,25 +263,30 @@
     resync(from, reason) {
       console.warn("turn-sync: resyncing with seat " + from + " (" + reason + ")");
       if (this.isHost) {
-        if (this.started) this.session.send(this.snapshot(), from);
+        if (this.started) this.reply(from, this.snapshot());
       } else {
-        this.session.send({ k: "sync" }, 0);
+        this.reply(0, { k: "sync" });
       }
     }
 
     stopRecovering() {
       if (this.recoverTimer !== null) this.timers.clearTimeout(this.recoverTimer);
       this.recoverTimer = null;
+      this.recovery = null;
+    }
+
+    stopSyncRetry() {
+      if (this.syncTimer !== null) this.timers.clearTimeout(this.syncTimer);
+      this.syncTimer = null;
     }
 
     stopTimers() {
       this.stopRecovering();
-      if (this.syncTimer !== null) this.timers.clearTimeout(this.syncTimer);
-      this.syncTimer = null;
+      this.stopSyncRetry();
     }
   }
 
-  const api = { TurnSync, RECOVER_MS, SYNC_RETRY_MS, MAX_SYNC_FAILURES };
+  const api = { TurnSync, RECOVER_MS, SYNC_RETRY_MS, MAX_SYNC_FAILURES, REPLY_BURST };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

@@ -12,7 +12,8 @@ function ok(label, cond, extra) {
 
 for (const [name, code] of Object.entries(NET.CLOSE)) {
   if (NET.FATAL.has(code)) {
-    ok(name + " has a message", typeof LOBBY.closeMessage(code) === "string" && LOBBY.closeMessage(code).length > 0);
+    // Its own text, not the generic fallback every code gets.
+    ok(name + " has its own message", LOBBY.hasCloseText(code));
   }
 }
 ok("a room that is gone explains itself", /ended or doesn't exist/.test(LOBBY.closeMessage(NET.CLOSE.ROOM_GONE)));

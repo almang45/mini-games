@@ -196,6 +196,8 @@ async function connect(room, ctx, hello) {
   ok("the old token no longer works", ghost.closedWith && ghost.closedWith.code === CLOSE.FORBIDDEN);
   a.close(1000, "");
   await room.webSocketClose(a, 1000, "");
+  // Past the grace, so only the seat-0 rule can turn the intruder away.
+  clock += RECLAIM_GRACE_MS + 1;
   const intruder = await connect(room, ctx, {});
   ok("the host seat is never reclaimed", intruder.closedWith && intruder.closedWith.code === CLOSE.ROOM_FULL);
 }
@@ -304,6 +306,35 @@ async function connect(room, ctx, hello) {
   ok("an old room gets an empty leftAt", JSON.stringify(room.meta.leftAt) === "[null,null]");
   const c = await connect(room, ctx, {});
   ok("and its seats aren't reclaimed without a recorded drop", c.closedWith && c.closedWith.code === CLOSE.ROOM_FULL);
+}
+
+{
+  // The guest's socket closes while its first hello is still hashing.
+  const { ctx, room, host } = await newRoom();
+  const a = await connect(room, ctx, { token: host.token });
+  const ws = ctx.socket();
+  await room.accept(ws);
+  const pending = room.webSocketMessage(ws, JSON.stringify({ t: "hello", v: PROTOCOL_VERSION, game: "connect-four" }));
+  ws.close(1006, "");
+  await room.webSocketClose(ws, 1006, "");
+  await pending;
+  ok("a socket that closed mid-hello takes no seat", room.meta.tokens[1] === null);
+  ok("and nobody hears it join", !a.frames().some((f) => f.t === "peer" && f.state === "joined"));
+  const b = await connect(room, ctx, {});
+  ok("so the seat is still free", b.last().t === "welcome" && b.last().seat === 1);
+}
+
+{
+  // A replaced host tab still has frames in flight: they must not act for seat 0.
+  const { ctx, room, host } = await newRoom();
+  const old = await connect(room, ctx, { token: host.token });
+  const guest = await connect(room, ctx, {});
+  await connect(room, ctx, { token: host.token });
+  await room.webSocketMessage(old, JSON.stringify({ t: "leave" }));
+  ok("a replaced socket can't end the room", room.meta !== null && room.meta.tokens[0] !== null);
+  const before = guest.sent.length;
+  await room.webSocketMessage(old, JSON.stringify({ t: "msg", data: "late" }));
+  ok("nor relay as its old seat", guest.sent.length === before);
 }
 
 console.log("relay room: " + count() + " checks passed");

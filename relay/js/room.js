@@ -83,6 +83,9 @@ export class Room {
 
   async webSocketMessage(ws, raw) {
     await this.ready;
+    // A socket closed on purpose (replaced, rejected, stale) keeps its seat in the attachment, but
+    // anything it still sends no longer speaks for that seat.
+    if (this.attachment(ws).closed) return;
     if (typeof raw !== "string") return this.reject(ws, CLOSE.BAD_MESSAGE, "binary_frame");
     if (raw.length > MAX_MESSAGE_CHARS) return this.reject(ws, CLOSE.TOO_LARGE, "message_too_large");
     if (!this.takeToken(ws)) return this.reject(ws, CLOSE.RATE_LIMITED, "rate_limited");
@@ -123,8 +126,8 @@ export class Room {
     // Hash first: nothing below awaits, so two sockets can never claim the same free seat.
     const fresh = token === undefined ? randomToken() : null;
     const hash = await sha256Hex(token ?? fresh);
-    // The hello timeout may have closed this socket during the await.
-    if (this.attachment(ws).closed) return;
+    // The hello timeout, or the client itself, may have closed this socket during the await.
+    if (this.attachment(ws).closed || ws.readyState !== OPEN) return;
     const { meta } = this;
     if (!meta) return this.reject(ws, CLOSE.ROOM_GONE, "room_not_found");
     if (msg.game !== meta.game) return this.reject(ws, CLOSE.WRONG_GAME, "wrong_game");

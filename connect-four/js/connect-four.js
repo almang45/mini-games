@@ -180,14 +180,16 @@
   }
 
   // The TurnSync adapter (shared/net/turn-sync.js) for online play. The page owns the game
-  // state; getState/setState reach it, and onReset clears whatever the page shows over the board.
+  // state; getState/setState reach it, and onReset stops whatever the page has running.
   function createOnlineAdapter({ getState, setState, onReset }) {
     let hostColor = RED;
     return {
       get hostColor() { return hostColor; },
       seatColor(seat) { return seat === 0 ? hostColor : opponent(hostColor); },
       isValidConfig(config) {
-        return config !== null && typeof config === "object" && (config.hostColor === RED || config.hostColor === YELLOW);
+        // No other keys: a config is stored and sent on, so a padded one would bloat every snapshot.
+        return config !== null && typeof config === "object" && Object.keys(config).length === 1
+          && (config.hostColor === RED || config.hostColor === YELLOW);
       },
       reset(config) {
         if (onReset) onReset();

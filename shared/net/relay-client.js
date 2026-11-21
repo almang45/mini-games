@@ -86,6 +86,7 @@
     const controller = typeof AbortSignal.timeout === "function" ? null : new AbortController();
     const timer = controller ? root.setTimeout(() => controller.abort(new DOMException("timed out", "TimeoutError")), limit) : null;
     let res;
+    let body;
     try {
       // text/plain keeps this a "simple" request, so the browser skips the CORS preflight round trip.
       res = await doFetch(trimSlash(baseUrl) + "/rooms", {
@@ -94,6 +95,13 @@
         body: JSON.stringify({ game, seats }),
         signal: controller ? controller.signal : AbortSignal.timeout(limit),
       });
+      // Read inside the timeout too: a proxy can send headers and then stall the body.
+      if (res.ok) {
+        body = await res.json().catch((error) => {
+          if (error && error.name === "SyntaxError") return undefined;
+          throw error;
+        });
+      }
     } catch (error) {
       const timedOut = error && (error.name === "TimeoutError" || error.name === "AbortError");
       throw new NetError("unreachable", timedOut ? "The online server didn't answer in time." : "Couldn't reach the online server.", error);
@@ -102,8 +110,7 @@
     }
     if (res.status === 429) throw new NetError("rate_limited", "Too many new rooms - wait a minute and try again.");
     if (!res.ok) throw new NetError("create_failed", "The online server couldn't create a room (" + res.status + ").");
-    const body = await res.json();
-    if (!isValidCode(body.code) || typeof body.token !== "string") {
+    if (!body || typeof body !== "object" || !isValidCode(body.code) || typeof body.token !== "string") {
       throw new NetError("create_failed", "The online server sent an unexpected answer.");
     }
     return { code: body.code, token: body.token, seat: body.seat };
@@ -142,6 +149,7 @@
       this.opened = false;
       this.connectStartedAt = 0;
       this.lastSeen = 0;
+      this.pingAt = null;
       this.listeners = {};
     }
 
@@ -197,6 +205,7 @@
         if (this.connectTimer !== null) this.timers.clearTimeout(this.connectTimer);
         this.connectTimer = null;
         this.lastSeen = this.timers.now();
+        this.pingAt = null;
         const hello = { t: "hello", v: PROTOCOL_VERSION, game: this.game };
         if (this.token) hello.token = this.token;
         ws.send(JSON.stringify(hello));
@@ -205,6 +214,7 @@
       ws.onmessage = (event) => {
         if (ws !== this.ws) return;
         this.lastSeen = this.timers.now();
+        this.pingAt = null;
         this.onFrame(event.data);
       };
       ws.onclose = (event) => {
@@ -278,17 +288,20 @@
       }, delay);
     }
 
-    // The relay answers pings without waking up; silence this long means the socket is dead even
-    // if the browser hasn't noticed (common after a phone sleeps or switches network).
+    // The relay answers pings without waking up; a ping unanswered this long means the socket is
+    // dead even if the browser hasn't noticed (common after a phone sleeps or switches network).
+    // Timed from the ping, not the last frame: a hidden tab's timers may run only once a minute.
     beat() {
       const ws = this.ws;
       if (!ws) return;
-      if (this.timers.now() - this.lastSeen > DEAD_AFTER_MS) {
+      const now = this.timers.now();
+      if (this.pingAt !== null && now - this.pingAt > DEAD_AFTER_MS) {
         this.ws = null;
         this.closeQuietly(ws, 4000, "heartbeat_timeout");
         this.onClosed(1006, "heartbeat_timeout");
         return;
       }
+      if (this.pingAt === null) this.pingAt = now;
       ws.send(PING);
     }
 
