@@ -2,7 +2,8 @@
 
 A small collection of static, no-build browser games, deployed together on
 GitHub Pages. Nothing to install — every game is plain HTML/CSS/JS with no
-bundler and no server.
+bundler and no server of its own. Online play goes through the small relay in
+[relay/](relay/README.md).
 
 **[Play now →](https://almang45.github.io/mini-games/)**
 
@@ -33,7 +34,7 @@ to, both here and in `index.html`.
 | | |
 |---|---|
 | **[Reversi](reversi/)** | Reversi/Othello against a three-level AI, or two players on one device. |
-| **[Connect Four](connect-four/)** | Connect Four against a three-level AI, or two players on one device. |
+| **[Connect Four](connect-four/)** | Connect Four against a three-level AI, two players on one device, or online across two devices. |
 | **[Checkers](checkers/)** | English draughts with compulsory captures and multi-jumps, against a three-level AI or two players on one device. |
 | **[Backgammon](backgammon/)** | Backgammon with gammons, backgammons and a running match score (no doubling cube), against a three-level AI or two players on one device. |
 | **[Dots and Boxes](dots-boxes/)** | Dots and Boxes on 3x3 to 6x6 boards, against a three-level AI (Hard plays chain control and the double-cross) or two players on one device. |
@@ -75,7 +76,10 @@ A `shared/` folder at the repo root holds the handful of things that really
 are identical across projects (the color palette + base styles in
 `shared/theme.css` and one DOM-shim primitive reused by both test suites)
 — everything else stays local to its own game on purpose, since each game's
-UI is independent by design. `shared/favicon.svg` (a generic dice icon)
+UI is independent by design. The exception is `shared/net/`, the online layer
+(relay client, turn sync, lobby panel): it is game-agnostic on purpose so
+every game that goes online shares one tested protocol implementation, even
+while Connect Four is its only user. `shared/favicon.svg` (a generic dice icon)
 backs only the top-level hub page; each game has its own favicon (PNG or
 SVG) representing that specific game, also used as its icon on the hub.
 
@@ -129,10 +133,28 @@ first time the game is opened like any other file.
 only run over http(s), so opening files straight from disk works as before,
 just without the offline cache.
 
+## Online play
+
+Connect Four can be played on two devices: one player hosts a room and shares
+its five-character code or link, the other joins. The pages stay static; the
+devices talk through a small relay, a Cloudflare Worker with one Durable
+Object per room, in [`relay/`](relay/). The relay only hands out seats and
+forwards messages. The rules still run in the browser, and the host's copy of
+the game is the one that counts when the two devices disagree.
+
+The browser side lives in `shared/net/`: `relay-client.js` (rooms, reconnects,
+heartbeat), `turn-sync.js` (moves, resync, recovery after a reload),
+`lobby.js` and `net.css` (the Online panel). Every other mode keeps working
+offline and without the relay. To develop against a local relay, run
+`npx wrangler dev` in `relay/` and open a page on `localhost:8080` with
+`?relay=http://127.0.0.1:8787`; see [relay/README.md](relay/README.md).
+
 ## Deployment
 
 This repo is deployed via GitHub Pages, serving directly from the root of
-`main`. There is no build step. The only Actions workflow runs the tests.
+`main`. There is no build step for the site. `.github/workflows/tests.yml`
+runs the tests; `.github/workflows/relay.yml` checks the relay on pull
+requests and deploys it to Cloudflare when `relay/` changes on `main`.
 
 ## License
 
