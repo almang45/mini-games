@@ -5,8 +5,10 @@ const { TurnSync } = require("../../../shared/net/turn-sync.js");
 const { Hub, fakeTimers } = require("../../../shared/js/test/net-fakes.js");
 
 let passed = 0;
+// Kept before console.error is captured below, so a failure still reaches the CI log.
+const realError = console.error.bind(console);
 function ok(label, cond, extra) {
-  if (!cond) console.error("FAIL:", label, extra !== undefined ? JSON.stringify(extra) : "");
+  if (!cond) realError("FAIL:", label, extra !== undefined ? JSON.stringify(extra) : "");
   assert.ok(cond, label);
   passed++;
 }
@@ -60,10 +62,11 @@ const hashes = (players) => new Set(players.filter((p) => p.sync.started).map((p
 
 ok("a config names who plays each seat", L.isValidOnlineConfig({ count: 4, controllers: [0, 1, 0, 3] }));
 for (const bad of [null, {}, { count: 5, controllers: [0, 1, 2, 3, 4] }, { count: 2, controllers: [0] },
-  { count: 2, controllers: [1, 1] }, { count: 3, controllers: [0, 2, 2] }]) {
+  { count: 2, controllers: [1, 1] }, { count: 3, controllers: [0, 2, 2] }, { count: 2, controllers: [0, 1], pad: "x" }]) {
   ok("rejects " + JSON.stringify(bad), !L.isValidOnlineConfig(bad));
 }
 ok("empty seats go to the host's AI", JSON.stringify(L.onlineConfig(4, [0, 2]).controllers) === "[0,0,2,0]");
+ok("a seat can be handed to the AI", JSON.stringify(L.withAI({ count: 4, controllers: [0, 1, 2, 3] }, 2)) === '{"count":4,"controllers":[0,1,0,3]}');
 
 // ---- a full four-seat game: two guests, one AI seat ---------------------------------------------
 
@@ -112,19 +115,41 @@ ok("empty seats go to the host's AI", JSON.stringify(L.onlineConfig(4, [0, 2]).c
   host.sync.newRound(L.onlineConfig(4, host.session.present));
   ok("the next round seats them", JSON.stringify(blue.adapter.controllers) === "[0,1,0,3]");
 
-  // Green drops: green is a player this round, so nobody may move until it is back.
-  while (host.adapter.turnSeat() !== 1) step(players, random);
+  // Green drops: green is a player this round, so nobody may move until it is back - not even
+  // the host on its own turn.
+  while (host.adapter.turnSeat() !== 0) step(players, random);
+  ok("the host may move on its turn", host.sync.canMove());
   hub.disconnect(1);
-  ok("a dropped player pauses the game", !host.sync.canMove() && !blue.sync.canMove());
+  ok("a dropped player pauses the game", !host.sync.playersPresent && !blue.sync.playersPresent && !host.sync.canMove());
   hub.connect(1);
-  ok("and it resumes when they return", green.sync.canMove() && green.adapter.hash() === host.adapter.hash());
+  ok("and it resumes when they return", host.sync.canMove() && green.adapter.hash() === host.adapter.hash());
 
+  while (host.adapter.turnSeat() !== 1) step(players, random);
   warnings = [];
   host.session.emit("message", { from: 1, data: { k: "move", round: host.sync.round, i: host.sync.moves.length, move: { r: 9 }, hash: "x" } });
   ok("a die that isn't 1-6 is refused", warnings.some((w) => w.includes("illegal_move")) && green.adapter.hash() === host.adapter.hash());
   const moves = host.sync.moves.length;
   host.session.emit("message", { from: 2, data: { k: "move", round: host.sync.round, i: moves, move: { r: 6 }, hash: "x" } });
   ok("a seat moving out of turn is refused", host.sync.moves.length === moves && warnings.some((w) => w.includes("out_of_order")));
+
+  // A modified page sends moves carrying more than a roll or a token.
+  while (host.adapter.turnSeat() !== 1 || host.state.phase !== "roll") step(players, random);
+  for (const move of [{ r: 1, t: 0 }, { r: 6, p: "a".repeat(1000) }, { t: 0, r: 2 }, [], 3]) {
+    warnings = [];
+    const before = host.sync.moves.length;
+    host.session.emit("message", { from: 1, data: { k: "move", round: host.sync.round, i: before, move, hash: "x" } });
+    ok("a move like " + JSON.stringify(move).slice(0, 20) + " is refused", host.sync.moves.length === before && warnings.some((w) => w.includes("illegal_move")));
+  }
+
+  // Green leaves for good mid-game: the host hands the seat to its AI, and nothing else changes.
+  const hash = host.adapter.hash();
+  const played = host.sync.moves.length;
+  ok("the host hands a seat to the AI", host.sync.changeConfig(L.withAI(host.sync.config, 1)));
+  ok("every device sees the AI take it", host.adapter.isAI(1) && blue.adapter.isAI(1) && green.adapter.isAI(1));
+  ok("with the game as it was", host.adapter.hash() === hash && blue.adapter.hash() === hash && host.sync.moves.length === played);
+  ok("and the host plays green's turn", host.sync.canMove() && !green.sync.canMove());
+  ok("a bad config change is refused", !host.sync.changeConfig({ count: 4, controllers: [1, 1, 1, 1] }) && host.sync.started);
+  ok("only the host changes the round", (() => { try { green.sync.changeConfig(host.sync.config); return false; } catch { return true; } })());
 }
 
 {

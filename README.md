@@ -74,12 +74,13 @@ lines and neither has a separate test suite (see
 
 A `shared/` folder at the repo root holds the handful of things that really
 are identical across projects (the color palette + base styles in
-`shared/theme.css` and one DOM-shim primitive reused by both test suites)
+`shared/theme.css`, one DOM-shim primitive reused by both test suites, and
+`shared/js/test/net-fakes.js`, the relay stand-ins the online games' tests share)
 — everything else stays local to its own game on purpose, since each game's
 UI is independent by design. The exception is `shared/net/`, the online layer
 (relay client, turn sync, lobby panel): it is game-agnostic on purpose so
-every game that goes online shares one tested protocol implementation, even
-while Connect Four is its only user. `shared/favicon.svg` (a generic dice icon)
+every game that goes online shares one tested protocol implementation
+(Connect Four and Ludo use it today). `shared/favicon.svg` (a generic dice icon)
 backs only the top-level hub page; each game has its own favicon (PNG or
 SVG) representing that specific game, also used as its icon on the hub.
 

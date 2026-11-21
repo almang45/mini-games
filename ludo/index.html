@@ -167,6 +167,9 @@
   const $ = (id) => document.getElementById(id);
   const AI_DELAY_MS = 550;
   const STEP_MS = 150;
+  // A player gone this long mid-game is handed to the host's AI so the others can play on.
+  // Shorter than the relay's 3-minute seat reclaim, so whoever takes the seat over only watches.
+  const TAKEOVER_MS = 150000;
 
   // ---- board geometry: grid cells as [row, col] -----------------------------
 
@@ -253,7 +256,8 @@
   let mover = null;   // seat whose token is walking; state.turn may already be the next seat
   let tokenEls = [];
   let online = null;  // { session, sync, adapter } while this tab is in a room
-  let gameId = 0;
+  let localGames = 0;
+  let gameId = "local:0";
   let resultShownFor = null; // so a later redraw doesn't reopen a result the player closed
 
   const mode = () => $("mode").value;
@@ -502,7 +506,7 @@
       else render();
       return;
     }
-    gameId++;
+    gameId = "local:" + (++localGames);
     const n = Number($("count").value);
     const types = Array.from({ length: n }, (_, i) => (mode() !== "solo" || i === 0 ? "human" : "ai"));
     state = L.createGame(types);
@@ -524,13 +528,14 @@
     stopTimers();
     const adapter = L.createOnlineAdapter({
       getState: () => state,
-      setState: (next) => { state = next; },
+      // Rebuilt at once: a replay that then fails must not leave the board drawn for another seat count.
+      setState: (next) => { state = next; rebuild(); },
       onReset: () => {
         stopTimers();
         $("overlay").hidden = true;
       },
     });
-    const room = { session, adapter, sync: null };
+    const room = { session, adapter, sync: null, takeovers: new Map() };
     room.sync = new NET.TurnSync({ session, adapter, persist, onChange: (event) => onNetChange(room, event) });
     online = room;
     syncModeUI();
@@ -538,9 +543,38 @@
   }
 
   function endOnline() {
+    if (online) clearTakeovers(online);
     online = null;
     syncModeUI();
     newGame();
+  }
+
+  // Host only. A player who leaves for good, or stays away past TAKEOVER_MS, hands their seat to
+  // the AI; otherwise whoever the relay gives that seat to next would play their tokens.
+  function watchSeat(room, { seat, state: change }) {
+    if (change === "joined") {
+      clearTimeout(room.takeovers.get(seat));
+      room.takeovers.delete(seat);
+      return;
+    }
+    if (room.adapter.controllers[seat] !== seat) return;
+    if (change === "gone") {
+      handOver(room, seat);
+    } else if (change === "left" && !room.takeovers.has(seat)) {
+      room.takeovers.set(seat, setTimeout(() => {
+        room.takeovers.delete(seat);
+        if (online === room && !room.session.present.includes(seat)) handOver(room, seat);
+      }, TAKEOVER_MS));
+    }
+  }
+
+  function handOver(room, seat) {
+    if (room.sync.changeConfig(L.withAI(room.sync.config, seat))) lobby.refresh();
+  }
+
+  function clearTakeovers(room) {
+    room.takeovers.forEach((timer) => clearTimeout(timer));
+    room.takeovers.clear();
   }
 
   function onNetChange(room, event) {
@@ -553,6 +587,7 @@
         return;
       case "round":
       case "state":
+        if (event.type === "round") clearTakeovers(room);
         stopTimers();
         gameId = "online:" + online.sync.round;
         rebuild();
@@ -571,6 +606,7 @@
           startRound();
           return;
         }
+        if (online.sync.isHost && online.sync.started) watchSeat(room, event);
         break;
       }
       default:
@@ -587,7 +623,8 @@
   const lobby = NET.mountLobby($("online"), {
     game: "ludo",
     seats: () => Number($("count").value),
-    aiFillsSeats: true,
+    // Before the first round every open seat is the AI's; after it only the seats it really plays.
+    aiFillsSeats: (seat) => !inRoom() || online.adapter.isAI(seat),
     peerName: (seat) => L.NAME[L.SEAT_COLORS[(online && online.session.seats) || Number($("count").value)][seat]],
     onSession: startOnline,
     onEnd: endOnline,

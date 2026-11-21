@@ -193,13 +193,19 @@
   function isValidOnlineConfig(config) {
     if (config === null || typeof config !== "object") return false;
     const { count, controllers } = config;
-    return Boolean(SEAT_COLORS[count]) && Array.isArray(controllers) && controllers.length === count
+    // No other keys: configs are stored and resent, so a padded one would bloat every snapshot.
+    return Object.keys(config).length === 2 && Boolean(SEAT_COLORS[count]) && Array.isArray(controllers) && controllers.length === count
       && controllers[0] === 0 && controllers.every((c, i) => c === i || c === 0);
   }
 
   // Who plays each seat this round: the connected seats themselves, the host's AI for the rest.
   function onlineConfig(count, present) {
     return { count, controllers: Array.from({ length: count }, (_, i) => (i === 0 || present.includes(i) ? i : 0)) };
+  }
+
+  // The same round with `seat` handed to the host's AI (its player left for good).
+  function withAI(config, seat) {
+    return { count: config.count, controllers: config.controllers.map((c, i) => (i === seat ? 0 : c)) };
   }
 
   function createOnlineAdapter({ getState, setState, onReset }) {
@@ -214,10 +220,12 @@
         controllers = config.controllers.slice();
         setState(createGame(controllers.map((c, i) => (isAI(i) ? "ai" : "human"))));
       },
+      // Exactly one key: a move is stored and resent as it came, so it can't carry anything else.
       apply(m) {
         const state = getState();
-        if (m && Number.isInteger(m.r)) roll(state, m.r);
-        else if (m && Number.isInteger(m.t)) move(state, m.t);
+        const keys = m !== null && typeof m === "object" ? Object.keys(m) : [];
+        if (keys.length === 1 && keys[0] === "r" && Number.isInteger(m.r)) roll(state, m.r);
+        else if (keys.length === 1 && keys[0] === "t" && Number.isInteger(m.t)) move(state, m.t);
         else throw new Error("not a Ludo move");
       },
       hash() {
@@ -235,7 +243,7 @@
   const api = {
     COLORS, START, SAFE, LOOP, LAST_LOOP, HOME, TOKENS, NAME, SEAT_COLORS,
     loopSquare, target, legalMoves, createGame, roll, move, threats, scoreMove, chooseMove,
-    isValidOnlineConfig, onlineConfig, createOnlineAdapter,
+    isValidOnlineConfig, onlineConfig, withAI, createOnlineAdapter,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.LUDO = api;

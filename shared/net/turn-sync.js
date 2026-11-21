@@ -88,6 +88,21 @@
       this.notify({ type: "round" });
     }
 
+    // Host only: change who plays what in the round under way (a seat handed to the AI, say).
+    // The moves stay; every device replays them under the new config.
+    changeConfig(config) {
+      if (!this.isHost) throw new Error("Only the host changes the round");
+      if (!this.started) return false;
+      // Checked first: a config load() refuses would leave the host without its game.
+      if (!config || typeof config !== "object" || (this.adapter.isValidConfig && !this.adapter.isValidConfig(config))) {
+        console.warn("turn-sync: refusing an invalid config change");
+        return false;
+      }
+      if (!this.load({ round: this.round, config, moves: this.moves })) return false;
+      this.session.send(this.snapshot());
+      return true;
+    }
+
     play(move) {
       if (!this.canMove()) return false;
       this.adapter.apply(move);
