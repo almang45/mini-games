@@ -82,6 +82,9 @@
   async function createRoom({ baseUrl, game, seats, fetchImpl, timeoutMs }) {
     const doFetch = fetchImpl || ((...args) => root.fetch(...args));
     const limit = timeoutMs || CREATE_TIMEOUT_MS;
+    // AbortSignal.timeout is missing before Safari 16 / Chrome 103.
+    const controller = typeof AbortSignal.timeout === "function" ? null : new AbortController();
+    const timer = controller ? root.setTimeout(() => controller.abort(new DOMException("timed out", "TimeoutError")), limit) : null;
     let res;
     try {
       // text/plain keeps this a "simple" request, so the browser skips the CORS preflight round trip.
@@ -89,11 +92,13 @@
         method: "POST",
         headers: { "content-type": "text/plain" },
         body: JSON.stringify({ game, seats }),
-        signal: AbortSignal.timeout(limit),
+        signal: controller ? controller.signal : AbortSignal.timeout(limit),
       });
     } catch (error) {
       const timedOut = error && (error.name === "TimeoutError" || error.name === "AbortError");
       throw new NetError("unreachable", timedOut ? "The online server didn't answer in time." : "Couldn't reach the online server.", error);
+    } finally {
+      if (timer !== null) root.clearTimeout(timer);
     }
     if (res.status === 429) throw new NetError("rate_limited", "Too many new rooms - wait a minute and try again.");
     if (!res.ok) throw new NetError("create_failed", "The online server couldn't create a room (" + res.status + ").");

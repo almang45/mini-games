@@ -227,7 +227,8 @@
       end("left", "You left the room.", "idle");
     }
 
-    say("Host a room, then share its code or link with the other player.", "idle");
+    const sayIdle = () => say("Host a room, then share its code or link with the other player.", "idle");
+    sayIdle();
 
     return {
       show(visible) {
@@ -235,6 +236,7 @@
         if (!visible && !session) {
           generation++;
           setBusy(false);
+          sayIdle();
         }
       },
       leave,

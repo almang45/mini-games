@@ -300,6 +300,38 @@ ok("backoff is jittered down to half", NET.backoffDelay(3, () => 0) === 2000);
   }
 
   {
+    // Older browsers: no AbortSignal.timeout, so an AbortController and a timer do the job.
+    const original = AbortSignal.timeout;
+    AbortSignal.timeout = undefined;
+    let error = null;
+    try {
+      await NET.createRoom({
+        baseUrl: "https://relay.test", game: "x", seats: 2, timeoutMs: 20,
+        fetchImpl: (url, init) => new Promise((resolve, reject) => {
+          init.signal.addEventListener("abort", () => reject(init.signal.reason));
+        }),
+      });
+    } catch (e) {
+      error = e;
+    } finally {
+      AbortSignal.timeout = original;
+    }
+    ok("without AbortSignal.timeout createRoom still times out", error instanceof NET.NetError && /in time/.test(error.message), error && error.message);
+    const room = await (async () => {
+      AbortSignal.timeout = undefined;
+      try {
+        return await NET.createRoom({
+          baseUrl: "https://relay.test", game: "x", seats: 2,
+          fetchImpl: async () => ({ ok: true, status: 201, json: async () => ({ code: "K7QX3", token: "abc", seat: 0 }) }),
+        });
+      } finally {
+        AbortSignal.timeout = original;
+      }
+    })();
+    ok("and still creates rooms", room.code === "K7QX3");
+  }
+
+  {
     const map = new Map();
     const storage = { getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => map.set(k, v), removeItem: (k) => map.delete(k) };
     const store = NET.snapshotStore(storage, "connect-four", "K7QX3");
