@@ -7,7 +7,10 @@
 //   reset(config)  start a fresh game from the round's config
 //   apply(move)    play a move, throwing if it is illegal (and leaving the state as it was)
 //   hash()         a short string that differs whenever the positions differ
-//   turnSeat()     the seat to move, or -1 when the game is over
+//   turnSeat()     the seat to move, or -1 when the game is over. With AI players this is the
+//                  seat that plays for them (the host), not the game seat
+//   requiredSeats()  optional: the seats that must be connected for play to go on. Defaults to
+//                  every seat; a game that fills empty seats with AI lists only the humans
 //   isValidConfig(config)  optional: false for a config this game can't start from
 //
 // `persist` ({load(), save(snapshot)}, optional) keeps the host's record across a reload, so a
@@ -61,8 +64,15 @@
       this.onChange(event);
     }
 
+    // Everyone who plays this round is connected, so a move can't race a player's absence.
+    get playersPresent() {
+      if (!this.adapter.requiredSeats) return this.session.everyonePresent;
+      const { present } = this.session;
+      return this.session.status === "open" && this.adapter.requiredSeats().every((seat) => present.includes(seat));
+    }
+
     canMove() {
-      return this.started && this.session.everyonePresent && this.adapter.turnSeat() === this.session.seat;
+      return this.started && this.playersPresent && this.adapter.turnSeat() === this.session.seat;
     }
 
     // Host only: start a round with `config` (who plays which side, first player, ...).

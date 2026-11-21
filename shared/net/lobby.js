@@ -42,7 +42,9 @@
     }
   }
 
-  // opts: game, seats, onSession(session), onEnd(reason), peerName(seat) -> label used in status text.
+  // opts: game, seats (a number, or a function read when hosting), onSession(session, {persist}),
+  // onEnd(reason), peerName(seat) -> label used in status text, aiFillsSeats (empty seats don't
+  // hold the game up, so they read as open rather than awaited).
   function mountLobby(container, opts) {
     const storage = sessionStore() || { getItem: () => null, setItem() {}, removeItem() {} };
     const baseUrl = NET.relayUrl(root.location);
@@ -117,6 +119,7 @@
       for (let seat = 0; seat < session.seats; seat++) if (!session.present.includes(seat)) missing.push(seat);
       if (missing.length === 0) return say("Connected - everyone is here.", "ok");
       const names = missing.map(peerName).join(", ");
+      if (opts.aiFillsSeats) return say("Connected. The AI plays " + names + " until someone joins - share the code or link.", "ok");
       return say("Waiting for " + names + ". Share the code or link.", "wait");
     }
 
@@ -168,7 +171,8 @@
       setBusy(true);
       say("Creating a room…", "wait");
       try {
-        const room = await NET.createRoom({ baseUrl, game: opts.game, seats: opts.seats });
+        const seats = typeof opts.seats === "function" ? opts.seats() : opts.seats;
+        const room = await NET.createRoom({ baseUrl, game: opts.game, seats });
         if (mine !== generation) {
           // The player switched mode meanwhile; the unused room expires on the relay by itself.
           console.info("mini-net: dropping room " + room.code + ", created after the panel moved on");
