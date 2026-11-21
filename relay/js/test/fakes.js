@@ -36,9 +36,10 @@ export class FakeContext {
     const self = this;
     this.storage = {
       async get(key) { return self.data.has(key) ? structuredClone(self.data.get(key)) : undefined; },
-      async put(key, value) { self.data.set(key, structuredClone(value)); },
+      async put(key, value) { self.puts = (self.puts || 0) + 1; self.data.set(key, structuredClone(value)); },
       async deleteAll() { self.data.clear(); },
       async setAlarm(at) { self.alarmAt = at; },
+      async getAlarm() { return self.alarmAt; },
       async deleteAlarm() { self.alarmAt = null; },
     };
   }

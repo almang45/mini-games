@@ -1,5 +1,5 @@
 import { FakeContext, ok, count, logs } from "./fakes.js";
-import { Room, IDLE_TTL_MS, MAX_AGE_MS, HELLO_TIMEOUT_MS, BUCKET_SIZE, STALE_MS, SWEEP_MS } from "../room.js";
+import { Room, IDLE_TTL_MS, MAX_AGE_MS, HELLO_TIMEOUT_MS, BUCKET_SIZE, STALE_MS, SWEEP_MS, RECLAIM_GRACE_MS } from "../room.js";
 import { CLOSE, MAX_MESSAGE_CHARS, PROTOCOL_VERSION } from "../protocol.js";
 
 let clock = 1_000_000;
@@ -40,7 +40,7 @@ async function connect(room, ctx, hello) {
   const welcomeA = a.last();
   ok("host resumes seat 0 with its token", welcomeA.t === "welcome" && welcomeA.seat === 0 && welcomeA.token === host.token);
   ok("welcome lists who is present", JSON.stringify(welcomeA.present) === "[0]");
-  ok("an occupied room doesn't expire, only sweeps", ctx.alarmAt === clock + SWEEP_MS && room.meta.idleSince === null);
+  ok("an occupied room doesn't expire, only sweeps", ctx.alarmAt <= clock + SWEEP_MS && room.meta.idleSince === null);
 
   const b = await connect(room, ctx, {});
   const welcomeB = b.last();
@@ -183,8 +183,14 @@ async function connect(room, ctx, hello) {
   const oldToken = b.last().token;
   b.close(1006, "");
   await room.webSocketClose(b, 1006, "");
+  const early = await connect(room, ctx, {});
+  ok("a seat that just dropped can't be taken by a code holder", early.closedWith && early.closedWith.code === CLOSE.ROOM_FULL);
+  clock += RECLAIM_GRACE_MS - 1000;
+  const stillEarly = await connect(room, ctx, {});
+  ok("nor before the grace period ends", stillEarly.closedWith && stillEarly.closedWith.code === CLOSE.ROOM_FULL);
+  clock += 1000;
   const b2 = await connect(room, ctx, {});
-  ok("a tokenless guest reclaims an empty guest seat", b2.last().t === "welcome" && b2.last().seat === 1);
+  ok("a tokenless guest reclaims a guest seat empty for the grace period", b2.last().t === "welcome" && b2.last().seat === 1);
   ok("the reclaim is logged", logs.some((entry) => entry.event === "seat_reclaimed" && entry.seat === 1));
   const ghost = await connect(room, ctx, { token: oldToken });
   ok("the old token no longer works", ghost.closedWith && ghost.closedWith.code === CLOSE.FORBIDDEN);
@@ -220,7 +226,7 @@ async function connect(room, ctx, hello) {
   const { ctx, room, host } = await newRoom();
   const a = await connect(room, ctx, { token: host.token });
   const b = await connect(room, ctx, {});
-  ok("an occupied room sweeps for dead sockets", ctx.alarmAt === clock + SWEEP_MS);
+  ok("an occupied room sweeps for dead sockets", ctx.alarmAt <= clock + SWEEP_MS);
   clock += STALE_MS / 2;
   a.autoAt = clock;
   clock += STALE_MS / 2 + 1000;
@@ -234,6 +240,70 @@ async function connect(room, ctx, hello) {
   clock += STALE_MS + 1000;
   await room.alarm();
   ok("once everyone is stale the room starts its idle timer", a.closedWith && a.closedWith.code === CLOSE.STALE && room.meta.idleSince === clock);
+}
+
+{
+  // A guest that comes back inside the grace period keeps its seat, and the clock restarts.
+  const { ctx, room, host } = await newRoom();
+  await connect(room, ctx, { token: host.token });
+  const b = await connect(room, ctx, {});
+  const token = b.last().token;
+  b.close(1006, "");
+  await room.webSocketClose(b, 1006, "");
+  clock += RECLAIM_GRACE_MS - 1000;
+  const back = await connect(room, ctx, { token });
+  ok("the guest resumes inside the grace period", back.last().t === "welcome" && back.last().seat === 1);
+  ok("which clears its empty-since time", room.meta.leftAt[1] === null);
+}
+
+{
+  const { ctx, room, host } = await newRoom();
+  const a = await connect(room, ctx, { token: host.token });
+  a.autoAt = clock;
+  const before = ctx.puts;
+  clock += SWEEP_MS;
+  a.autoAt = clock;
+  await room.alarm();
+  ok("a sweep that finds nothing writes nothing", ctx.puts === before && !a.closedWith);
+}
+
+{
+  // The host reconnects every 30 s; a vanished guest must still be swept.
+  const { ctx, room, host } = await newRoom();
+  let a = await connect(room, ctx, { token: host.token });
+  const b = await connect(room, ctx, {});
+  clock = ctx.alarmAt; // the earlier hello-timeout alarm fires and schedules the sweep
+  await room.alarm();
+  const sweepAt = ctx.alarmAt;
+  ok("the next sweep is a minute out", sweepAt === clock + SWEEP_MS);
+  clock += 30 * 1000;
+  a.close(1006, "");
+  await room.webSocketClose(a, 1006, "");
+  a = await connect(room, ctx, { token: host.token });
+  ok("a reconnect never pushes the pending sweep later", ctx.alarmAt <= sweepAt);
+  for (let i = 0; i < 6; i++) {
+    clock = Math.max(clock, ctx.alarmAt);
+    a.autoAt = clock;
+    await room.alarm();
+    if (b.closedWith) break;
+    clock += 30 * 1000;
+    a.autoAt = clock;
+    a.close(1006, "");
+    await room.webSocketClose(a, 1006, "");
+    a = await connect(room, ctx, { token: host.token });
+  }
+  ok("so the silent guest is swept despite the churn", b.closedWith && b.closedWith.code === CLOSE.STALE);
+}
+
+{
+  // Rooms stored before leftAt existed still load and reclaim nothing early.
+  const ctx = new FakeContext();
+  ctx.data.set("meta", { code: "ABCDE", game: "connect-four", seats: 2, tokens: ["x", "y"], createdAt: clock, idleSince: clock });
+  const room = new Room(ctx, {});
+  await room.ready;
+  ok("an old room gets an empty leftAt", JSON.stringify(room.meta.leftAt) === "[null,null]");
+  const c = await connect(room, ctx, {});
+  ok("and its seats aren't reclaimed without a recorded drop", c.closedWith && c.closedWith.code === CLOSE.ROOM_FULL);
 }
 
 console.log("relay room: " + count() + " checks passed");

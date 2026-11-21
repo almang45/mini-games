@@ -13,6 +13,9 @@ export const HELLO_TIMEOUT_MS = 10 * 1000;
 // Clients ping every 20 s. A seat silent this long belongs to a phone that vanished without a TCP close.
 export const STALE_MS = 90 * 1000;
 export const SWEEP_MS = 60 * 1000;
+// A guest seat is free for a tokenless join only after it has been empty this long: past the
+// client's reconnect window and the stale sweep, so a code holder can't grab a seat mid-reconnect.
+export const RECLAIM_GRACE_MS = 3 * 60 * 1000;
 // Per socket: bursts of 40 frames, 5 per second sustained. A turn-based game sends far less.
 export const BUCKET_SIZE = 40;
 const REFILL_PER_MS = 5 / 1000;
@@ -29,6 +32,8 @@ export class Room {
     this.helloPending = new WeakSet();
     this.ready = ctx.blockConcurrencyWhile(async () => {
       this.meta = (await ctx.storage.get("meta")) || null;
+      // Rooms created before leftAt existed.
+      if (this.meta && !Array.isArray(this.meta.leftAt)) this.meta.leftAt = new Array(this.meta.seats).fill(null);
     });
     if (typeof WebSocketRequestResponsePair === "function") {
       ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair(PING, PONG));
@@ -52,7 +57,7 @@ export class Room {
     const now = Date.now();
     const tokens = new Array(seats).fill(null);
     tokens[0] = hash;
-    this.meta = { code, game, seats, tokens, createdAt: now, idleSince: now };
+    this.meta = { code, game, seats, tokens, leftAt: new Array(seats).fill(null), createdAt: now, idleSince: now };
     await this.save();
     await this.reschedule(now);
     log("info", "room_created", { room: code, game, seats });
@@ -126,7 +131,7 @@ export class Room {
     let seat;
     if (fresh) {
       seat = meta.tokens.indexOf(null);
-      if (seat < 0) seat = this.reclaimableSeat();
+      if (seat < 0) seat = this.reclaimableSeat(Date.now());
       if (seat < 0) return this.reject(ws, CLOSE.ROOM_FULL, "room_full");
       if (meta.tokens[seat] !== null) log("info", "seat_reclaimed", { room: meta.code, seat });
       meta.tokens[seat] = hash;
@@ -137,6 +142,7 @@ export class Room {
     // The newest socket wins: the older one is usually a phone that lost its network.
     for (const other of this.seatSockets(seat)) this.closeSocket(other, CLOSE.REPLACED, "replaced");
     meta.idleSince = null;
+    meta.leftAt[seat] = null;
     ws.serializeAttachment({ seat, at: Date.now(), closed: false });
     this.send(ws, {
       t: "welcome", v: PROTOCOL_VERSION, seat, token: token ?? fresh,
@@ -168,6 +174,7 @@ export class Room {
     if (!meta) return this.reject(ws, CLOSE.ROOM_GONE, "room_not_found");
     if (seat === 0) return this.expire("host_left");
     meta.tokens[seat] = null;
+    meta.leftAt[seat] = null;
     this.closeSocket(ws, CLOSE.LEFT, "left");
     this.broadcast({ t: "peer", seat, state: "gone" });
     log("info", "seat_left", { room: meta.code, seat });
@@ -190,9 +197,12 @@ export class Room {
     // Silent when the seat was given up ("gone" already sent) or a newer socket replaced this one.
     const held = Number.isInteger(seat) && this.meta.tokens[seat] !== null;
     const { announced } = this.attachment(ws);
-    if (held && !announced && this.seatSockets(seat).every((other) => other === ws)) {
-      this.broadcast({ t: "peer", seat, state: "left" }, ws);
-      log("info", "seat_disconnected", { room: this.meta.code, seat, code });
+    if (held && this.seatSockets(seat).every((other) => other === ws)) {
+      this.markLeft(seat, Date.now());
+      if (!announced) {
+        this.broadcast({ t: "peer", seat, state: "left" }, ws);
+        log("info", "seat_disconnected", { room: this.meta.code, seat, code });
+      }
     }
     await this.markIdleIfEmpty(ws);
     await this.save();
@@ -214,23 +224,34 @@ export class Room {
     const { meta } = this;
     if (meta && now - meta.createdAt >= MAX_AGE_MS) return this.expire("max_age");
     if (meta && meta.idleSince !== null && now - meta.idleSince >= IDLE_TTL_MS) return this.expire("idle");
-    this.sweepStale(now);
-    await this.markIdleIfEmpty();
-    await this.save();
+    const swept = this.sweepStale(now);
+    const idled = await this.markIdleIfEmpty();
+    // Most sweeps find nothing; skipping the write keeps an occupied room off the storage quota.
+    if (swept || idled) await this.save();
   }
 
   // The relay can't rely on a close event from a phone that lost coverage, so it checks the
   // heartbeat itself and frees the seat for presence and idle expiry.
   sweepStale(now) {
-    if (!this.meta) return;
+    if (!this.meta) return false;
+    let swept = false;
     for (const peer of this.live()) {
       if (now - this.lastSeen(peer.ws) <= STALE_MS) continue;
       const att = this.attachment(peer.ws);
       peer.ws.serializeAttachment({ ...att, announced: true });
       this.closeSocket(peer.ws, CLOSE.STALE, "stale");
-      if (this.seatSockets(peer.seat).length === 0) this.broadcast({ t: "peer", seat: peer.seat, state: "left" });
+      if (this.seatSockets(peer.seat).length === 0) {
+        this.markLeft(peer.seat, now);
+        this.broadcast({ t: "peer", seat: peer.seat, state: "left" });
+      }
       log("info", "seat_stale", { room: this.meta.code, seat: peer.seat });
+      swept = true;
     }
+    return swept;
+  }
+
+  markLeft(seat, now) {
+    if (this.meta.leftAt[seat] === null) this.meta.leftAt[seat] = now;
   }
 
   lastSeen(ws) {
@@ -240,11 +261,12 @@ export class Room {
     return Math.max(this.attachment(ws).at, auto ? auto.getTime() : 0, this.lastFrame.get(ws) || 0);
   }
 
-  // A guest seat with no live socket: its holder lost the token (new tab, lost welcome) or is gone.
-  // Anyone holding the code may take it, the same trust that let them join in the first place.
-  reclaimableSeat() {
+  // A guest seat empty for the grace period: its holder lost the token (new tab, lost welcome)
+  // or is gone. Anyone holding the code may then take it, the same trust that let them join.
+  reclaimableSeat(now) {
     for (let seat = 1; seat < this.meta.seats; seat++) {
-      if (this.seatSockets(seat).length === 0) return seat;
+      const leftAt = this.meta.leftAt[seat];
+      if (leftAt !== null && now - leftAt >= RECLAIM_GRACE_MS && this.seatSockets(seat).length === 0) return seat;
     }
     return -1;
   }
@@ -262,11 +284,15 @@ export class Room {
 
   // ------------------------------------------------------------------ helpers
 
+  // Returns whether the room just went idle.
   async markIdleIfEmpty(closing) {
+    let idled = false;
     if (this.meta && this.meta.idleSince === null && this.live(closing).length === 0) {
       this.meta.idleSince = Date.now();
+      idled = true;
     }
     await this.reschedule(Date.now());
+    return idled;
   }
 
   async reschedule(now) {
@@ -276,7 +302,12 @@ export class Room {
       if (!Number.isInteger(att.seat) && !att.closed) due.push(att.at + HELLO_TIMEOUT_MS);
     }
     if (this.meta) {
-      if (this.live().length > 0) due.push(now + SWEEP_MS);
+      if (this.live().length > 0) {
+        due.push(now + SWEEP_MS);
+        // Never move a pending alarm later: events more often than SWEEP_MS would postpone the sweep forever.
+        const pending = await this.ctx.storage.getAlarm();
+        if (pending !== null && pending > now) due.push(pending);
+      }
       due.push(this.meta.createdAt + MAX_AGE_MS);
       if (this.meta.idleSince !== null) due.push(this.meta.idleSince + IDLE_TTL_MS);
     }

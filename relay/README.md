@@ -41,7 +41,7 @@ WebSocket frames are JSON. The first one must be a hello within 10 seconds:
 
 | Client sends | Meaning |
 |---|---|
-| `{"t":"hello","v":1,"game":"…","token":"…"}` | Take a seat. Without `token`, the next free seat, or else a guest seat nobody is connected to (its old token stops working). With it, the seat that token owns. One hello per socket |
+| `{"t":"hello","v":1,"game":"…","token":"…"}` | Take a seat. Without `token`, the next free seat, or else a guest seat nobody has been connected to for 3 minutes (its old token stops working). With it, the seat that token owns. One hello per socket |
 | `{"t":"msg","data":…,"to":1}` | Forward `data` to seat `to`, or to every other seat without `to` |
 | `{"t":"leave"}` | Give the seat up. The host leaving ends the room |
 | `{"t":"ping"}` | Answered with `{"t":"pong"}` by the runtime, without waking the room |
@@ -67,6 +67,7 @@ retries 4001, 4007, 4008 and network drops, and stops on the rest.
 - While anyone is connected the room checks every 60 s for seats that sent
   nothing (not even a ping) for 90 s, closes them with 4007 and tells the
   others the seat left. A phone that lost coverage never sends a TCP close.
+  A sweep that finds nothing writes nothing to storage.
 - A room with nobody connected is deleted after 30 minutes. Any room is
   deleted 24 hours after it was created.
 - The origin check keeps other websites from using the relay through their
@@ -80,7 +81,7 @@ retries 4001, 4007, 4008 and network drops, and stops on the rest.
 | Relay down or unreachable | "Host a game" says the server can't be reached; other modes are untouched |
 | A phone sleeps or changes network | The client sees no pong for 45 s, reconnects with backoff, and resumes its seat; the board stays locked meanwhile. A handshake that hangs is abandoned after 10 s; waking the page or the network coming back retries at once |
 | A phone vanishes without closing | The relay's 90 s liveness sweep closes the seat (4007) so the other side sees it leave and the room can idle out |
-| A guest loses its token (new tab, lost welcome) | Joining the code again takes over the guest seat nobody is connected to. The host seat is never taken over |
+| A guest loses its token (new tab, lost welcome) | After the seat has been empty for 3 minutes, joining the code again takes it over. A guest that is only reconnecting can't be displaced, and the host seat is never taken over |
 | Leave pressed while offline | The page ends the room at once; the client keeps reconnecting in the background for up to 15 s to tell the relay, so the seat is freed |
 | A deploy restarts the Worker | Sockets drop and reconnect the same way; rooms live in Durable Object storage and survive |
 | A tab reloads | The seat token is in `sessionStorage`; the page rejoins through `?room=`. A reloaded host restores the game from its own `sessionStorage` copy, and only asks the guest when it has none |
