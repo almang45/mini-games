@@ -184,9 +184,58 @@
     return scored.reduce((best, m) => (m.score > best.score ? m : best)).t;
   }
 
+  // ------------------------------------------------------------- online
+
+  // The TurnSync adapter (shared/net/turn-sync.js) for online play. Game seat i is network seat i;
+  // `controllers[i]` names the device that plays it: i itself for a connected player, 0 (the
+  // host) for a seat nobody took, which the host's AI plays. Moves are {r: die} (the controller
+  // rolled, so every device applies the same value) and {t: token}.
+  function isValidOnlineConfig(config) {
+    if (config === null || typeof config !== "object") return false;
+    const { count, controllers } = config;
+    return Boolean(SEAT_COLORS[count]) && Array.isArray(controllers) && controllers.length === count
+      && controllers[0] === 0 && controllers.every((c, i) => c === i || c === 0);
+  }
+
+  // Who plays each seat this round: the connected seats themselves, the host's AI for the rest.
+  function onlineConfig(count, present) {
+    return { count, controllers: Array.from({ length: count }, (_, i) => (i === 0 || present.includes(i) ? i : 0)) };
+  }
+
+  function createOnlineAdapter({ getState, setState, onReset }) {
+    let controllers = [0, 1];
+    const isAI = (seat) => seat !== 0 && controllers[seat] === 0;
+    return {
+      get controllers() { return controllers.slice(); },
+      isAI,
+      isValidConfig: isValidOnlineConfig,
+      reset(config) {
+        if (onReset) onReset();
+        controllers = config.controllers.slice();
+        setState(createGame(controllers.map((c, i) => (isAI(i) ? "ai" : "human"))));
+      },
+      apply(m) {
+        const state = getState();
+        if (m && Number.isInteger(m.r)) roll(state, m.r);
+        else if (m && Number.isInteger(m.t)) move(state, m.t);
+        else throw new Error("not a Ludo move");
+      },
+      hash() {
+        const s = getState();
+        return JSON.stringify([s.seats.map((seat) => seat.tokens), s.turn, s.phase, s.die, s.sixes, s.winner]);
+      },
+      turnSeat() {
+        const s = getState();
+        return s.gameOver ? -1 : controllers[s.turn];
+      },
+      requiredSeats() { return [...new Set(controllers)]; },
+    };
+  }
+
   const api = {
     COLORS, START, SAFE, LOOP, LAST_LOOP, HOME, TOKENS, NAME, SEAT_COLORS,
     loopSquare, target, legalMoves, createGame, roll, move, threats, scoreMove, chooseMove,
+    isValidOnlineConfig, onlineConfig, createOnlineAdapter,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.LUDO = api;

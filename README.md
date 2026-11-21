@@ -39,7 +39,7 @@ to, both here and in `index.html`.
 | **[Backgammon](backgammon/)** | Backgammon with gammons, backgammons and a running match score (no doubling cube), against a three-level AI or two players on one device. |
 | **[Dots and Boxes](dots-boxes/)** | Dots and Boxes on 3x3 to 6x6 boards, against a three-level AI (Hard plays chain control and the double-cross) or two players on one device. |
 | **[Mancala](mancala/)** | Kalah-rules Mancala against a three-level AI, or two players on one device. |
-| **[Ludo](ludo/)** | Ludo for 2-4 players on the classic cross board, against an AI on two levels or with everyone on one device. |
+| **[Ludo](ludo/)** | Ludo for 2-4 players on the classic cross board, against an AI on two levels, with everyone on one device, or online across up to four devices. |
 | **[Word Grid](word-grid/)** | A two-player crossword tile game on a 15x15 board with the public-domain ENABLE word list, against an AI (Easy or Normal) or a friend. |
 
 ### Kids
@@ -135,12 +135,13 @@ just without the offline cache.
 
 ## Online play
 
-Connect Four can be played on two devices: one player hosts a room and shares
-its five-character code or link, the other joins. The pages stay static; the
+Connect Four (two devices) and Ludo (up to four, with the host's AI in any
+empty seat) can be played online: one player hosts a room and shares its
+five-character code or link, the others join. The pages stay static; the
 devices talk through a small relay, a Cloudflare Worker with one Durable
 Object per room, in [`relay/`](relay/). The relay only hands out seats and
 forwards messages. The rules still run in the browser, and the host's copy of
-the game is the one that counts when the two devices disagree.
+the game is the one that counts when the devices disagree.
 
 The browser side lives in `shared/net/`: `relay-client.js` (rooms, reconnects,
 heartbeat), `turn-sync.js` (moves, resync, recovery after a reload),
