@@ -42,7 +42,10 @@
     }
   }
 
-  // opts: game, seats, onSession(session), onEnd(reason), peerName(seat) -> label used in status text.
+  // opts: game, seats (a number, or a function read when hosting), onSession(session, {persist}),
+  // onEnd(reason), peerName(seat) -> label used in status text, aiFillsSeats (true, or a function
+  // (seat) -> bool: missing seats the AI plays don't hold the game up, so they read as open
+  // rather than awaited). Call refresh() when the answer changes without a session event.
   function mountLobby(container, opts) {
     const storage = sessionStore() || { getItem: () => null, setItem() {}, removeItem() {} };
     const baseUrl = NET.relayUrl(root.location);
@@ -116,8 +119,15 @@
       const missing = [];
       for (let seat = 0; seat < session.seats; seat++) if (!session.present.includes(seat)) missing.push(seat);
       if (missing.length === 0) return say("Connected - everyone is here.", "ok");
-      const names = missing.map(peerName).join(", ");
-      return say("Waiting for " + names + ". Share the code or link.", "wait");
+      const names = (seats) => seats.map(peerName).join(", ");
+      const aiPlays = (seat) => (typeof opts.aiFillsSeats === "function" ? Boolean(opts.aiFillsSeats(seat)) : Boolean(opts.aiFillsSeats));
+      const byAI = missing.filter(aiPlays);
+      const awaited = missing.filter((seat) => !aiPlays(seat));
+      if (awaited.length > 0) {
+        const extra = byAI.length > 0 ? " (the AI plays " + names(byAI) + ")" : "";
+        return say("Waiting for " + names(awaited) + extra + ". Share the code or link.", "wait");
+      }
+      return say("Connected. The AI plays " + names(byAI) + " until someone joins - share the code or link.", "ok");
     }
 
     function showRoom(code) {
@@ -168,7 +178,8 @@
       setBusy(true);
       say("Creating a room…", "wait");
       try {
-        const room = await NET.createRoom({ baseUrl, game: opts.game, seats: opts.seats });
+        const seats = typeof opts.seats === "function" ? opts.seats() : opts.seats;
+        const room = await NET.createRoom({ baseUrl, game: opts.game, seats });
         if (mine !== generation) {
           // The player switched mode meanwhile; the unused room expires on the relay by itself.
           console.info("mini-net: dropping room " + room.code + ", created after the panel moved on");
@@ -246,6 +257,7 @@
         }
       },
       leave,
+      refresh: () => describe(),
       get session() { return session; },
       // Joins the room named in ?room=, if any. Returns whether it did.
       joinFromUrl() {
