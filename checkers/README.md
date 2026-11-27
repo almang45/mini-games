@@ -1,8 +1,9 @@
 # Checkers
 
 English draughts (American checkers) on the 8x8 board, built as static
-HTML/CSS/JS with no build step and no server. You can play Black or White
-against the AI, or two players can share one device.
+HTML/CSS/JS with no build step and no server of its own. You can play Black or
+White against the AI, two players can share one device, or two devices can
+play online through the relay (see the root README, "Online play").
 
 ## Rules
 
@@ -18,6 +19,17 @@ against the AI, or two players can share one device.
 
 To make a multi-jump, click the piece and then each landing square in turn.
 Escape cancels a half-built move.
+
+## Online
+
+Choose "Online - two devices", then Host a game and share the code or link;
+the other player joins with it. The host plays Black in the first game and the
+colours swap with every new game, which only the host can start. Each device
+draws its own pieces at the bottom. Undo is off online. A move is sent as the
+piece and its landing squares; the other device works out the captures. A player who drops or reloads rejoins the same seat; the board is
+locked until both players are connected. The adapter for
+`shared/net/turn-sync.js` is `createOnlineAdapter` in `js/checkers.js`;
+the page hands it `getState`/`setState`/`onReset` in its inline script.
 
 ## AI
 
@@ -36,15 +48,18 @@ are chosen at random.
 ## Layout
 
 - `index.html`: the page, its styles, and the UI wiring.
-- `js/checkers.js`: rules and AI, with no DOM code (`window.CHECKERS`, or
+- `js/checkers.js`: rules, AI and the online adapter, with no DOM code (`window.CHECKERS`, or
   `require()` in Node).
 - `js/test/checkers.test.js`: Node tests for steps, forced and multi-jump
   captures (a man and a king), crowning (including a crown that ends a jump),
   wins by capture and by blockade, the draw rule, undo, the AI avoiding a
   piece left hanging, and Medium beating Easy over ten games.
+- `js/test/checkers-online.test.js`: the online adapter, and whole games
+  played across two simulated devices (`shared/js/test/net-two-seat.js`).
 
 ## Tests
 
 ```
 node checkers/js/test/checkers.test.js
+node checkers/js/test/checkers-online.test.js
 ```

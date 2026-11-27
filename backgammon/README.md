@@ -1,8 +1,9 @@
 # Backgammon
 
 Backgammon with the standard 15-checker setup, built as static HTML/CSS/JS
-with no build step and no server. You can play White or Black against the AI,
-or two players can share one device. Games are scored 1, 2 (gammon) or 3
+with no build step and no server of its own. You can play White or Black
+against the AI, two players can share one device, or two devices can play
+online through the relay (see the root README, "Online play"). Games are scored 1, 2 (gammon) or 3
 (backgammon) and the page keeps a running match total. There is no doubling
 cube.
 
@@ -32,6 +33,20 @@ back moves within the current turn. Done ends the turn once every die that can
 be used has been. Escape drops the picked checker. Next Game (in the game-over box, or under
 the board after See Board) keeps the match total; New Match starts it again.
 
+## Online
+
+Choose "Online - two devices", then Host a game and share the code or link;
+the other player joins with it. The host plays White in the first game and the
+colours swap with every new game. Only the host can start the next game or a
+new match; the host's device rolls the opening dice, and the player whose turn
+it is rolls their own. Every roll, checker move, undo and Done is sent as it
+happens, so the other player watches the turn being played. The match score
+travels with each new game, so a reload keeps it. Like the relay itself, this
+trusts the players: a modified page could choose its own dice. A player who drops or reloads rejoins the same seat; the board is
+locked until both players are connected. The adapter for
+`shared/net/turn-sync.js` is `createOnlineAdapter` in `js/backgammon.js`;
+the page hands it `getState`/`setState`/`onReset` in its inline script.
+
 ## AI
 
 Every distinct position reachable with the roll is scored by a hand-tuned
@@ -58,7 +73,7 @@ Self-play over 100 games each:
 ## Layout
 
 - `index.html`: the page, its styles, and the UI wiring.
-- `js/backgammon.js`: rules and AI, with no DOM code (`window.BACKGAMMON`, or
+- `js/backgammon.js`: rules, AI and the online adapter, with no DOM code (`window.BACKGAMMON`, or
   `require()` in Node).
 - `js/test/backgammon.test.js`: Node tests covering:
   - hitting and undo
@@ -70,9 +85,13 @@ Self-play over 100 games each:
   - the AI's opening moves
   - conservation of 15 checkers through full games, and Medium beating
     random play
+- `js/test/backgammon-online.test.js`: the online adapter (configs, every
+  kind of action, refused moves, the match score) and whole games played
+  across two simulated devices (`shared/js/test/net-two-seat.js`).
 
 ## Tests
 
 ```
 node backgammon/js/test/backgammon.test.js
+node backgammon/js/test/backgammon-online.test.js
 ```
