@@ -8,11 +8,13 @@
 <link rel="manifest" href="../manifest.webmanifest">
 <script src="../shared/register-sw.js" defer></script>
 <link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="../shared/net/net.css">
 <style>
   header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 
   .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
   .controls label { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  .controls label[hidden] { display: none; }
   select {
     font: inherit;
     font-size: 0.85rem;
@@ -137,9 +139,10 @@
         <option value="black">You play Black vs AI</option>
         <option value="white">You play White vs AI</option>
         <option value="pvp">Two players</option>
+        <option value="online">Online - two devices</option>
       </select>
     </label>
-    <label>AI
+    <label id="levelLabel">AI
       <select id="level">
         <option value="easy">Easy</option>
         <option value="medium" selected>Medium</option>
@@ -150,6 +153,8 @@
     <button id="btnUndo" type="button">Undo</button>
   </div>
 
+  <div id="online"></div>
+
   <div class="scoreboard">
     <div class="score" id="scoreBlack"><span class="piece black"></span><b id="nameBlack">Black</b> <span id="countBlack"></span></div>
     <p class="status" id="status" aria-live="polite"></p>
@@ -158,7 +163,7 @@
 
   <div class="board" id="board" aria-label="Board"></div>
 
-  <footer>Move diagonally forward onto the dark squares. Jump an enemy piece to capture it, and keep jumping while you can — captures are compulsory. Reach the far row to crown a king, which moves both ways. Take every piece or leave your opponent with no move to win. Black moves first. To make a multi-jump, click each landing square in turn.</footer>
+  <footer>Move diagonally forward onto the dark squares. Jump an enemy piece to capture it, and keep jumping while you can — captures are compulsory. Reach the far row to crown a king, which moves both ways. Take every piece or leave your opponent with no move to win. Black moves first. To make a multi-jump, click each landing square in turn. Online, the host plays Black in the first game and the colours swap every new game.</footer>
 </div>
 
 <div class="overlay" id="overlay" hidden>
@@ -173,10 +178,14 @@
 </div>
 
 <script src="js/checkers.js"></script>
+<script src="../shared/net/relay-client.js"></script>
+<script src="../shared/net/turn-sync.js"></script>
+<script src="../shared/net/lobby.js"></script>
 <script>
 (function () {
   "use strict";
   const CK = window.CHECKERS;
+  const NET = window.MINI_NET;
   const { SIZE, BLACK, WHITE } = CK;
   const NAME = { [BLACK]: "Black", [WHITE]: "White" };
   const HUMANS = { black: [BLACK], white: [WHITE], pvp: [BLACK, WHITE] };
@@ -188,11 +197,18 @@
   let aiTimer = null;
   // The move being built: the piece picked and the squares clicked so far.
   let pick = null;
+  let online = null; // { session, sync, adapter, resultShownFor } while this tab is in a room
 
   const mode = () => $("mode").value;
-  const isHuman = (player) => HUMANS[mode()].includes(player);
-  // White sits at the bottom when it is the only human side.
-  const flipped = () => mode() === "white";
+  const isOnline = () => mode() === "online";
+  const isHuman = (player) => {
+    if (!isOnline()) return HUMANS[mode()].includes(player);
+    return online !== null && online.sync.started && player === online.adapter.seatColor(online.session.seat);
+  };
+  // Online, only the host starts games; a guest waits for the host's next round.
+  const canStartGame = () => !isOnline() || (online !== null && online.sync.isHost && online.sync.started);
+  // White sits at the bottom when it is the only human side here.
+  const flipped = () => (isOnline() ? isHuman(WHITE) : mode() === "white");
 
   const squares = [];
   for (let k = 0; k < SIZE * SIZE; k++) {
@@ -207,7 +223,7 @@
   const view = (k) => (flipped() ? SIZE * SIZE - 1 - k : k);
   squares.forEach((el, k) => el.addEventListener("click", () => onSquareClick(view(k))));
 
-  const canPlay = () => !state.gameOver && isHuman(state.turn) && !aiTimer;
+  const canPlay = () => !state.gameOver && isHuman(state.turn) && !aiTimer && (!isOnline() || online.sync.canMove());
   const legal = () => CK.legalMoves(state.board, state.turn);
   // Moves still consistent with what has been clicked.
   const candidates = (moves) => moves.filter((m) => m.from === pick.from && pick.path.every((p, i) => m.path[i] === p));
@@ -223,8 +239,13 @@
         const done = next.find((m) => m.path.length === pick.path.length);
         if (done) {
           pick = null;
-          CK.play(state, done);
-          advance();
+          // Online the move goes through TurnSync, which plays it here and sends it on.
+          // The captures stay behind: the other device works them out from the path.
+          if (isOnline()) online.sync.play({ from: done.from, path: done.path });
+          else {
+            CK.play(state, done);
+            advance();
+          }
         } else {
           render();
         }
@@ -282,18 +303,33 @@
     $("scoreBlack").classList.toggle("is-turn", !state.gameOver && state.turn === BLACK);
     $("scoreWhite").classList.toggle("is-turn", !state.gameOver && state.turn === WHITE);
     $("status").textContent = statusText(moves);
-    $("btnUndo").disabled = state.history.length === 0;
+    $("btnUndo").disabled = state.history.length === 0 || isOnline();
+    $("btnNew").disabled = !canStartGame();
+    $("modalNew").disabled = !canStartGame();
   }
 
   function playerLabel(player) {
     if (mode() === "pvp") return NAME[player];
+    if (isOnline()) {
+      if (!online || !online.sync.started) return NAME[player];
+      return isHuman(player) ? "You" : "Opponent";
+    }
     return isHuman(player) ? "You" : "AI";
   }
 
   function statusText(moves) {
+    if (isOnline()) {
+      if (!online) return "Host a game or join one to play online.";
+      if (online.sync.desynced) return "Out of sync with the host - reload the page on both devices.";
+      if (!online.sync.started) return "Waiting for the game to start…";
+    }
     if (state.gameOver) return resultText();
     const who = NAME[state.turn];
-    if (!isHuman(state.turn)) return "AI (" + who + ") is thinking…";
+    if (isOnline()) {
+      if (online.session.status !== "open") return "Reconnecting…";
+      if (!online.session.everyonePresent) return "Waiting for your opponent…";
+      if (!isHuman(state.turn)) return "Opponent (" + who + ") to move.";
+    } else if (!isHuman(state.turn)) return "AI (" + who + ") is thinking…";
     const prefix = mode() === "pvp" ? who + " to move" : "Your move (" + who + ")";
     const left = CK.DRAW_PLIES - state.quiet;
     const drawNote = left <= 20 ? " Draw in " + Math.ceil(left / 2) + " moves without a capture." : "";
@@ -307,16 +343,24 @@
     const loser = -state.winner;
     const how = CK.count(state.board, loser) ? "is blocked" : "has no pieces left";
     if (mode() === "pvp") return NAME[state.winner] + " wins — " + NAME[loser] + " " + how + ".";
-    return isHuman(state.winner) ? "You win — the AI " + how + "!" : "The AI wins — you " + (how === "is blocked" ? "are blocked" : "have no pieces left") + ".";
+    const them = isOnline() ? "your opponent" : "the AI";
+    const They = isOnline() ? "Your opponent" : "The AI";
+    return isHuman(state.winner) ? "You win — " + them + " " + how + "!" : They + " wins — you " + (how === "is blocked" ? "are blocked" : "have no pieces left") + ".";
+  }
+
+  function showResult() {
+    $("resultText").textContent = resultText() + (canStartGame() ? "" : " The host starts the next game.");
+    $("overlay").hidden = false;
   }
 
   function advance() {
+    if (isOnline()) {
+      render(); // onNetChange shows results; nobody here plays for the opponent
+      return;
+    }
     if (state.gameOver || isHuman(state.turn)) {
       render();
-      if (state.gameOver) {
-        $("resultText").textContent = resultText();
-        $("overlay").hidden = false;
-      }
+      if (state.gameOver) showResult();
       return;
     }
     // Set before rendering so the board renders locked while the AI thinks.
@@ -337,12 +381,19 @@
     cancelAI();
     pick = null;
     $("overlay").hidden = true;
+    if (isOnline() && online) {
+      // The colours swap every game, so each player gets to move first in turn.
+      if (canStartGame()) online.sync.newRound({ hostColor: -online.adapter.hostColor });
+      else render();
+      return;
+    }
     state = CK.createGame();
     advance();
   }
 
   // Against the AI, rewind to the last position where it was your turn.
   function undo() {
+    if (isOnline()) return;
     cancelAI();
     pick = null;
     $("overlay").hidden = true;
@@ -351,16 +402,81 @@
     advance();
   }
 
+  // ---- online ---------------------------------------------------------------
+
+  function startOnline(session, { persist }) {
+    cancelAI();
+    pick = null;
+    // TurnSync drives the board through the adapter, on both devices, for local and remote moves alike.
+    const adapter = CK.createOnlineAdapter({
+      getState: () => state,
+      setState: (next) => { state = next; },
+      // The overlay is left to onNetChange: a resync replays the same finished game and must not close it.
+      onReset: () => { cancelAI(); pick = null; },
+    });
+    // Per room: round numbers start again in every room.
+    const room = { session, adapter, sync: null, resultShownFor: null };
+    room.sync = new NET.TurnSync({ session, adapter, persist, onChange: (event) => onNetChange(room, event) });
+    online = room;
+    state = CK.createGame();
+    render();
+  }
+
+  function endOnline() {
+    online = null;
+    newGame();
+  }
+
+  function onNetChange(room, event) {
+    // A room this tab already left can still fire a late timer; it must not touch the next one.
+    if (online !== room) return;
+    if (event.type === "need-round") {
+      online.sync.newRound({ hostColor: BLACK });
+      return;
+    }
+    // A half-built move no longer fits once the board changed under it.
+    if (event.type === "move" || event.type === "state" || event.type === "round") pick = null;
+    render();
+    if (event.type === "round" || (event.type === "state" && !state.gameOver)) $("overlay").hidden = true;
+    // Once per round, so a reconnect after the end doesn't reopen a result the player closed.
+    if ((event.type === "move" || event.type === "state") && state.gameOver && room.resultShownFor !== room.sync.round) {
+      room.resultShownFor = room.sync.round;
+      showResult();
+    }
+  }
+
+  const lobby = NET.mountLobby($("online"), {
+    game: "checkers",
+    seats: 2,
+    peerName: () => "your opponent",
+    onSession: startOnline,
+    onEnd: endOnline,
+  });
+
+  function syncModeUI() {
+    lobby.show(isOnline());
+    $("levelLabel").hidden = isOnline();
+  }
+
   $("btnNew").addEventListener("click", newGame);
   $("modalNew").addEventListener("click", newGame);
   $("modalClose").addEventListener("click", () => { $("overlay").hidden = true; });
   $("btnUndo").addEventListener("click", undo);
-  $("mode").addEventListener("change", newGame);
+  $("mode").addEventListener("change", () => {
+    syncModeUI();
+    // Leaving the mode leaves the room; that ends in endOnline, which starts the local game.
+    if (!isOnline() && online) lobby.leave();
+    else newGame();
+  });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && pick) { pick = null; render(); }
   });
 
+  // A shared link (?room=CODE) opens straight into that room.
+  if (new URLSearchParams(location.search).has("room")) $("mode").value = "online";
+  syncModeUI();
   newGame();
+  if (isOnline()) lobby.joinFromUrl();
 })();
 </script>
 </body>

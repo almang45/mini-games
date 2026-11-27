@@ -354,11 +354,84 @@
     return best[Math.floor(rand() * best.length)].turn;
   }
 
+  // ------------------------------------------------------------ online
+
+  // The TurnSync adapter (shared/net/turn-sync.js) for online play. The page owns the game state;
+  // seat 0 (the host) plays `hostColor`. Each action is its own move, so the other device watches
+  // the turn as it happens: {roll: [a, b]}, {step: [from, to]}, {undo: true} or {end: true}.
+  // The dice come from the device whose turn it is, as in Ludo: the relay only passes them on.
+  // A config is {hostColor, opening: [a, b], score: [host, guest]}: the host rolls the opening
+  // dice for everyone, and the match score so far travels with the round, so a reload keeps it.
+  const isDie = (d) => Number.isInteger(d) && d >= 1 && d <= 6;
+  const isPoint = (r) => Number.isInteger(r) && r >= OFF && r <= BAR;
+  const isScore = (n) => Number.isInteger(n) && n >= 0 && n <= 9999;
+  // An rng that rolls the given dice, so roll() and createGame() play out the dice that were sent.
+  const loaded = (dice) => {
+    const queue = dice.slice();
+    return () => (queue.shift() - 0.5) / 6;
+  };
+
+  // The match score once `state`'s finished game is added to `score` ([host, guest]).
+  function scoreAfter(state, score, hostColor) {
+    if (!state.gameOver) return score.slice();
+    const next = score.slice();
+    next[state.winner === hostColor ? 0 : 1] += state.result.points;
+    return next;
+  }
+
+  function createOnlineAdapter({ getState, setState, onReset }) {
+    let config = { hostColor: WHITE, opening: [2, 1], score: [0, 0] };
+    return {
+      get hostColor() { return config.hostColor; },
+      get score() { return config.score.slice(); },
+      seatColor(seat) { return seat === 0 ? config.hostColor : -config.hostColor; },
+      isValidConfig(c) {
+        // No other keys: a config is stored and sent on, so a padded one would bloat every snapshot.
+        return c !== null && typeof c === "object" && Object.keys(c).length === 3
+          && (c.hostColor === WHITE || c.hostColor === BLACK)
+          && Array.isArray(c.opening) && c.opening.length === 2 && c.opening.every(isDie) && c.opening[0] !== c.opening[1]
+          && Array.isArray(c.score) && c.score.length === 2 && c.score.every(isScore);
+      },
+      reset(next) {
+        if (onReset) onReset();
+        config = { hostColor: next.hostColor, opening: next.opening.slice(), score: next.score.slice() };
+        setState(createGame(loaded(config.opening)));
+      },
+      // Each rule function below checks before it changes anything, so a refused move leaves the state alone.
+      apply(m) {
+        const state = getState();
+        const keys = m !== null && typeof m === "object" ? Object.keys(m) : [];
+        if (keys.length !== 1) throw new Error("not a Backgammon move");
+        if (keys[0] === "roll" && Array.isArray(m.roll) && m.roll.length === 2 && m.roll.every(isDie)) {
+          roll(state, loaded(m.roll));
+        } else if (keys[0] === "step" && Array.isArray(m.step) && m.step.length === 2 && m.step.every(isPoint)) {
+          move(state, m.step[0], m.step[1]);
+        } else if (keys[0] === "undo" && m.undo === true) {
+          if (!undoStep(state)) throw new Error("nothing to undo");
+        } else if (keys[0] === "end" && m.end === true) {
+          endTurn(state);
+        } else {
+          throw new Error("not a Backgammon move");
+        }
+      },
+      hash() {
+        const s = getState();
+        return posKey(s) + "/" + s.turn + "/" + s.phase + "/" + (s.dice ? s.dice.join("") : "-") + "/" + s.done.length;
+      },
+      turnSeat() {
+        const state = getState();
+        if (state.gameOver) return -1;
+        return state.turn === config.hostColor ? 0 : 1;
+      },
+    };
+  }
+
   const api = {
     WHITE, BLACK, CHECKERS, BAR, OFF, LEVELS,
     idx, rel, startPosition, clonePos, countAt, pips, rearmost, target, applyStep, legalTurns, resultOf,
     createGame, roll, diceFaces, following, nextSteps, diceLeft, move, undoStep, turnComplete, endTurn,
     hitChance, evaluate, contact, chooseTurn,
+    scoreAfter, createOnlineAdapter,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.BACKGAMMON = api;

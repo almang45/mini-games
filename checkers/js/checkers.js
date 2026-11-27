@@ -205,9 +205,49 @@
     return best[Math.floor(rand() * best.length)];
   }
 
+  // The TurnSync adapter (shared/net/turn-sync.js) for online play. The page owns the game state;
+  // seat 0 (the host) plays `hostColor`, which swaps every game. A move is {from, path}: the
+  // captures follow from those, so play() works them out instead of trusting the sender.
+  const MAX_PATH = 12; // no capture sequence can jump more than the opponent's 12 pieces
+  const isSquare = (i) => Number.isInteger(i) && i >= 0 && i < SIZE * SIZE;
+  function createOnlineAdapter({ getState, setState, onReset }) {
+    let hostColor = BLACK;
+    return {
+      get hostColor() { return hostColor; },
+      seatColor(seat) { return seat === 0 ? hostColor : -hostColor; },
+      isValidConfig(config) {
+        // No other keys: a config is stored and sent on, so a padded one would bloat every snapshot.
+        return config !== null && typeof config === "object" && Object.keys(config).length === 1
+          && (config.hostColor === BLACK || config.hostColor === WHITE);
+      },
+      reset(config) {
+        if (onReset) onReset();
+        hostColor = config.hostColor;
+        setState(createGame());
+      },
+      apply(move) {
+        const wellFormed = move !== null && typeof move === "object" && Object.keys(move).length === 2
+          && isSquare(move.from) && Array.isArray(move.path) && move.path.length >= 1
+          && move.path.length <= MAX_PATH && move.path.every(isSquare);
+        if (!wellFormed) throw new Error("not a Checkers move");
+        play(getState(), { from: move.from, path: move.path.slice() });
+      },
+      hash() {
+        const state = getState();
+        return state.board.join(",") + "/" + state.turn + "/" + state.quiet + "/" + (state.gameOver ? 1 : 0);
+      },
+      turnSeat() {
+        const state = getState();
+        if (state.gameOver) return -1;
+        return state.turn === hostColor ? 0 : 1;
+      },
+    };
+  }
+
   const api = {
     SIZE, EMPTY, BLACK, WHITE, KING, DRAW_PLIES, LEVELS,
     side, isKing, playable, createGame, legalMoves, jumpsFrom, play, undo, count, evaluate, chooseMove,
+    createOnlineAdapter,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.CHECKERS = api;

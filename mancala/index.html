@@ -8,11 +8,13 @@
 <link rel="manifest" href="../manifest.webmanifest">
 <script src="../shared/register-sw.js" defer></script>
 <link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="../shared/net/net.css">
 <style>
   header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 
   .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
   .controls label { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  .controls label[hidden] { display: none; }
   select {
     font: inherit;
     font-size: 0.85rem;
@@ -123,9 +125,10 @@
         <option value="south">You play South (first) vs AI</option>
         <option value="north">You play North vs AI</option>
         <option value="pvp">Two players</option>
+        <option value="online">Online - two devices</option>
       </select>
     </label>
-    <label>AI
+    <label id="levelLabel">AI
       <select id="level">
         <option value="easy">Easy</option>
         <option value="medium" selected>Medium</option>
@@ -136,13 +139,15 @@
     <button id="btnUndo" type="button">Undo</button>
   </div>
 
+  <div id="online"></div>
+
   <p class="status" id="status" aria-live="polite"></p>
 
   <div class="side-label"><span id="labelNorth"></span></div>
   <div class="board" id="board" aria-label="Board"></div>
   <div class="side-label" style="justify-content: flex-end"><span id="labelSouth"></span></div>
 
-  <footer>Pick up every seed in one of your pits and sow them one by one counter-clockwise, into your own store but never your opponent's. End in your store and you move again. End in an empty pit on your side and you capture that seed plus everything in the pit opposite. When either side runs out of seeds, each player banks what's left on their own side and the fuller store wins.</footer>
+  <footer>Pick up every seed in one of your pits and sow them one by one counter-clockwise, into your own store but never your opponent's. End in your store and you move again. End in an empty pit on your side and you capture that seed plus everything in the pit opposite. When either side runs out of seeds, each player banks what's left on their own side and the fuller store wins. Online, the host plays South in the first game and the sides swap every new game.</footer>
 </div>
 
 <div class="overlay" id="overlay" hidden>
@@ -157,10 +162,14 @@
 </div>
 
 <script src="js/mancala.js"></script>
+<script src="../shared/net/relay-client.js"></script>
+<script src="../shared/net/turn-sync.js"></script>
+<script src="../shared/net/lobby.js"></script>
 <script>
 (function () {
   "use strict";
   const M = window.MANCALA;
+  const NET = window.MINI_NET;
   const { SOUTH, NORTH, STORE, PIT_INDICES } = M;
   const NAME = { [SOUTH]: "South", [NORTH]: "North" };
   const HUMANS = { south: [SOUTH], north: [NORTH], pvp: [SOUTH, NORTH] };
@@ -173,9 +182,17 @@
   let shown = null; // board currently drawn, which lags state.board while sowing animates
   let lit = new Set();
   let timer = null; // AI thinking or a sowing animation; input waits for either
+  let online = null; // { session, sync, adapter, resultShownFor } while this tab is in a room
 
   const mode = () => $("mode").value;
-  const isHuman = (player) => HUMANS[mode()].includes(player);
+  const isOnline = () => mode() === "online";
+  const isHuman = (player) => {
+    if (!isOnline()) return HUMANS[mode()].includes(player);
+    return online !== null && online.sync.started && player === online.adapter.seatSide(online.session.seat);
+  };
+  // Online, only the host starts games; a guest waits for the host's next round.
+  const canStartGame = () => !isOnline() || (online !== null && online.sync.isHost && online.sync.started);
+  const canPlay = () => !state.gameOver && !timer && isHuman(state.turn) && (!isOnline() || online.sync.canMove());
 
   const holes = new Array(14);
   function makeHole(idx, cls, column, row) {
@@ -197,8 +214,7 @@
   makeHole(STORE[SOUTH], "store south", 8);
 
   function render() {
-    const canPlay = !state.gameOver && !timer && isHuman(state.turn);
-    const legal = new Set(canPlay ? M.legalMoves(state.board, state.turn) : []);
+    const legal = new Set(canPlay() ? M.legalMoves(state.board, state.turn) : []);
     holes.forEach((el, idx) => {
       const seeds = shown[idx];
       const isStore = idx === STORE[SOUTH] || idx === STORE[NORTH];
@@ -220,16 +236,31 @@
 
     for (const player of [SOUTH, NORTH]) {
       const label = $(player === SOUTH ? "labelSouth" : "labelNorth");
-      const who = mode() === "pvp" ? NAME[player] : isHuman(player) ? "You (" + NAME[player] + ")" : "AI (" + NAME[player] + ")";
       label.innerHTML = "";
-      label.appendChild(Object.assign(document.createElement("b"), { textContent: who }));
+      label.appendChild(Object.assign(document.createElement("b"), { textContent: playerLabel(player) }));
       label.classList.toggle("is-turn", !state.gameOver && state.turn === player);
     }
     $("status").textContent = statusText();
-    $("btnUndo").disabled = state.history.length === 0;
+    $("btnUndo").disabled = state.history.length === 0 || isOnline();
+    $("btnNew").disabled = !canStartGame();
+    $("modalNew").disabled = !canStartGame();
+  }
+
+  function playerLabel(player) {
+    if (mode() === "pvp") return NAME[player];
+    if (isOnline()) {
+      if (!online || !online.sync.started) return NAME[player];
+      return (isHuman(player) ? "You (" : "Opponent (") + NAME[player] + ")";
+    }
+    return (isHuman(player) ? "You (" : "AI (") + NAME[player] + ")";
   }
 
   function statusText() {
+    if (isOnline()) {
+      if (!online) return "Host a game or join one to play online.";
+      if (online.sync.desynced) return "Out of sync with the host - reload the page on both devices.";
+      if (!online.sync.started) return "Waiting for the game to start…";
+    }
     if (state.gameOver) return resultText();
     const r = state.lastResult;
     let note = "";
@@ -237,6 +268,11 @@
     else if (r && r.extraTurn) note = "Last seed in the store — another turn. ";
     const who = NAME[state.turn];
     if (mode() === "pvp") return note + who + " to move.";
+    if (isOnline()) {
+      if (online.session.status !== "open") return "Reconnecting…";
+      if (!online.session.everyonePresent) return "Waiting for your opponent…";
+      return note + (isHuman(state.turn) ? "Your move." : "Opponent (" + who + ") to move.");
+    }
     return note + (isHuman(state.turn) ? "Your move." : "AI (" + who + ") is thinking…");
   }
 
@@ -246,21 +282,34 @@
     const score = Math.max(south, north) + "–" + Math.min(south, north);
     if (winner === null) return "Draw, 24–24.";
     if (mode() === "pvp") return NAME[winner] + " wins " + score + ".";
+    if (isOnline()) return (isHuman(winner) ? "You win " : "Your opponent wins ") + score + ".";
     return (isHuman(winner) ? "You win " : "The AI wins ") + score + ".";
   }
 
-  function onPitClick(pit) {
-    if (state.gameOver || timer || !isHuman(state.turn)) return;
-    if (!M.legalMoves(state.board, state.turn).includes(pit)) return;
-    move(pit);
+  function showResult() {
+    $("resultText").textContent = resultText() + (canStartGame() ? "" : " The host starts the next game.");
+    $("overlay").hidden = false;
   }
 
-  // Plays the move at once, then replays its sowing seed by seed on screen.
-  function move(pit) {
-    const before = state.board.slice();
+  function onPitClick(pit) {
+    if (!canPlay()) return;
+    if (!M.legalMoves(state.board, state.turn).includes(pit)) return;
+    // Online the move goes through TurnSync, which plays it here and sends it on; its move
+    // event then animates it, the same way as a move from the other device.
+    if (isOnline()) {
+      online.sync.play(pit);
+      return;
+    }
     M.play(state, pit);
+    animateLast();
+  }
+
+  // Replays the last move's sowing seed by seed on screen; the state already has its result.
+  function animateLast() {
+    const before = state.history[state.history.length - 1].board;
+    const { pit } = state.lastMove;
     const { path, capture, sweep } = state.lastResult;
-    shown = before;
+    shown = before.slice();
     shown[pit] = 0;
     lit = new Set([pit]);
     let step = 0;
@@ -292,15 +341,23 @@
 
   function advance() {
     render();
+    if (isOnline()) {
+      // Once per round, so a reconnect after the end doesn't reopen a result the player closed.
+      if (online && online.sync.started && state.gameOver && online.resultShownFor !== online.sync.round) {
+        online.resultShownFor = online.sync.round;
+        showResult();
+      }
+      return;
+    }
     if (state.gameOver) {
-      $("resultText").textContent = resultText();
-      $("overlay").hidden = false;
+      showResult();
       return;
     }
     if (isHuman(state.turn)) return;
     timer = setTimeout(() => {
       timer = null;
-      move(M.chooseMove(state.board, state.turn, $("level").value));
+      M.play(state, M.chooseMove(state.board, state.turn, $("level").value));
+      animateLast();
     }, AI_DELAY_MS);
     render();
   }
@@ -314,6 +371,12 @@
   function newGame() {
     cancelTimer();
     $("overlay").hidden = true;
+    if (isOnline() && online) {
+      // The sides swap every game, so each player gets to move first in turn.
+      if (canStartGame()) online.sync.newRound({ hostSide: M.opponent(online.adapter.hostSide) });
+      else render();
+      return;
+    }
     state = M.createGame();
     shown = state.board.slice();
     advance();
@@ -321,6 +384,7 @@
 
   // Against the AI, rewind to the last position where it was your turn.
   function undo() {
+    if (isOnline()) return;
     cancelTimer();
     $("overlay").hidden = true;
     let undone = M.undo(state);
@@ -329,13 +393,84 @@
     advance();
   }
 
+  // ---- online ---------------------------------------------------------------
+
+  function startOnline(session, { persist }) {
+    cancelTimer();
+    // TurnSync drives the board through the adapter, on both devices, for local and remote moves alike.
+    const adapter = M.createOnlineAdapter({
+      getState: () => state,
+      setState: (next) => { state = next; shown = next.board.slice(); },
+      // The overlay is left to onNetChange: a resync replays the same finished game and must not close it.
+      onReset: cancelTimer,
+    });
+    // Per room: round numbers start again in every room.
+    const room = { session, adapter, sync: null, resultShownFor: null };
+    room.sync = new NET.TurnSync({ session, adapter, persist, onChange: (event) => onNetChange(room, event) });
+    online = room;
+    state = M.createGame();
+    shown = state.board.slice();
+    render();
+  }
+
+  function endOnline() {
+    online = null;
+    newGame();
+  }
+
+  function onNetChange(room, event) {
+    // A room this tab already left can still fire a late timer; it must not touch the next one.
+    if (online !== room) return;
+    switch (event.type) {
+      case "need-round":
+        online.sync.newRound({ hostSide: SOUTH });
+        return;
+      case "move":
+        // A move that lands mid-animation: jump to the finished board and animate the new one.
+        cancelTimer();
+        animateLast();
+        return;
+      case "round":
+      case "state":
+        cancelTimer();
+        shown = state.board.slice();
+        if (event.type === "round" || !state.gameOver) $("overlay").hidden = true;
+        advance();
+        return;
+      default:
+        render();
+    }
+  }
+
+  const lobby = NET.mountLobby($("online"), {
+    game: "mancala",
+    seats: 2,
+    peerName: () => "your opponent",
+    onSession: startOnline,
+    onEnd: endOnline,
+  });
+
+  function syncModeUI() {
+    lobby.show(isOnline());
+    $("levelLabel").hidden = isOnline();
+  }
+
   $("btnNew").addEventListener("click", newGame);
   $("modalNew").addEventListener("click", newGame);
   $("modalClose").addEventListener("click", () => { $("overlay").hidden = true; });
   $("btnUndo").addEventListener("click", undo);
-  $("mode").addEventListener("change", newGame);
+  $("mode").addEventListener("change", () => {
+    syncModeUI();
+    // Leaving the mode leaves the room; that ends in endOnline, which starts the local game.
+    if (!isOnline() && online) lobby.leave();
+    else newGame();
+  });
 
+  // A shared link (?room=CODE) opens straight into that room.
+  if (new URLSearchParams(location.search).has("room")) $("mode").value = "online";
+  syncModeUI();
   newGame();
+  if (isOnline()) lobby.joinFromUrl();
 })();
 </script>
 </body>

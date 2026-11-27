@@ -33,12 +33,12 @@ to, both here and in `index.html`.
 
 | | |
 |---|---|
-| **[Reversi](reversi/)** | Reversi/Othello against a three-level AI, or two players on one device. |
+| **[Reversi](reversi/)** | Reversi/Othello against a three-level AI, two players on one device, or online across two devices. |
 | **[Connect Four](connect-four/)** | Connect Four against a three-level AI, two players on one device, or online across two devices. |
-| **[Checkers](checkers/)** | English draughts with compulsory captures and multi-jumps, against a three-level AI or two players on one device. |
-| **[Backgammon](backgammon/)** | Backgammon with gammons, backgammons and a running match score (no doubling cube), against a three-level AI or two players on one device. |
+| **[Checkers](checkers/)** | English draughts with compulsory captures and multi-jumps, against a three-level AI, two players on one device, or online across two devices. |
+| **[Backgammon](backgammon/)** | Backgammon with gammons, backgammons and a running match score (no doubling cube), against a three-level AI, two players on one device, or online across two devices. |
 | **[Dots and Boxes](dots-boxes/)** | Dots and Boxes on 3x3 to 6x6 boards, against a three-level AI (Hard plays chain control and the double-cross), two players on one device, or two to four players online across devices. |
-| **[Mancala](mancala/)** | Kalah-rules Mancala against a three-level AI, or two players on one device. |
+| **[Mancala](mancala/)** | Kalah-rules Mancala against a three-level AI, two players on one device, or online across two devices. |
 | **[Ludo](ludo/)** | Ludo for 2-4 players on the classic cross board, against an AI on two levels, with everyone on one device, or online across up to four devices. |
 | **[Word Grid](word-grid/)** | A two-player crossword tile game on a 15x15 board with the public-domain ENABLE word list, against an AI (Easy or Normal) or a friend. |
 
@@ -75,12 +75,13 @@ lines and neither has a separate test suite (see
 A `shared/` folder at the repo root holds the handful of things that really
 are identical across projects (the color palette + base styles in
 `shared/theme.css`, one DOM-shim primitive reused by both test suites, and
-`shared/js/test/net-fakes.js`, the relay stand-ins the online games' tests share)
+`shared/js/test/net-fakes.js` and `net-two-seat.js`, the relay stand-ins and
+two-device game checks the online games' tests share)
 — everything else stays local to its own game on purpose, since each game's
 UI is independent by design. The exception is `shared/net/`, the online layer
 (relay client, turn sync, lobby panel): it is game-agnostic on purpose so
 every game that goes online shares one tested protocol implementation
-(Connect Four, Ludo and Dots and Boxes use it today). `shared/favicon.svg` (a generic dice icon)
+(seven games use it today: see "Online play" below). `shared/favicon.svg` (a generic dice icon)
 backs only the top-level hub page; each game has its own favicon (PNG or
 SVG) representing that specific game, also used as its icon on the hub.
 
@@ -136,8 +137,9 @@ just without the offline cache.
 
 ## Online play
 
-Connect Four (two devices), Ludo and Dots and Boxes (up to four, with the
-host's AI in any empty seat) can be played online: one player hosts a room and shares its
+Reversi, Connect Four, Checkers, Backgammon and Mancala (two devices), Ludo
+and Dots and Boxes (up to four, with the host's AI in any empty seat) can be
+played online: one player hosts a room and shares its
 five-character code or link, the others join. The pages stay static; the
 devices talk through a small relay, a Cloudflare Worker with one Durable
 Object per room, in [`relay/`](relay/). The relay only hands out seats and

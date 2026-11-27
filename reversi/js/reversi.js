@@ -182,9 +182,44 @@
     return best;
   }
 
+  // The TurnSync adapter (shared/net/turn-sync.js) for online play. The page owns the game state;
+  // seat 0 (the host) plays `hostColor`, which swaps every game. A move is a square index.
+  function createOnlineAdapter({ getState, setState, onReset }) {
+    let hostColor = BLACK;
+    return {
+      get hostColor() { return hostColor; },
+      seatColor(seat) { return seat === 0 ? hostColor : opponent(hostColor); },
+      isValidConfig(config) {
+        // No other keys: a config is stored and sent on, so a padded one would bloat every snapshot.
+        return config !== null && typeof config === "object" && Object.keys(config).length === 1
+          && (config.hostColor === BLACK || config.hostColor === WHITE);
+      },
+      reset(config) {
+        if (onReset) onReset();
+        hostColor = config.hostColor;
+        setState(createGame());
+      },
+      apply(idx) {
+        // play() refuses a square that flips nothing; the range check keeps "3" or 64 out.
+        if (!Number.isInteger(idx) || idx < 0 || idx >= SIZE * SIZE) throw new Error("not a Reversi move");
+        play(getState(), idx);
+      },
+      hash() {
+        const state = getState();
+        return state.board.join("") + "/" + state.turn + "/" + (state.gameOver ? 1 : 0);
+      },
+      turnSeat() {
+        const state = getState();
+        if (state.gameOver) return -1;
+        return state.turn === hostColor ? 0 : 1;
+      },
+    };
+  }
+
   const api = {
     SIZE, EMPTY, BLACK, WHITE, LEVELS,
     opponent, initialBoard, flips, legalMoves, applyMove, count, winner, createGame, play, undo, chooseMove,
+    createOnlineAdapter,
   };
 
   if (typeof module !== "undefined" && module.exports) {

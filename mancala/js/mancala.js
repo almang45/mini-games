@@ -160,9 +160,44 @@
     return best;
   }
 
+  // The TurnSync adapter (shared/net/turn-sync.js) for online play. The page owns the game state;
+  // seat 0 (the host) plays `hostSide`, which swaps every game. A move is a pit index.
+  function createOnlineAdapter({ getState, setState, onReset }) {
+    let hostSide = SOUTH;
+    return {
+      get hostSide() { return hostSide; },
+      seatSide(seat) { return seat === 0 ? hostSide : opponent(hostSide); },
+      isValidConfig(config) {
+        // No other keys: a config is stored and sent on, so a padded one would bloat every snapshot.
+        return config !== null && typeof config === "object" && Object.keys(config).length === 1
+          && (config.hostSide === SOUTH || config.hostSide === NORTH);
+      },
+      reset(config) {
+        if (onReset) onReset();
+        hostSide = config.hostSide;
+        setState(createGame());
+      },
+      apply(pit) {
+        // sow() refuses another side's pit or an empty one; the integer check keeps "3" or 2.5 out.
+        if (!Number.isInteger(pit)) throw new Error("not a Mancala move");
+        play(getState(), pit);
+      },
+      hash() {
+        const state = getState();
+        return state.board.join(",") + "/" + state.turn + "/" + (state.gameOver ? 1 : 0);
+      },
+      turnSeat() {
+        const state = getState();
+        if (state.gameOver) return -1;
+        return state.turn === hostSide ? 0 : 1;
+      },
+    };
+  }
+
   const api = {
     PITS, SEEDS, TOTAL_SEEDS, SOUTH, NORTH, STORE, PIT_INDICES, LEVELS,
     opponent, opposite, initialBoard, legalMoves, sow, createGame, play, undo, winner, chooseMove,
+    createOnlineAdapter,
   };
 
   if (typeof module !== "undefined" && module.exports) {

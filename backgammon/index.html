@@ -8,11 +8,13 @@
 <link rel="manifest" href="../manifest.webmanifest">
 <script src="../shared/register-sw.js" defer></script>
 <link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="../shared/net/net.css">
 <style>
   header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 
   .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
   .controls label { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  .controls label[hidden] { display: none; }
   select {
     font: inherit;
     font-size: 0.85rem;
@@ -180,9 +182,10 @@
         <option value="white">You play White vs AI</option>
         <option value="black">You play Black vs AI</option>
         <option value="pvp">Two players</option>
+        <option value="online">Online - two devices</option>
       </select>
     </label>
-    <label>AI
+    <label id="levelLabel">AI
       <select id="level">
         <option value="easy">Easy</option>
         <option value="medium" selected>Medium</option>
@@ -191,6 +194,8 @@
     </label>
     <button id="btnNew" type="button">New Match</button>
   </div>
+
+  <div id="online"></div>
 
   <div class="scoreboard">
     <div class="score" id="scoreTop"></div>
@@ -207,7 +212,7 @@
     <button class="btn-primary" id="btnNext" type="button" hidden>Next Game</button>
   </div>
 
-  <footer>Move all fifteen checkers round the board into your home board (bottom right), then bear them off; the first to bear off all fifteen wins. Each die moves one checker that many points; doubles move four times. You can't land on a point held by two or more enemy checkers. Land on a single one to hit it to the bar — a checker on the bar must come back in before anything else moves. Use both dice if you can. Click a checker, then where it goes. A gammon (the loser bore off none) scores 2, a backgammon (and still has a checker on the bar or in the winner's home board) scores 3.</footer>
+  <footer>Move all fifteen checkers round the board into your home board (bottom right), then bear them off; the first to bear off all fifteen wins. Each die moves one checker that many points; doubles move four times. You can't land on a point held by two or more enemy checkers. Land on a single one to hit it to the bar — a checker on the bar must come back in before anything else moves. Use both dice if you can. Click a checker, then where it goes. A gammon (the loser bore off none) scores 2, a backgammon (and still has a checker on the bar or in the winner's home board) scores 3. Online, the host plays White in the first game, the colours swap every new game, and only the host starts the next game or a new match.</footer>
 </div>
 
 <div class="overlay" id="overlay" hidden>
@@ -222,10 +227,14 @@
 </div>
 
 <script src="js/backgammon.js"></script>
+<script src="../shared/net/relay-client.js"></script>
+<script src="../shared/net/turn-sync.js"></script>
+<script src="../shared/net/lobby.js"></script>
 <script>
 (function () {
   "use strict";
   const BG = window.BACKGAMMON;
+  const NET = window.MINI_NET;
   const { WHITE, BLACK, BAR, OFF } = BG;
   const NAME = { [WHITE]: "White", [BLACK]: "Black" };
   const CLS = { [WHITE]: "white", [BLACK]: "black" };
@@ -238,12 +247,37 @@
   let timer = null;
   let picked = null; // the relative point (or BAR) of the checker picked, for the side to move
   const match = { [WHITE]: 0, [BLACK]: 0 };
+  let online = null; // { session, sync, adapter, resultShownFor } while this tab is in a room
 
   const mode = () => $("mode").value;
-  const isHuman = (s) => HUMANS[mode()].includes(s);
+  const isOnline = () => mode() === "online";
+  const isHuman = (s) => {
+    if (!isOnline()) return HUMANS[mode()].includes(s);
+    return online !== null && online.sync.started && s === online.adapter.seatColor(online.session.seat);
+  };
+  // Online, only the host starts games; a guest waits for the host's next round.
+  const canStartGame = () => !isOnline() || (online !== null && online.sync.isHost && online.sync.started);
   // The bottom of the board belongs to this side.
-  const viewer = () => (mode() === "black" ? BLACK : WHITE);
-  const humanToMove = () => !state.gameOver && isHuman(state.turn) && !timer;
+  const viewer = () => {
+    if (isOnline()) return online && online.sync.started ? online.adapter.seatColor(online.session.seat) : WHITE;
+    return mode() === "black" ? BLACK : WHITE;
+  };
+  const humanToMove = () => !state.gameOver && isHuman(state.turn) && !timer && (!isOnline() || online.sync.canMove());
+  // Match points by colour. Online the score is kept per seat (colours can swap between games)
+  // and comes with each round, with the finished game added once it is over.
+  function points(s) {
+    if (!isOnline()) return match[s];
+    if (!online || !online.sync.started) return 0;
+    const score = BG.scoreAfter(state, online.adapter.score, online.adapter.hostColor);
+    return score[s === online.adapter.hostColor ? 0 : 1];
+  }
+
+  // Online every action goes through TurnSync, which plays it here and sends it on;
+  // offline it is played straight away. The caller re-renders once it has been played.
+  function act(onlineMove, local) {
+    if (isOnline()) online.sync.play(onlineMove);
+    else local();
+  }
 
   // ------------------------------------------------------------- moves
 
@@ -279,7 +313,10 @@
       const route = dest != null && destinations(picked).get(dest);
       if (route) {
         picked = null;
-        for (const st of route.steps) if (!state.gameOver) BG.move(state, st.from, st.to);
+        for (const st of route.steps) {
+          if (state.gameOver) break;
+          act({ step: [st.from, st.to] }, () => BG.move(state, st.from, st.to));
+        }
         afterHumanStep();
         return;
       }
@@ -304,11 +341,15 @@
     picked = null;
     if (state.gameOver) return gameOver();
     if (isHuman(state.turn)) {
-      if (state.phase === "move") {
+      if (state.phase === "move" && humanToMove()) {
         const src = sources();
         if (src.size === 1) picked = [...src][0];
       }
       render();
+      return;
+    }
+    if (isOnline()) {
+      render(); // the opponent plays on their own device
       return;
     }
     aiTurn();
@@ -341,60 +382,122 @@
     render();
   }
 
+  const die = () => 1 + Math.floor(Math.random() * 6);
+
   function roll() {
     if (!humanToMove() || state.phase !== "roll") return;
-    BG.roll(state);
+    // Online the dice are rolled here and sent, so both devices play the same ones.
+    act({ roll: [die(), die()] }, () => BG.roll(state));
     advance();
   }
 
   function done() {
     if (!humanToMove() || !BG.turnComplete(state)) return;
-    BG.endTurn(state);
+    act({ end: true }, () => BG.endTurn(state));
     advance();
   }
 
   function undoStep() {
-    if (!humanToMove()) return;
+    if (!humanToMove() || !state.done.length) return;
     picked = null;
-    BG.undoStep(state);
+    act({ undo: true }, () => BG.undoStep(state));
     afterHumanStep();
   }
 
   function gameOver() {
-    match[state.winner] += state.result.points;
-    render();
-    $("resultText").textContent = resultText();
+    if (isOnline()) {
+      render();
+      // Once per round, so a reconnect after the end doesn't reopen a result the player closed.
+      if (!online || !online.sync.started || online.resultShownFor === online.sync.round) return;
+      online.resultShownFor = online.sync.round;
+    } else {
+      match[state.winner] += state.result.points;
+      render();
+    }
+    $("resultText").textContent = resultText() + (canStartGame() ? "" : " The host starts the next game.");
     $("overlay").hidden = false;
   }
 
-  function newGame() {
+  function cancelTimer() {
     clearTimeout(timer);
     timer = null;
+  }
+
+  // Online the host deals the next round: a fresh opening roll (re-rolled on a tie, as at the
+  // table), the colours swapped, and the match score so far carried in the config.
+  function nextRoundConfig(score) {
+    let opening;
+    do opening = [die(), die()]; while (opening[0] === opening[1]);
+    const hostColor = online.sync.started ? -online.adapter.hostColor : WHITE;
+    return { hostColor, opening, score };
+  }
+
+  function newGame() {
+    cancelTimer();
     picked = null;
     $("overlay").hidden = true;
+    if (isOnline() && online) {
+      if (canStartGame()) online.sync.newRound(nextRoundConfig(BG.scoreAfter(state, online.adapter.score, online.adapter.hostColor)));
+      else render();
+      return;
+    }
     state = BG.createGame();
     advance();
   }
 
+  function newMatch() {
+    if (isOnline() && online) {
+      if (!canStartGame()) return;
+      cancelTimer();
+      picked = null;
+      $("overlay").hidden = true;
+      online.sync.newRound(nextRoundConfig([0, 0]));
+      return;
+    }
+    match[WHITE] = 0;
+    match[BLACK] = 0;
+    newGame();
+  }
+
   // ------------------------------------------------------------- rendering
 
-  const label = (s) => (mode() === "pvp" ? NAME[s] : isHuman(s) ? "You" : "AI");
+  function label(s) {
+    if (mode() === "pvp") return NAME[s];
+    if (isOnline()) {
+      if (!online || !online.sync.started) return NAME[s];
+      return isHuman(s) ? "You" : "Opponent";
+    }
+    return isHuman(s) ? "You" : "AI";
+  }
   const fmtPoint = (r) => (r === BAR ? "bar" : r === OFF ? "off" : String(r));
   const fmtTurn = (t) => (t.moves.length ? t.moves.map((m) => fmtPoint(m.from) + "/" + fmtPoint(m.to) + (m.hit ? "*" : "")).join(" ") : "no move");
 
   function resultText() {
     const kind = state.result.kind === "single" ? "" : " with a " + state.result.kind;
     const pts = state.result.points + (state.result.points === 1 ? " point" : " points");
-    const who = mode() === "pvp" ? NAME[state.winner] + " wins" : isHuman(state.winner) ? "You win" : "The AI wins";
-    return who + kind + " (" + pts + "). Match: " + label(viewer()) + " " + match[viewer()] + " – " + match[-viewer()] + " " + label(-viewer()) + ".";
+    let who = "The AI wins";
+    if (mode() === "pvp") who = NAME[state.winner] + " wins";
+    else if (isHuman(state.winner)) who = "You win";
+    else if (isOnline()) who = "Your opponent wins";
+    return who + kind + " (" + pts + "). Match: " + label(viewer()) + " " + points(viewer()) + " – " + points(-viewer()) + " " + label(-viewer()) + ".";
   }
 
   function statusText() {
+    if (isOnline()) {
+      if (!online) return "Host a game or join one to play online.";
+      if (online.sync.desynced) return "Out of sync with the host - reload the page on both devices.";
+      if (!online.sync.started) return "Waiting for the game to start…";
+    }
     if (state.gameOver) return resultText();
     const who = mode() === "pvp" ? NAME[state.turn] : isHuman(state.turn) ? "You" : "AI";
-    if (!isHuman(state.turn)) return "AI (" + NAME[state.turn] + ") " + (state.phase === "roll" ? "is rolling…" : "is moving…");
+    if (isOnline()) {
+      if (online.session.status !== "open") return "Reconnecting…";
+      if (!online.session.everyonePresent) return "Waiting for your opponent…";
+      if (!isHuman(state.turn)) return "Opponent (" + NAME[state.turn] + ") " + (state.phase === "roll" ? "to roll." : "is moving…");
+    } else if (!isHuman(state.turn)) return "AI (" + NAME[state.turn] + ") " + (state.phase === "roll" ? "is rolling…" : "is moving…");
     if (state.phase === "roll") {
-      const last = state.lastTurn && !isHuman(state.lastTurn.player) ? "AI played " + fmtTurn(state.lastTurn) + ". " : "";
+      const them = isOnline() ? "Opponent" : "AI";
+      const last = state.lastTurn && !isHuman(state.lastTurn.player) ? them + " played " + fmtTurn(state.lastTurn) + ". " : "";
       return last + (mode() === "pvp" ? who + " to roll." : "Your roll.");
     }
     if (!state.turns.length) return who + (who === "You" ? " have" : " has") + " no legal move — press Done.";
@@ -510,7 +613,7 @@
 
     for (const [id, side] of [["scoreTop", -v], ["scoreBottom", v]]) {
       const el = $(id);
-      el.replaceChildren(checker(side), document.createTextNode(" " + label(side) + " "), Object.assign(document.createElement("small"), { textContent: match[side] + " pts" }));
+      el.replaceChildren(checker(side), document.createTextNode(" " + label(side) + " "), Object.assign(document.createElement("small"), { textContent: points(side) + " pts" }));
       el.classList.toggle("is-turn", !state.gameOver && s === side);
     }
     $("status").textContent = statusText();
@@ -521,15 +624,73 @@
     $("btnUndo").disabled = !state.done.length;
     $("btnDone").hidden = !(human && state.phase === "move");
     $("btnDone").disabled = !BG.turnComplete(state);
-    // After "See Board", the match carries on from here.
-    $("btnNext").hidden = !state.gameOver;
+    // After "See Board", the match carries on from here; online only the host deals the next game.
+    $("btnNext").hidden = !state.gameOver || !canStartGame();
+    $("btnNew").disabled = !canStartGame();
+    $("modalNew").disabled = !canStartGame();
   }
 
-  $("btnNew").addEventListener("click", () => {
-    match[WHITE] = 0;
-    match[BLACK] = 0;
+  // ---- online ---------------------------------------------------------------
+
+  function startOnline(session, { persist }) {
+    cancelTimer();
+    picked = null;
+    // TurnSync drives the board through the adapter, on both devices, for local and remote moves alike.
+    const adapter = BG.createOnlineAdapter({
+      getState: () => state,
+      setState: (next) => { state = next; },
+      // The overlay is left to onNetChange: a resync replays the same finished game and must not close it.
+      onReset: () => { cancelTimer(); picked = null; },
+    });
+    // Per room: round numbers start again in every room.
+    const room = { session, adapter, sync: null, resultShownFor: null };
+    room.sync = new NET.TurnSync({ session, adapter, persist, onChange: (event) => onNetChange(room, event) });
+    online = room;
+    state = BG.createGame();
+    render();
+  }
+
+  function endOnline() {
+    online = null;
     newGame();
+  }
+
+  function onNetChange(room, event) {
+    // A room this tab already left can still fire a late timer; it must not touch the next one.
+    if (online !== room) return;
+    switch (event.type) {
+      case "need-round":
+        online.sync.newRound(nextRoundConfig([0, 0]));
+        return;
+      case "move":
+        // This device's own actions carry on in the click handlers that sent them.
+        if (event.local) return;
+        advance();
+        return;
+      case "round":
+      case "state":
+        if (event.type === "round" || !state.gameOver) $("overlay").hidden = true;
+        advance();
+        return;
+      default:
+        render();
+    }
+  }
+
+  const lobby = NET.mountLobby($("online"), {
+    game: "backgammon",
+    seats: 2,
+    peerName: () => "your opponent",
+    onSession: startOnline,
+    onEnd: endOnline,
   });
+
+  function syncModeUI() {
+    lobby.show(isOnline());
+    $("levelLabel").hidden = isOnline();
+  }
+
+  $("btnNew").addEventListener("click", newMatch);
   $("modalNew").addEventListener("click", newGame);
   $("btnNext").addEventListener("click", newGame);
   $("modalClose").addEventListener("click", () => { $("overlay").hidden = true; });
@@ -537,15 +698,22 @@
   $("btnUndo").addEventListener("click", undoStep);
   $("btnDone").addEventListener("click", done);
   $("mode").addEventListener("change", () => {
+    syncModeUI();
     match[WHITE] = 0;
     match[BLACK] = 0;
-    newGame();
+    // Leaving the mode leaves the room; that ends in endOnline, which starts the local game.
+    if (!isOnline() && online) lobby.leave();
+    else newGame();
   });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && picked != null) { picked = null; render(); }
   });
 
+  // A shared link (?room=CODE) opens straight into that room.
+  if (new URLSearchParams(location.search).has("room")) $("mode").value = "online";
+  syncModeUI();
   newGame();
+  if (isOnline()) lobby.joinFromUrl();
 })();
 </script>
 </body>
