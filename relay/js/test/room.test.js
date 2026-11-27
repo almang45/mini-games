@@ -279,8 +279,10 @@ async function connect(room, ctx, hello) {
   const sweepAt = ctx.alarmAt;
   ok("the next sweep is a minute out", sweepAt === clock + SWEEP_MS);
   clock += 30 * 1000;
+  const writes = ctx.alarmWrites;
   a.close(1006, "");
   await room.webSocketClose(a, 1006, "");
+  ok("a drop leaves the pending sweep unwritten", ctx.alarmWrites === writes && ctx.alarmAt === sweepAt, { writes, now: ctx.alarmWrites });
   a = await connect(room, ctx, { token: host.token });
   ok("a reconnect never pushes the pending sweep later", ctx.alarmAt <= sweepAt);
   for (let i = 0; i < 6; i++) {

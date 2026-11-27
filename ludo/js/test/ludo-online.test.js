@@ -56,11 +56,20 @@ function step(players, random) {
   return controller.sync.play({ t: L.chooseMove(s, "normal") });
 }
 
+// Steps until `done`, failing (instead of hanging) on a refused action or a runaway game.
+function stepUntil(players, random, done) {
+  for (let i = 0; i < 1000 && !done(); i++) ok("the action is accepted", step(players, random));
+  ok("reached the wanted turn", done());
+}
+
 const hashes = (players) => new Set(players.filter((p) => p.sync.started).map((p) => p.adapter.hash()));
 
 // ---- config ---------------------------------------------------------------------------------
 
 ok("a config names who plays each seat", L.isValidOnlineConfig({ count: 4, controllers: [0, 1, 0, 3] }));
+ok("absent players are the human seats not connected",
+  JSON.stringify(L.absentPlayers({ count: 4, controllers: [0, 1, 0, 3] }, [0, 1])) === "[3]"
+  && L.absentPlayers({ count: 4, controllers: [0, 0, 0, 0] }, [0]).length === 0);
 for (const bad of [null, {}, { count: 5, controllers: [0, 1, 2, 3, 4] }, { count: 2, controllers: [0] },
   { count: 2, controllers: [1, 1] }, { count: 3, controllers: [0, 2, 2] }, { count: 2, controllers: [0, 1], pad: "x" }]) {
   ok("rejects " + JSON.stringify(bad), !L.isValidOnlineConfig(bad));
@@ -117,14 +126,14 @@ ok("a seat can be handed to the AI", JSON.stringify(L.withAI({ count: 4, control
 
   // Green drops: green is a player this round, so nobody may move until it is back - not even
   // the host on its own turn.
-  while (host.adapter.turnSeat() !== 0) step(players, random);
+  stepUntil(players, random, () => host.adapter.turnSeat() === 0);
   ok("the host may move on its turn", host.sync.canMove());
   hub.disconnect(1);
   ok("a dropped player pauses the game", !host.sync.playersPresent && !blue.sync.playersPresent && !host.sync.canMove());
   hub.connect(1);
   ok("and it resumes when they return", host.sync.canMove() && green.adapter.hash() === host.adapter.hash());
 
-  while (host.adapter.turnSeat() !== 1) step(players, random);
+  stepUntil(players, random, () => host.adapter.turnSeat() === 1);
   warnings = [];
   host.session.emit("message", { from: 1, data: { k: "move", round: host.sync.round, i: host.sync.moves.length, move: { r: 9 }, hash: "x" } });
   ok("a die that isn't 1-6 is refused", warnings.some((w) => w.includes("illegal_move")) && green.adapter.hash() === host.adapter.hash());
@@ -133,7 +142,7 @@ ok("a seat can be handed to the AI", JSON.stringify(L.withAI({ count: 4, control
   ok("a seat moving out of turn is refused", host.sync.moves.length === moves && warnings.some((w) => w.includes("out_of_order")));
 
   // A modified page sends moves carrying more than a roll or a token.
-  while (host.adapter.turnSeat() !== 1 || host.state.phase !== "roll") step(players, random);
+  stepUntil(players, random, () => host.adapter.turnSeat() === 1 && host.state.phase === "roll");
   for (const move of [{ r: 1, t: 0 }, { r: 6, p: "a".repeat(1000) }, { t: 0, r: 2 }, [], 3]) {
     warnings = [];
     const before = host.sync.moves.length;

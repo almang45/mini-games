@@ -38,7 +38,7 @@ export class FakeContext {
       async get(key) { return self.data.has(key) ? structuredClone(self.data.get(key)) : undefined; },
       async put(key, value) { self.puts = (self.puts || 0) + 1; self.data.set(key, structuredClone(value)); },
       async deleteAll() { self.data.clear(); },
-      async setAlarm(at) { self.alarmAt = at; },
+      async setAlarm(at) { self.alarmWrites = (self.alarmWrites || 0) + 1; self.alarmAt = at; },
       async getAlarm() { return self.alarmAt; },
       async deleteAlarm() { self.alarmAt = null; },
     };

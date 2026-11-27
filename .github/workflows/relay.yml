@@ -13,7 +13,6 @@ permissions:
   contents: read
 
 env:
-  WRANGLER_VERSION: "4.157.0"
   RELAY_URL: https://mini-games-relay.almang45-395.workers.dev
 
 jobs:
@@ -55,10 +54,15 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
+      # wrangler and its whole dependency tree come from relay/package-lock.json, checked against
+      # its integrity hashes; install scripts don't run (the deploy needs none of them).
+      - name: Install the locked wrangler
+        working-directory: relay
+        run: npm ci --ignore-scripts --no-audit --no-fund
       # Bundles and validates wrangler.toml and every binding without touching Cloudflare.
       - name: Dry-run deploy
         working-directory: relay
-        run: npx --yes "wrangler@${WRANGLER_VERSION}" deploy --dry-run --outdir "${RUNNER_TEMP}/relay-dist"
+        run: npx --no-install wrangler deploy --dry-run --outdir "${RUNNER_TEMP}/relay-dist"
 
   sast:
     needs: build
@@ -98,14 +102,24 @@ jobs:
         if: env.HAS_CF_TOKEN == 'true'
         with:
           persist-credentials: false
-      - uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         if: env.HAS_CF_TOKEN == 'true'
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: ${{ env.WRANGLER_VERSION }}
-          workingDirectory: relay
-          command: deploy --message "${{ github.sha }}"
+          node-version: 24
+      # Installed before the token is in the environment, from the lockfile only, without install
+      # scripts: a compromised transitive package can't run while the Cloudflare token is around.
+      - name: Install the locked wrangler
+        if: env.HAS_CF_TOKEN == 'true'
+        working-directory: relay
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Deploy
+        if: env.HAS_CF_TOKEN == 'true'
+        working-directory: relay
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: npx --no-install wrangler deploy --message "$DEPLOY_SHA"
       # Fails the run if the new version doesn't answer; roll back with `wrangler rollback` (relay/README.md).
       - name: Smoke test
         if: env.HAS_CF_TOKEN == 'true'

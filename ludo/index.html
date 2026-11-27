@@ -550,20 +550,30 @@
   }
 
   // Host only. A player who leaves for good, or stays away past TAKEOVER_MS, hands their seat to
-  // the AI; otherwise whoever the relay gives that seat to next would play their tokens.
-  function watchSeat(room, { seat, state: change }) {
-    if (change === "joined") {
-      clearTimeout(room.takeovers.get(seat));
-      room.takeovers.delete(seat);
+  // the AI; otherwise whoever the relay gives that seat to next would play their tokens. Worked
+  // out from who is present rather than from peer events alone, because a host that was itself
+  // offline or reloading when a player left never hears about it.
+  function syncTakeovers(room) {
+    if (!room.sync.isHost || !room.sync.started || state.gameOver) {
+      clearTakeovers(room);
       return;
     }
-    if (room.adapter.controllers[seat] !== seat) return;
-    if (change === "gone") {
-      handOver(room, seat);
-    } else if (change === "left" && !room.takeovers.has(seat)) {
+    // While the host is reconnecting its view of who is present is stale; keep the timers as they are.
+    if (room.session.status !== "open") return;
+    const absent = L.absentPlayers(room.sync.config, room.session.present);
+    for (const [seat, timer] of room.takeovers) {
+      if (!absent.includes(seat)) {
+        clearTimeout(timer);
+        room.takeovers.delete(seat);
+      }
+    }
+    for (const seat of absent) {
+      if (room.takeovers.has(seat)) continue;
       room.takeovers.set(seat, setTimeout(() => {
         room.takeovers.delete(seat);
-        if (online === room && !room.session.present.includes(seat)) handOver(room, seat);
+        if (online === room && room.sync.started && L.absentPlayers(room.sync.config, room.session.present).includes(seat)) {
+          handOver(room, seat);
+        }
       }, TAKEOVER_MS));
     }
   }
@@ -581,15 +591,21 @@
     // A room this tab already left can still fire a late timer; it must not touch the next one.
     if (online !== room) return;
     syncModeUI();
+    // TurnSync has already applied the event, so the round's seats and who is present are current.
+    syncTakeovers(room);
+    // A guest learns that a seat went to the AI only from the host's state, not from a session
+    // event, so the lobby's line about who is missing is refreshed here.
+    lobby.refresh();
     switch (event.type) {
       case "need-round":
         startRound();
         return;
       case "round":
       case "state":
-        if (event.type === "round") clearTakeovers(room);
         stopTimers();
-        gameId = "online:" + online.sync.round;
+        // The room code too: round numbers start again in every room, and a result shown in one
+        // room must not hide the next room's.
+        gameId = "online:" + online.session.code + ":" + online.sync.round;
         rebuild();
         advance();
         return;
@@ -606,7 +622,11 @@
           startRound();
           return;
         }
-        if (online.sync.isHost && online.sync.started) watchSeat(room, event);
+        // Gave the seat up for good: no point waiting out the takeover.
+        if (event.state === "gone" && online.sync.isHost && online.sync.started
+          && L.absentPlayers(online.sync.config, online.session.present).includes(event.seat)) {
+          handOver(room, event.seat);
+        }
         break;
       }
       default:

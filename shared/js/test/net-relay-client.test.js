@@ -396,6 +396,50 @@ ok("backoff is jittered down to half", NET.backoffDelay(3, () => 0) === 2000);
     ok("blocked storage degrades to no saved seat, with a warning each time", loaded === null && warnings.length === 3);
   }
 
+  // ---- waking up on an open socket -------------------------------------------------------
+
+  {
+    const { session, timers } = newSession();
+    session.start();
+    const ws = lastSocket();
+    ws.open();
+    ws.push({ t: "welcome", v: 1, seat: 1, token: "tok", game: "connect-four", seats: 2, present: [0, 1] });
+    const pings = () => ws.sent.filter((f) => f === NET.PING).length;
+    const before = pings();
+    session.nudge();
+    ok("waking pings an open socket at once", pings() === before + 1 && session.status === "open");
+    ws.push({ t: "pong" });
+    timers.advance(NET.WAKE_PROBE_MS);
+    ok("a socket that answers stays open", session.status === "open" && ws.closedWith === null);
+
+    session.nudge();
+    session.nudge();
+    ok("one probe at a time", pings() === before + 2);
+    const count = sockets.length;
+    timers.advance(NET.WAKE_PROBE_MS);
+    ok("a socket that died in its sleep is dropped within the probe", ws.closedWith && ws.closedWith.reason === "wake_probe_timeout"
+      && session.status === "reconnecting");
+    timers.advance(NET.BACKOFF_MAX_MS);
+    ok("and replaced", sockets.length === count + 1);
+  }
+
+  {
+    // A ping already overdue when the page wakes: dropped on the spot, no probe wait.
+    const { session, timers } = newSession();
+    session.start();
+    const ws = lastSocket();
+    ws.open();
+    ws.push({ t: "welcome", v: 1, seat: 1, token: "tok", game: "connect-four", seats: 2, present: [0, 1] });
+    timers.advance(NET.HEARTBEAT_MS);
+    // The phone sleeps: no timers run, then the clock jumps.
+    const slept = NET.DEAD_AFTER_MS + 1000;
+    const realNow = timers.now;
+    timers.now = () => realNow() + slept;
+    session.nudge();
+    ok("an overdue ping drops the socket at once", ws.closedWith && ws.closedWith.reason === "heartbeat_timeout");
+    timers.now = realNow;
+  }
+
   console.log("net relay-client: " + passed + " checks passed");
 })().catch((error) => {
   console.error(error);

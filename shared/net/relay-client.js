@@ -40,6 +40,10 @@
   const CONNECT_TIMEOUT_MS = 10000;
   // A socket still connecting after this long is worth replacing when the page wakes or the network returns.
   const STUCK_CONNECT_MS = 3000;
+  // An open socket gets this long to answer a ping when the page wakes or the network returns. A
+  // socket that died while the phone slept would otherwise pass for open until the heartbeat
+  // notices (up to a minute), and every move made meanwhile would be lost.
+  const WAKE_PROBE_MS = 5000;
   const LEAVE_DEADLINE_MS = 15000;
   const CREATE_TIMEOUT_MS = 10000;
 
@@ -148,8 +152,8 @@
       this.leaving = false;
       this.opened = false;
       this.connectStartedAt = 0;
-      this.lastSeen = 0;
       this.pingAt = null;
+      this.probeTimer = null;
       this.listeners = {};
     }
 
@@ -204,7 +208,6 @@
         this.opened = true;
         if (this.connectTimer !== null) this.timers.clearTimeout(this.connectTimer);
         this.connectTimer = null;
-        this.lastSeen = this.timers.now();
         this.pingAt = null;
         const hello = { t: "hello", v: PROTOCOL_VERSION, game: this.game };
         if (this.token) hello.token = this.token;
@@ -213,7 +216,6 @@
       };
       ws.onmessage = (event) => {
         if (ws !== this.ws) return;
-        this.lastSeen = this.timers.now();
         this.pingAt = null;
         this.onFrame(event.data);
       };
@@ -296,17 +298,39 @@
       if (!ws) return;
       const now = this.timers.now();
       if (this.pingAt !== null && now - this.pingAt > DEAD_AFTER_MS) {
-        this.ws = null;
-        this.closeQuietly(ws, 4000, "heartbeat_timeout");
-        this.onClosed(1006, "heartbeat_timeout");
+        this.dropDead(ws, "heartbeat_timeout");
         return;
       }
       if (this.pingAt === null) this.pingAt = now;
       ws.send(PING);
     }
 
-    // Call when the page becomes visible or the network returns: retry now instead of waiting out the backoff.
+    dropDead(ws, reason) {
+      this.ws = null;
+      this.closeQuietly(ws, 4000, reason);
+      this.onClosed(1006, reason);
+    }
+
+    // Pings an open socket now and drops it unless something comes back within WAKE_PROBE_MS.
+    probe() {
+      const ws = this.ws;
+      if (!ws || !this.opened || this.probeTimer !== null) return;
+      this.beat();
+      if (ws !== this.ws) return; // the ping was already overdue: beat() dropped it
+      this.probeTimer = this.timers.setTimeout(() => {
+        this.probeTimer = null;
+        // Any frame clears pingAt, so a socket that answered is left alone.
+        if (ws === this.ws && this.pingAt !== null) this.dropDead(ws, "wake_probe_timeout");
+      }, WAKE_PROBE_MS);
+    }
+
+    // Call when the page becomes visible or the network returns: check an open socket at once, and
+    // retry a closed one now instead of waiting out the backoff.
     nudge() {
+      if (this.status === "open") {
+        this.probe();
+        return;
+      }
       if (this.status !== "connecting" && this.status !== "reconnecting") return;
       const waiting = this.retryTimer !== null;
       const stuck = this.ws !== null && !this.opened && this.timers.now() - this.connectStartedAt > STUCK_CONNECT_MS;
@@ -367,9 +391,11 @@
       if (this.retryTimer !== null) this.timers.clearTimeout(this.retryTimer);
       if (this.heartbeat !== null) this.timers.clearInterval(this.heartbeat);
       if (this.connectTimer !== null) this.timers.clearTimeout(this.connectTimer);
+      if (this.probeTimer !== null) this.timers.clearTimeout(this.probeTimer);
       this.retryTimer = null;
       this.heartbeat = null;
       this.connectTimer = null;
+      this.probeTimer = null;
     }
   }
 
@@ -427,7 +453,7 @@
 
   const api = {
     DEFAULT_RELAY_URL, PROTOCOL_VERSION, CODE_LENGTH, CODE_PATTERN, PING, CLOSE, FATAL,
-    HEARTBEAT_MS, DEAD_AFTER_MS, BACKOFF_MAX_MS, CONNECT_TIMEOUT_MS, STUCK_CONNECT_MS, LEAVE_DEADLINE_MS,
+    HEARTBEAT_MS, DEAD_AFTER_MS, WAKE_PROBE_MS, BACKOFF_MAX_MS, CONNECT_TIMEOUT_MS, STUCK_CONNECT_MS, LEAVE_DEADLINE_MS,
     NetError, RelaySession,
     normalizeCode, isValidCode, socketUrl, relayUrl, backoffDelay, createRoom,
     saveSeat, loadSeat, forgetSeat, snapshotStore,
