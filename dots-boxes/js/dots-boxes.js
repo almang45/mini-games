@@ -1,6 +1,6 @@
-// Dots and Boxes rules and AI, no DOM. A board of W x H boxes. Players take
-// turns drawing a line between neighbouring dots; whoever draws the fourth
-// side of a box claims it and must move again. Most boxes wins.
+// Dots and Boxes rules and AI, no DOM. A board of W x H boxes. Two to four
+// players take turns drawing a line between neighbouring dots; whoever draws
+// the fourth side of a box claims it and must move again. Most boxes wins.
 //
 // Lines are numbered horizontals first: horizontal (r, c) for r in 0..H and
 // c in 0..W-1 is r*W + c; vertical (r, c) for r in 0..H-1 and c in 0..W is
@@ -10,7 +10,9 @@
 
   const P1 = 1;
   const P2 = 2;
-  const other = (p) => 3 - p;
+  const MAX_PLAYERS = 4;
+  // Players are 1..n and move in that order.
+  const nextPlayer = (p, n) => (p % n) + 1;
 
   // ------------------------------------------------------------ geometry
 
@@ -42,15 +44,20 @@
     return g;
   }
 
-  function createGame(w, h) {
+  function createGame(w, h, players) {
     if (!(w >= 1 && h >= 1 && w <= 12 && h <= 12)) throw new Error("board size out of range");
+    const n = players === undefined ? 2 : players;
+    if (!(Number.isInteger(n) && n >= 2 && n <= MAX_PLAYERS)) throw new Error("player count out of range");
     const g = geometry(w, h);
+    const score = {};
+    for (let p = 1; p <= n; p++) score[p] = 0;
     return {
       w, h,
+      players: n,
       lines: new Array(g.lineCount).fill(0), // 0 undrawn, else the player who drew it
       boxes: new Array(g.boxCount).fill(0),  // 0 open, else the owner
       turn: P1,
-      score: { [P1]: 0, [P2]: 0 },
+      score,
       lastLine: null,
       gameOver: false,
       winner: null,
@@ -76,13 +83,24 @@
     }
     state.score[state.turn] += made;
     state.lastLine = l;
-    if (!made) state.turn = other(state.turn);
+    if (!made) state.turn = nextPlayer(state.turn, state.players);
     if (state.lines.every((x) => x)) {
       state.gameOver = true;
-      const a = state.score[P1], b = state.score[P2];
-      state.winner = a === b ? null : a > b ? P1 : P2;
+      const leaders = leadersOf(state);
+      state.winner = leaders.length === 1 ? leaders[0] : null;
     }
     return made;
+  }
+
+  // The players with the top score: one is the winner, more share a draw.
+  function leadersOf(state) {
+    let best = -1;
+    let out = [];
+    for (let p = 1; p <= state.players; p++) {
+      const v = state.score[p];
+      if (v > best) { best = v; out = [p]; } else if (v === best) out.push(p);
+    }
+    return out;
   }
 
   function undo(state) {
@@ -332,7 +350,8 @@
 
     const safe = free.filter((l) => isSafe(g, lines, l));
     if (safe.length) {
-      if (cfg.search && safe.length <= cfg.search) {
+      // The search is a two-player negamax; with more players it would score the wrong opponent.
+      if (cfg.search && state.players === 2 && safe.length <= cfg.search) {
         try {
           const memo = new Map();
           const budget = { nodes: 200000 };
@@ -357,9 +376,72 @@
     return open != null ? open : pickRandom(free, rand);
   }
 
+  // ------------------------------------------------------------- online
+
+  // The TurnSync adapter (shared/net/turn-sync.js) for online play on 2 to 4 devices. Game player
+  // i + 1 is network seat i; `controllers[i]` names the device that plays it: i itself for a
+  // connected player, 0 (the host) for a seat nobody took, which the host's AI plays. A move is
+  // a line index.
+  const ONLINE_SIZES = [3, 4, 5, 6];
+
+  function isValidOnlineConfig(config) {
+    if (config === null || typeof config !== "object" || Array.isArray(config)) return false;
+    const { w, h, controllers } = config;
+    // No other keys: configs are stored and resent, so a padded one would bloat every snapshot.
+    return Object.keys(config).length === 3 && ONLINE_SIZES.includes(w) && ONLINE_SIZES.includes(h)
+      && Array.isArray(controllers) && controllers.length >= 2 && controllers.length <= MAX_PLAYERS
+      && controllers[0] === 0 && controllers.every((c, i) => c === i || c === 0);
+  }
+
+  // Who plays each seat this round: the connected seats themselves, the host's AI for the rest.
+  function onlineConfig(count, present, w, h) {
+    return { w, h, controllers: Array.from({ length: count }, (_, i) => (i === 0 || present.includes(i) ? i : 0)) };
+  }
+
+  // The same round with `seat` handed to the host's AI (its player left for good).
+  function withAI(config, seat) {
+    return { w: config.w, h: config.h, controllers: config.controllers.map((c, i) => (i === seat ? 0 : c)) };
+  }
+
+  // Seats with a human player this round who aren't connected. The host checks this after every
+  // reconnect or reload too, since the relay only reports a seat leaving to devices online then.
+  function absentPlayers(config, present) {
+    return config.controllers.filter((c, i) => i !== 0 && c === i && !present.includes(i));
+  }
+
+  function createOnlineAdapter({ getState, setState, onReset }) {
+    let controllers = [0, 1];
+    const isAI = (seat) => seat !== 0 && controllers[seat] === 0;
+    return {
+      get controllers() { return controllers.slice(); },
+      isAI,
+      isValidConfig: isValidOnlineConfig,
+      reset(config) {
+        if (onReset) onReset();
+        controllers = config.controllers.slice();
+        setState(createGame(config.w, config.h, controllers.length));
+      },
+      apply(line) {
+        // play() checks the range and that the line is free; the integer check keeps "3" or 3.5 out.
+        if (!Number.isInteger(line)) throw new Error("not a Dots and Boxes move");
+        play(getState(), line);
+      },
+      hash() {
+        const s = getState();
+        return s.lines.join("") + "/" + s.turn + "/" + s.boxes.join("");
+      },
+      turnSeat() {
+        const s = getState();
+        return s.gameOver ? -1 : controllers[s.turn - 1];
+      },
+      requiredSeats() { return [...new Set(controllers)]; },
+    };
+  }
+
   const api = {
-    P1, P2, LEVELS, geometry, createGame, play, undo,
+    P1, P2, MAX_PLAYERS, LEVELS, geometry, createGame, play, undo, leadersOf,
     captures, isSafe, components, chainValue, chooseMove,
+    isValidOnlineConfig, onlineConfig, withAI, absentPlayers, createOnlineAdapter,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.DOTS_BOXES = api;
