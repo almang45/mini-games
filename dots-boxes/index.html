@@ -8,11 +8,13 @@
 <link rel="manifest" href="../manifest.webmanifest">
 <script src="../shared/register-sw.js" defer></script>
 <link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="../shared/net/net.css">
 <style>
   header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 
   .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
   .controls label { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--ink-dim); }
+  .controls label[hidden] { display: none; }
   select {
     font: inherit;
     font-size: 0.85rem;
@@ -23,7 +25,8 @@
     padding: 8px 10px;
   }
 
-  .scoreboard { width: min(520px, 100%); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .scoreboard { width: min(520px, 100%); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .scores { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
   .score {
     display: flex;
     align-items: center;
@@ -36,9 +39,10 @@
     white-space: nowrap;
   }
   .score.is-turn { border-color: var(--accent); }
+  .score[hidden] { display: none; }
   .score .swatch { width: 16px; height: 16px; border-radius: 4px; }
   .score b { font-variant-numeric: tabular-nums; }
-  .status { flex: 1; margin: 0; text-align: center; font-size: 0.88rem; color: var(--ink-dim); }
+  .status { margin: 0; min-height: 1.3em; text-align: center; font-size: 0.88rem; color: var(--ink-dim); }
 
   .board-wrap {
     width: min(520px, 100%);
@@ -50,6 +54,8 @@
   svg { display: block; width: 100%; height: auto; touch-action: manipulation; }
   .p1 { --c: #d9483f; }
   .p2 { --c: #2f7fd1; }
+  .p3 { --c: #2a9152; }
+  .p4 { --c: #8a4fc4; }
   .swatch { background: var(--c); }
   .box { fill: var(--c); opacity: 0.35; transition: opacity 0.2s ease; }
   .box-mark { fill: var(--c); font-weight: 800; text-anchor: middle; dominant-baseline: central; font-family: inherit; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4)); }
@@ -99,6 +105,14 @@
         <option value="first">You go first vs AI</option>
         <option value="second">AI goes first</option>
         <option value="pvp">Two players</option>
+        <option value="online">Online - up to 4 devices</option>
+      </select>
+    </label>
+    <label id="countLabel" hidden>Players
+      <select id="count">
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
       </select>
     </label>
     <label>Board
@@ -109,7 +123,7 @@
         <option value="6x6">6 × 6</option>
       </select>
     </label>
-    <label>AI
+    <label id="levelLabel">AI
       <select id="level">
         <option value="easy">Easy</option>
         <option value="medium" selected>Medium</option>
@@ -120,15 +134,21 @@
     <button id="btnUndo" type="button">Undo</button>
   </div>
 
+  <div id="online"></div>
+
   <div class="scoreboard">
-    <div class="score p1" id="score1"><span class="swatch"></span><span id="name1">Red</span> <b id="pts1">0</b></div>
+    <div class="scores">
+      <div class="score p1" id="score1"><span class="swatch"></span><span id="name1">Red</span> <b id="pts1">0</b></div>
+      <div class="score p2" id="score2"><span class="swatch"></span><span id="name2">Blue</span> <b id="pts2">0</b></div>
+      <div class="score p3" id="score3" hidden><span class="swatch"></span><span id="name3">Green</span> <b id="pts3">0</b></div>
+      <div class="score p4" id="score4" hidden><span class="swatch"></span><span id="name4">Purple</span> <b id="pts4">0</b></div>
+    </div>
     <p class="status" id="status" aria-live="polite"></p>
-    <div class="score p2" id="score2"><b id="pts2">0</b> <span id="name2">Blue</span><span class="swatch"></span></div>
   </div>
 
   <div class="board-wrap"><svg id="board" role="group" aria-label="Board"></svg></div>
 
-  <footer>Take turns drawing a line between two neighbouring dots. Draw the fourth side of a box and it's yours — and you must draw another line. When every line is drawn, most boxes wins. Careful with the third side of a box: it hands the box (and often a whole chain of them) to your opponent.</footer>
+  <footer>Take turns drawing a line between two neighbouring dots. Draw the fourth side of a box and it's yours — and you must draw another line. When every line is drawn, most boxes wins. Careful with the third side of a box: it hands the box (and often a whole chain of them) to your opponent. Online, two to four players take turns in seat order; the host's AI plays any seat nobody took.</footer>
 </div>
 
 <div class="overlay" id="overlay" hidden>
@@ -143,15 +163,20 @@
 </div>
 
 <script src="js/dots-boxes.js"></script>
+<script src="../shared/net/relay-client.js"></script>
+<script src="../shared/net/turn-sync.js"></script>
+<script src="../shared/net/lobby.js"></script>
 <script>
 (function () {
   "use strict";
   const DB = window.DOTS_BOXES;
-  const { P1, P2 } = DB;
-  const NAME = { [P1]: "Red", [P2]: "Blue" };
-  const CLS = { [P1]: "p1", [P2]: "p2" };
-  const HUMANS = { first: [P1], second: [P2], pvp: [P1, P2] };
+  const NET = window.MINI_NET;
+  const NAME = { 1: "Red", 2: "Blue", 3: "Green", 4: "Purple" };
+  const HUMANS = { first: [1], second: [2], pvp: [1, 2] };
   const AI_DELAY_MS = 380;
+  // A player away this long is handed to the host's AI; kept under the relay's 3-minute seat
+  // reclaim, so a stranger joining with the code can't pick up a seat that still has a player.
+  const TAKEOVER_MS = 150000;
   const CELL = 100;
   const PAD = 18;
   const SVG = "http://www.w3.org/2000/svg";
@@ -162,10 +187,21 @@
   let aiTimer = null;
   let segs = [];
   let boxEls = [];
+  // { session, sync, adapter, takeovers, resultShownFor } while this tab is in a room. Per room,
+  // so a result shown in one room can't hide the same round number's result in the next.
+  let online = null;
 
   const mode = () => $("mode").value;
-  const isHuman = (p) => HUMANS[mode()].includes(p);
-  const canPlay = () => !state.gameOver && isHuman(state.turn) && !aiTimer;
+  const isOnline = () => mode() === "online";
+  const inRoom = () => isOnline() && online !== null && online.sync.started;
+  const boardSize = () => $("size").value.split("x").map(Number);
+  // Online, player p sits in network seat p - 1.
+  const isAI = (p) => (isOnline() ? inRoom() && online.adapter.isAI(p - 1) : !HUMANS[mode()].includes(p));
+  // Players played by hand on this device: offline every human one, online only this device's own.
+  const isHuman = (p) => (isOnline() ? inRoom() && p - 1 === online.session.seat && !online.adapter.isAI(p - 1) : !isAI(p));
+  const canPlay = () => !state.gameOver && !aiTimer && isHuman(state.turn) && (!isOnline() || online.sync.canMove());
+  // Online, only the host starts games; a guest waits for the host's next round.
+  const canStartGame = () => !isOnline() || (inRoom() && online.sync.isHost);
 
   function svgEl(tag, attrs, parent) {
     const el = document.createElementNS(SVG, tag);
@@ -211,58 +247,120 @@
     for (let r = 0; r <= state.h; r++) for (let c = 0; c <= state.w; c++) svgEl("circle", { class: "dot", cx: x(c), cy: y(r), r: 7 }, svg);
   }
 
+  function setState(next) {
+    state = next;
+    g = DB.geometry(next.w, next.h);
+    build();
+  }
+
   function render() {
     const live = canPlay();
     segs.forEach((el, l) => {
       const who = state.lines[l];
-      el.setAttribute("class", "seg " + (who ? "drawn " + CLS[who] : "free") + (live && !who ? " live" : "") + (state.lastLine === l ? " last" : ""));
+      el.setAttribute("class", "seg " + (who ? "drawn p" + who : "free") + (live && !who ? " live" : "") + (state.lastLine === l ? " last" : ""));
       el.setAttribute("aria-disabled", String(!(live && !who)));
     });
     boxEls.forEach(({ grp, mark }, b) => {
       const who = state.boxes[b];
-      grp.setAttribute("class", who ? CLS[who] : "");
+      grp.setAttribute("class", who ? "p" + who : "");
       grp.style.visibility = who ? "visible" : "hidden";
       mark.textContent = who ? NAME[who][0] : "";
     });
-    for (const p of [P1, P2]) {
+    for (let p = 1; p <= DB.MAX_PLAYERS; p++) {
+      const playing = p <= state.players;
+      $("score" + p).hidden = !playing;
+      if (!playing) continue;
       $("name" + p).textContent = label(p);
       $("pts" + p).textContent = String(state.score[p]);
       $("score" + p).classList.toggle("is-turn", !state.gameOver && state.turn === p);
     }
     $("status").textContent = statusText();
-    $("btnUndo").disabled = !state.history.some((h) => isHuman(h.turn));
+    $("btnUndo").disabled = isOnline() || !state.history.some((h) => isHuman(h.turn));
+    $("btnNew").disabled = !canStartGame();
+    $("modalNew").disabled = !canStartGame();
   }
 
-  const label = (p) => (mode() === "pvp" ? NAME[p] : isHuman(p) ? "You" : "AI");
+  function label(p) {
+    if (isOnline()) {
+      if (!inRoom()) return NAME[p];
+      if (isHuman(p)) return "You (" + NAME[p] + ")";
+      return isAI(p) ? "AI (" + NAME[p] + ")" : NAME[p];
+    }
+    return mode() === "pvp" ? NAME[p] : isHuman(p) ? "You" : "AI";
+  }
+
+  const names = (ps) => ps.map((p) => NAME[p]).join(" and ");
+
+  function onlineStatus() {
+    if (!online) return "Host a game or join one to play online.";
+    if (online.sync.desynced) return "Out of sync with the host - reload the page on every device.";
+    if (!online.sync.started) return "Waiting for the game to start…";
+    if (state.gameOver) return resultText();
+    if (online.session.status !== "open") return "Reconnecting…";
+    if (!online.sync.playersPresent) {
+      const missing = DB.absentPlayers(online.sync.config, online.session.present).map((seat) => seat + 1);
+      return "Waiting for " + (missing.length ? names(missing) : "the host") + "…"
+        + (online.sync.isHost ? " New Game re-seats whoever is here." : "");
+    }
+    return null;
+  }
 
   function statusText() {
-    if (state.gameOver) return resultText();
+    if (isOnline()) {
+      const text = onlineStatus();
+      if (text !== null) return text;
+    } else if (state.gameOver) {
+      return resultText();
+    }
     const again = state.history.length && state.history[state.history.length - 1].turn === state.turn ? " again" : "";
-    if (!isHuman(state.turn)) return "AI (" + NAME[state.turn] + ") is thinking…";
-    return (mode() === "pvp" ? NAME[state.turn] + " to move" : "Your move") + again + ".";
+    if (isAI(state.turn)) return "AI (" + NAME[state.turn] + ") is thinking…";
+    if (isHuman(state.turn) && (isOnline() || mode() !== "pvp")) return "Your move" + again + ".";
+    return NAME[state.turn] + " to move" + again + ".";
   }
 
   function resultText() {
-    const a = state.score[P1], b = state.score[P2];
-    const line = " (" + Math.max(a, b) + "–" + Math.min(a, b) + ")";
-    if (state.winner === null) return "A draw, " + a + "–" + b + ".";
-    if (mode() === "pvp") return NAME[state.winner] + " wins" + line + ".";
-    return (isHuman(state.winner) ? "You win" : "The AI wins") + line + ".";
+    const leaders = DB.leadersOf(state);
+    const top = state.score[leaders[0]];
+    if (state.winner === null) {
+      if (state.players === 2) return "A draw, " + top + "–" + top + ".";
+      return "A draw between " + names(leaders) + ", " + top + " boxes each.";
+    }
+    const scores = Array.from({ length: state.players }, (_, i) => state.score[i + 1]).sort((a, b) => b - a);
+    const line = " (" + scores.join("–") + ")";
+    const p = state.winner;
+    if (isOnline()) {
+      if (isHuman(p)) return "You win" + line + "!";
+      return (isAI(p) ? "The AI (" + NAME[p] + ")" : NAME[p]) + " wins" + line + ".";
+    }
+    if (mode() === "pvp") return NAME[p] + " wins" + line + ".";
+    return (isHuman(p) ? "You win" : "The AI wins") + line + ".";
+  }
+
+  function showResult() {
+    $("resultText").textContent = resultText() + (canStartGame() ? "" : " The host starts the next game.");
+    $("overlay").hidden = false;
   }
 
   function onLine(l) {
     if (!canPlay() || state.lines[l]) return;
+    // Online the line goes through TurnSync, which draws it here and sends it to the other
+    // devices; its move event then carries the game on.
+    if (isOnline()) {
+      online.sync.play(l);
+      return;
+    }
     DB.play(state, l);
     advance();
   }
 
   function advance() {
+    if (isOnline()) {
+      advanceOnline();
+      return;
+    }
     if (state.gameOver || isHuman(state.turn)) {
       render();
-      if (state.gameOver) {
-        $("resultText").textContent = resultText();
-        $("overlay").hidden = false;
-      }
+      if (state.gameOver) showResult();
       return;
     }
     // Set before rendering so the board renders locked while the AI thinks.
@@ -274,6 +372,30 @@
     render();
   }
 
+  // Online the host's device plays every AI seat; the others only draw what arrives.
+  function advanceOnline() {
+    const room = online;
+    if (room && inRoom() && state.gameOver && room.resultShownFor !== room.sync.round) {
+      // Once per round, so a reconnect after the end doesn't reopen a result the player closed.
+      room.resultShownFor = room.sync.round;
+      render();
+      showResult();
+      return;
+    }
+    if (room && inRoom() && !aiTimer && !state.gameOver && room.sync.isHost && isAI(state.turn) && room.sync.canMove()) {
+      aiTimer = setTimeout(() => {
+        aiTimer = null;
+        // Things may have moved on while the AI "thought": another room, a drop, a new round.
+        if (online !== room || state.gameOver || !isAI(state.turn) || !room.sync.canMove()) {
+          if (online === room) advance();
+          return;
+        }
+        room.sync.play(DB.chooseMove(state, $("level").value));
+      }, AI_DELAY_MS);
+    }
+    render();
+  }
+
   function cancelAI() {
     clearTimeout(aiTimer);
     aiTimer = null;
@@ -282,15 +404,20 @@
   function newGame() {
     cancelAI();
     $("overlay").hidden = true;
-    const [w, h] = $("size").value.split("x").map(Number);
-    state = DB.createGame(w, h);
-    g = DB.geometry(w, h);
-    build();
+    if (isOnline() && online) {
+      if (canStartGame()) startRound();
+      else render();
+      return;
+    }
+    const [w, h] = boardSize();
+    // Online before a room exists: an empty board for the chosen number of players.
+    setState(DB.createGame(w, h, isOnline() ? Number($("count").value) : 2));
     advance();
   }
 
   // Against the AI, rewind past its lines to your last line, so you can play it again.
   function undo() {
+    if (isOnline()) return;
     cancelAI();
     $("overlay").hidden = true;
     if (mode() === "pvp") DB.undo(state);
@@ -301,14 +428,155 @@
     advance();
   }
 
+  // ---- online ---------------------------------------------------------------
+
+  // Seats whoever is connected now, on the host's chosen board; the host's AI plays the rest.
+  function startRound() {
+    cancelAI();
+    const [w, h] = boardSize();
+    online.sync.newRound(DB.onlineConfig(online.session.seats, online.session.present, w, h));
+  }
+
+  function startOnline(session, { persist }) {
+    cancelAI();
+    // TurnSync drives the board through the adapter, on every device, for local and remote lines alike.
+    const adapter = DB.createOnlineAdapter({
+      getState: () => state,
+      setState,
+      // The overlay is left to onNetChange: a resync replays the same finished game and must not close it.
+      onReset: cancelAI,
+    });
+    const room = { session, adapter, sync: null, takeovers: new Map(), resultShownFor: null };
+    room.sync = new NET.TurnSync({ session, adapter, persist, onChange: (event) => onNetChange(room, event) });
+    online = room;
+    syncModeUI();
+    render();
+  }
+
+  function endOnline() {
+    if (online) clearTakeovers(online);
+    online = null;
+    syncModeUI();
+    newGame();
+  }
+
+  // Host only. Every human player who isn't connected gets a timer that hands their seat to the
+  // AI; one who came back loses it. Worked out from who is present rather than from peer events,
+  // because a host that was itself offline or reloading when a player left never hears about it.
+  function syncTakeovers(room) {
+    if (!room.sync.isHost || !room.sync.started || state.gameOver) {
+      clearTakeovers(room);
+      return;
+    }
+    // While the host is reconnecting its view of who is present is stale; keep the timers as they are.
+    if (room.session.status !== "open") return;
+    const absent = DB.absentPlayers(room.sync.config, room.session.present);
+    for (const [seat, timer] of room.takeovers) {
+      if (!absent.includes(seat)) {
+        clearTimeout(timer);
+        room.takeovers.delete(seat);
+      }
+    }
+    for (const seat of absent) {
+      if (room.takeovers.has(seat)) continue;
+      room.takeovers.set(seat, setTimeout(() => {
+        room.takeovers.delete(seat);
+        if (online === room && room.sync.started && DB.absentPlayers(room.sync.config, room.session.present).includes(seat)) {
+          handOver(room, seat);
+        }
+      }, TAKEOVER_MS));
+    }
+  }
+
+  function handOver(room, seat) {
+    if (room.sync.changeConfig(DB.withAI(room.sync.config, seat))) lobby.refresh();
+  }
+
+  function clearTakeovers(room) {
+    room.takeovers.forEach((timer) => clearTimeout(timer));
+    room.takeovers.clear();
+  }
+
+  function onNetChange(room, event) {
+    // A room this tab already left can still fire a late timer; it must not touch the next one.
+    if (online !== room) return;
+    syncModeUI();
+    const hostInRound = room.sync.isHost && room.sync.started;
+    switch (event.type) {
+      case "need-round":
+        startRound();
+        return;
+      case "round":
+        clearTakeovers(room);
+        $("overlay").hidden = true;
+        break;
+      case "state":
+        if (!state.gameOver) $("overlay").hidden = true;
+        break;
+      case "peer": {
+        // Until the first line, a player joining or leaving just re-seats the game.
+        const reseat = event.state === "joined" || event.state === "gone";
+        if (reseat && hostInRound && room.sync.moves.length === 0) {
+          startRound();
+          return;
+        }
+        // Gave the seat up for good: no point waiting out the takeover.
+        if (event.state === "gone" && hostInRound && DB.absentPlayers(room.sync.config, room.session.present).includes(event.seat)) {
+          handOver(room, event.seat);
+        }
+        break;
+      }
+      default:
+        break;
+    }
+    syncTakeovers(room);
+    // A guest learns that a seat went to the AI only from the host's state, not from a session
+    // event, so the lobby's line about who is missing is refreshed here.
+    lobby.refresh();
+    advance();
+  }
+
+  const lobby = NET.mountLobby($("online"), {
+    game: "dots-boxes",
+    seats: () => Number($("count").value),
+    // Before the first round every open seat is the AI's; after it only the seats it really plays.
+    aiFillsSeats: (seat) => !inRoom() || online.adapter.isAI(seat),
+    peerName: (seat) => NAME[seat + 1],
+    onSession: startOnline,
+    onEnd: endOnline,
+  });
+
+  function syncModeUI() {
+    lobby.show(isOnline());
+    // The room's size is fixed once it exists; the board and AI level are the host's to pick.
+    const roomSize = online && online.session.seats;
+    if (roomSize) $("count").value = String(roomSize);
+    $("countLabel").hidden = !isOnline();
+    $("count").disabled = isOnline() && online !== null;
+    const guest = isOnline() && online !== null && online.session.seat !== 0;
+    $("levelLabel").hidden = guest;
+    $("size").disabled = guest;
+    if (guest && inRoom()) $("size").value = state.w + "x" + state.h;
+  }
+
   $("btnNew").addEventListener("click", newGame);
   $("modalNew").addEventListener("click", newGame);
   $("modalClose").addEventListener("click", () => { $("overlay").hidden = true; });
   $("btnUndo").addEventListener("click", undo);
-  $("mode").addEventListener("change", newGame);
   $("size").addEventListener("change", newGame);
+  $("count").addEventListener("change", newGame);
+  $("mode").addEventListener("change", () => {
+    syncModeUI();
+    // Leaving the mode leaves the room; that ends in endOnline, which starts the local game.
+    if (!isOnline() && online) lobby.leave();
+    else newGame();
+  });
 
+  // A shared link (?room=CODE) opens straight into that room.
+  if (new URLSearchParams(location.search).has("room")) $("mode").value = "online";
+  syncModeUI();
   newGame();
+  if (isOnline()) lobby.joinFromUrl();
 })();
 </script>
 </body>

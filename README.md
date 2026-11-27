@@ -37,7 +37,7 @@ to, both here and in `index.html`.
 | **[Connect Four](connect-four/)** | Connect Four against a three-level AI, two players on one device, or online across two devices. |
 | **[Checkers](checkers/)** | English draughts with compulsory captures and multi-jumps, against a three-level AI or two players on one device. |
 | **[Backgammon](backgammon/)** | Backgammon with gammons, backgammons and a running match score (no doubling cube), against a three-level AI or two players on one device. |
-| **[Dots and Boxes](dots-boxes/)** | Dots and Boxes on 3x3 to 6x6 boards, against a three-level AI (Hard plays chain control and the double-cross) or two players on one device. |
+| **[Dots and Boxes](dots-boxes/)** | Dots and Boxes on 3x3 to 6x6 boards, against a three-level AI (Hard plays chain control and the double-cross), two players on one device, or two to four players online across devices. |
 | **[Mancala](mancala/)** | Kalah-rules Mancala against a three-level AI, or two players on one device. |
 | **[Ludo](ludo/)** | Ludo for 2-4 players on the classic cross board, against an AI on two levels, with everyone on one device, or online across up to four devices. |
 | **[Word Grid](word-grid/)** | A two-player crossword tile game on a 15x15 board with the public-domain ENABLE word list, against an AI (Easy or Normal) or a friend. |
@@ -80,7 +80,7 @@ are identical across projects (the color palette + base styles in
 UI is independent by design. The exception is `shared/net/`, the online layer
 (relay client, turn sync, lobby panel): it is game-agnostic on purpose so
 every game that goes online shares one tested protocol implementation
-(Connect Four and Ludo use it today). `shared/favicon.svg` (a generic dice icon)
+(Connect Four, Ludo and Dots and Boxes use it today). `shared/favicon.svg` (a generic dice icon)
 backs only the top-level hub page; each game has its own favicon (PNG or
 SVG) representing that specific game, also used as its icon on the hub.
 
@@ -136,8 +136,8 @@ just without the offline cache.
 
 ## Online play
 
-Connect Four (two devices) and Ludo (up to four, with the host's AI in any
-empty seat) can be played online: one player hosts a room and shares its
+Connect Four (two devices), Ludo and Dots and Boxes (up to four, with the
+host's AI in any empty seat) can be played online: one player hosts a room and shares its
 five-character code or link, the others join. The pages stay static; the
 devices talk through a small relay, a Cloudflare Worker with one Durable
 Object per room, in [`relay/`](relay/). The relay only hands out seats and
