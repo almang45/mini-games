@@ -20,8 +20,11 @@ Every game works without it except in Online mode.
 | `js/test/` | Node tests with an in-memory Durable Object runtime |
 | `wrangler.toml` | Bindings, migration, rate limits, allowed origins |
 
-`package.json` only marks the folder as ES modules for Node. There are no
-dependencies; CI fetches a pinned `wrangler` with `npx`.
+`package.json` marks the folder as ES modules for Node and pins `wrangler`, the
+only (dev) dependency; `package-lock.json` locks its whole tree. The Worker
+itself imports nothing. CI installs with `npm ci --ignore-scripts`, so every
+package is checked against its recorded hash and none runs install scripts.
+Run `npm ci --ignore-scripts` here once before the commands below.
 
 ## Protocol (v1)
 
@@ -67,7 +70,10 @@ retries 4001, 4007, 4008 and network drops, and stops on the rest.
 - While anyone is connected the room checks every 60 s for seats that sent
   nothing (not even a ping) for 90 s, closes them with 4007 and tells the
   others the seat left. A phone that lost coverage never sends a TCP close.
-  A sweep that finds nothing writes nothing to storage.
+  A sweep that finds nothing writes nothing but its next alarm (`setAlarm` is
+  billed as a write): about 1,440 writes a day for a room occupied around the
+  clock. Joins, drops and reconnects leave an alarm that is already due in
+  time untouched.
 - A room with nobody connected is deleted after 30 minutes. Any room is
   deleted 24 hours after it was created.
 - The origin check keeps other websites from using the relay through their
@@ -79,7 +85,7 @@ retries 4001, 4007, 4008 and network drops, and stops on the rest.
 | Failure | What happens |
 |---|---|
 | Relay down or unreachable | "Host a game" says the server can't be reached; other modes are untouched |
-| A phone sleeps or changes network | A ping goes unanswered for 45 s, so the client reconnects with backoff, and resumes its seat; the board stays locked meanwhile. A handshake that hangs is abandoned after 10 s; waking the page or the network coming back retries at once |
+| A phone sleeps or changes network | A ping goes unanswered for 45 s, so the client reconnects with backoff, and resumes its seat; the board stays locked meanwhile. Waking the page or the network coming back pings an open socket at once and drops it if nothing answers within 5 s, so moves aren't played into a socket that died in its sleep. A handshake that hangs is abandoned after 10 s; waking or the network returning retries at once |
 | A phone vanishes without closing | The relay's 90 s liveness sweep closes the seat (4007) so the other side sees it leave and the room can idle out |
 | A guest loses its token (new tab, lost welcome) | After the seat has been empty for 3 minutes, joining the code again takes it over. A guest that is only reconnecting can't be displaced, and the host seat is never taken over |
 | Leave pressed while offline | The page ends the room at once; the client keeps reconnecting in the background for up to 15 s to tell the relay, so the seat is freed |
@@ -102,7 +108,7 @@ and CodeQL on every pull request that touches `relay/` or `shared/net/`. On
 - `CLOUDFLARE_ACCOUNT_ID`.
 
 Without the token the deploy step logs a notice and does nothing. To deploy
-by hand: `npx wrangler@4.157.0 deploy` from this folder after
+by hand: `npx wrangler deploy` from this folder after
 `npx wrangler login`.
 
 Change the wire protocol in a backward-compatible way: add the new version to
@@ -112,10 +118,10 @@ the old version one release later.
 ## Operating
 
 ```
-npx wrangler@4.157.0 deployments list          # what is live
-npx wrangler@4.157.0 rollback                  # back to the previous version
-npx wrangler@4.157.0 rollback <version-id>     # or to a specific one
-npx wrangler@4.157.0 tail --format json        # live logs
+npx wrangler deployments list          # what is live
+npx wrangler rollback                  # back to the previous version
+npx wrangler rollback <version-id>     # or to a specific one
+npx wrangler tail --format json        # live logs
 ```
 
 Logs are one JSON object per line, also kept in Workers Logs (dashboard →
@@ -131,7 +137,7 @@ version before it.
 ## Local development
 
 ```
-cd relay && npx wrangler@4.157.0 dev --port 8787     # relay on 127.0.0.1:8787
+cd relay && npx wrangler dev --port 8787     # relay on 127.0.0.1:8787
 npx http-server . -p 8080                            # site, from the repo root
 ```
 

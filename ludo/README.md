@@ -50,7 +50,9 @@ at the host's level, and the lobby says so.
   kept for the tab, so a reload rejoins). A player who presses Leave, or stays
   away for 2½ minutes, is handed to the host's AI and the game carries on; if
   they come back, or someone else takes the seat over, they watch until the
-  host's next New Game.
+  host's next New Game. The host works out who is missing from who is
+  connected, so this also happens when the host itself was offline or
+  reloading at the moment they left.
 - Only the device whose turn it is acts: it rolls the die and sends the value,
   so every device applies the same roll. That trusts each player's own die;
   a modified page could pick its rolls. Moves out of turn, illegal moves and

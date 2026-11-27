@@ -208,6 +208,12 @@
     return { count: config.count, controllers: config.controllers.map((c, i) => (i === seat ? 0 : c)) };
   }
 
+  // Seats with a human player this round who aren't connected. The host checks this after every
+  // reconnect or reload too, since the relay only reports a seat leaving to devices online then.
+  function absentPlayers(config, present) {
+    return config.controllers.filter((c, i) => i !== 0 && c === i && !present.includes(i));
+  }
+
   function createOnlineAdapter({ getState, setState, onReset }) {
     let controllers = [0, 1];
     const isAI = (seat) => seat !== 0 && controllers[seat] === 0;
@@ -243,7 +249,7 @@
   const api = {
     COLORS, START, SAFE, LOOP, LAST_LOOP, HOME, TOKENS, NAME, SEAT_COLORS,
     loopSquare, target, legalMoves, createGame, roll, move, threats, scoreMove, chooseMove,
-    isValidOnlineConfig, onlineConfig, withAI, createOnlineAdapter,
+    isValidOnlineConfig, onlineConfig, withAI, absentPlayers, createOnlineAdapter,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.LUDO = api;

@@ -229,7 +229,7 @@ export class Room {
     if (meta && meta.idleSince !== null && now - meta.idleSince >= IDLE_TTL_MS) return this.expire("idle");
     const swept = this.sweepStale(now);
     const idled = await this.markIdleIfEmpty();
-    // Most sweeps find nothing; skipping the write keeps an occupied room off the storage quota.
+    // Most sweeps find nothing; skipping the put leaves the alarm as the only write per sweep.
     if (swept || idled) await this.save();
   }
 
@@ -298,24 +298,31 @@ export class Room {
     return idled;
   }
 
+  // setAlarm and deleteAlarm are billed as storage writes, so an alarm already where it belongs is
+  // left alone: joins, drops and reconnects mostly land on the pending sweep. The one write per
+  // sweep while the room is occupied is the price of noticing phones that vanish without a close.
   async reschedule(now) {
     const due = [];
     for (const ws of this.ctx.getWebSockets()) {
       const att = this.attachment(ws);
       if (!Number.isInteger(att.seat) && !att.closed) due.push(att.at + HELLO_TIMEOUT_MS);
     }
+    const pending = await this.ctx.storage.getAlarm();
     if (this.meta) {
       if (this.live().length > 0) {
         due.push(now + SWEEP_MS);
         // Never move a pending alarm later: events more often than SWEEP_MS would postpone the sweep forever.
-        const pending = await this.ctx.storage.getAlarm();
         if (pending !== null && pending > now) due.push(pending);
       }
       due.push(this.meta.createdAt + MAX_AGE_MS);
       if (this.meta.idleSince !== null) due.push(this.meta.idleSince + IDLE_TTL_MS);
     }
-    if (due.length === 0) return this.ctx.storage.deleteAlarm();
-    return this.ctx.storage.setAlarm(Math.max(now, Math.min(...due)));
+    if (due.length === 0) {
+      if (pending !== null) await this.ctx.storage.deleteAlarm();
+      return;
+    }
+    const at = Math.max(now, Math.min(...due));
+    if (at !== pending) await this.ctx.storage.setAlarm(at);
   }
 
   attachment(ws) {
